@@ -1,0 +1,29 @@
+{
+  "brand": "Mizani",
+  "version": "1.0",
+  "tagline": "Your money, in balance.",
+  "colors": {
+    "deepTeal": "#102A32",
+    "emerald": "#087F72",
+    "mint": "#76D7C2",
+    "warmGold": "#E8BF6A",
+    "softWhite": "#F7FAF8",
+    "text": "#17353D",
+    "muted": "#61777A",
+    "darkBackground": "#0B2028",
+    "darkSurface": "#12323A"
+  },
+  "typography": {
+    "preferred": "System sans-serif",
+    "optional": "Inter or Manrope",
+    "bundledFonts": false
+  },
+  "shape": {
+    "cardCornerRadiusDp": 16,
+    "buttonCornerRadiusDp": 12
+  },
+  "guidelines": {
+    "gold": "Accent only; do not use for small text on white",
+    "logo": "Maintain clear space and original proportions"
+  }
+}

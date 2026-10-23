@@ -1,0 +1,18 @@
+# Gradle / Android Studio
+.gradle/
+**/build/
+local.properties
+*.iml
+.idea/
+.kotlin/
+.DS_Store
+/captures
+.externalNativeBuild
+.cxx
+
+# OpenCode runtime staging (not product artefacts)
+.opencode/runtime/scratch*
+.opencode/runtime/drop*
+.opencode/runtime/backup/
+.opencode/runtime/handoff-*.md
+.opencode/runtime/evidence/*.ps1

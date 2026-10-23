@@ -1,0 +1,38 @@
+# Evidence
+
+## Confirmed baseline leads
+- `README.md:1-152` describes a single-module offline-first Kotlin/Compose finance app with Room/SQLCipher, integer minor-unit money, deterministic analytics, no network/AI runtime, and existing unit/instrumented verification claims. These are documentation claims until commands are re-run for the final change set.
+- `app/src/main/java/com/mizani/money/**` contains 15 feature/screen areas plus shared UI, repository, local database, analytics, money, security, and export code.
+- Existing tests are present under `app/src/test` (money, time, PIN, analytics, insights) and `app/src/androidTest` (guest journey, repository, lock, backup/restore, demo data).
+- No `AGENTS.md` or `.opencode/runtime/*.md` existed before this audit; this state directory is now created.
+- `docs/VERIFICATION.md:79-90` defines manual first-launch/offline/financial/lock/export scenarios; `:92-99` lists no cloud/SMS/multi-currency and release-artifact limitations.
+- `docs/DESIGN_SYSTEM.md:124-130` defines accessibility expectations (48dp controls, non-color signals, chart descriptions, large-font/dark-mode support).
+- `FinanceModels.kt:59-81` confirms refund wallet changes currently add amount without subtracting a refund fee; `Analytics.kt:57-79` and `:422-455`, `TransactionsScreen.kt:135-138`, and `ExportManager.kt:127-131` independently omit refund fees from eligible expense calculations/summaries.
+- `SettingsScreen.kt:173-187` wraps `vm.enableLock(pin): Result<Unit>` without handling the nested result, so a returned failure can show “App lock is on.”
+- Read-only inventory confirmed routes in `ui/Navigation.kt:51-236`, root gates in `MainActivity.kt:64-73`, and More entry points in `feature/more/MoreScreen.kt:100-158`.
+- Read-only inventory found no PIN attempt throttling/backoff in `AppViewModel.unlockWithPin` or `SettingsScreen` verification paths; this is a security risk requiring explicit product/security review.
+- Read-only inventory found CSV field escaping in `ExportManager.csvEscape` only quotes delimiters/newlines; spreadsheet formula prefixes are not neutralized.
+- Read-only inventory confirmed `MoneyFormat.parse` rounds excess fractional precision (`HALF_UP`) for both decimal and zero-decimal currencies; the UI currently reports malformed input as a generic zero/amount error.
+- Read-only inventory confirmed all app copy remains largely hardcoded and `StatusBanner` has no live-region semantics; several archive/navigation icons rely on null content descriptions.
+
+## Verification log
+- **PROVEN baseline unit tests:** `.\\gradlew.bat :app:testDebugUnitTest --console=plain --stacktrace --rerun` exited 0; fresh report shows 42 tests, 0 failures/errors/skips across Money (10), PIN (3), Periods (7), Analytics (17), Insights (5). Worker log: `%TEMP%\\mizani-testDebugUnitTest.log`.
+- **PROVEN baseline debug build:** `.\\gradlew.bat :app:assembleDebug --console=plain --stacktrace --rerun-tasks` exited 0; 40/40 tasks executed; APK `app/build/outputs/apk/debug/app-debug.apk` 30,917,845 bytes; only five `Icons.Rounded.*` deprecation warnings. Worker log: `%TEMP%\\mizani-assembleDebug.log`.
+- **HISTORICAL baseline:** earlier androidTest was blocked by no attached device. Superseded by the final emulator run recorded below.
+- Repository has an unborn `main` with no commits; test sources are untracked. No production files were edited by the baseline worker.
+- **PROVEN secondary UX pass:** `gradlew :app:compileDebugKotlin` exited 0 and `gradlew :app:testDebugUnitTest` exited 0 after edits in `feature/settings/SettingsScreen.kt`, `feature/plan/{PlanDialogs,PlanScreen}.kt`, `feature/budget/BudgetScreen.kt`, `feature/goals/GoalScreen.kt`, `feature/debts/DebtsScreen.kt`, `feature/wallets/WalletsScreen.kt`, and `feature/categories/CategoriesScreen.kt`. Worker reports no navigation/schema/dependency/calculation changes.
+- Confirmed secondary fixes: nested app-lock `Result<Unit>` is consumed directly; destructive recurring archive now confirms; error fallbacks are null-safe; goal not-found and form statuses use shared empty/status components; picker/swatch selection semantics were added.
+- Secondary UI verification remains **PARTIAL**: TalkBack, dialog behavior, and 48dp target compliance were not device-tested; compile/unit pass is not UI proof.
+- **PROVEN primary UX compile:** `:app:compileDebugKotlin` exited 0 after primary resource/accessibility edits. Primary worker preserved UI-test-critical labels and reports resource references validated; runtime accessibility remains unverified.
+- Finance worker reports implemented refund-fee accounting and repository/restore validation in `FinanceModels.kt`, `Analytics.kt`, `TransactionsScreen.kt`, `ExportManager.kt`, `FinanceRepository.kt`, and `BackupValidator.kt`, plus regression tests. Its reported clean compile/28-test pass predates the final combined tree and is not final evidence.
+- **PROVEN final verification (current tree after chart/display fixes):** `:app:compileDebugKotlin :app:processDebugResources` exit 0; `:app:testDebugUnitTest --rerun` exit 0 with **87 tests**, 0 failures/errors/skips in 8 suites (Money 12, PinBackoffPolicy 8, PinHasher 3, Periods 7, BackupValidator 29, AnalyticsEngine 19, ExportManager 4, InsightEngine 5); `:app:assembleDebug` exit 0 with APK **31,141,566 bytes** (~29.7 MiB); `:app:compileDebugAndroidTestKotlin` exit 0. `adb devices -l` via full SDK path reported zero attached devices, so instrumented/manual testing remains BLOCKED.
+- **INDEPENDENT RE-REVIEW — PASS WITH RISKS:** prior CSV negative-number and leading-whitespace defects are fixed; duplicate restore-ID validation, `saveGoal` linked-wallet guard, and PIN gate confirmed. Residual hypotheses: wall-clock PIN backoff bypass, non-atomic failure counter, and real spreadsheet/device behavior unverified.
+- **PROVEN documentation cleanup:** 49 screenshots, screenshot index, obsolete AI-strategy docs, and brand packaging/marketing docs deleted; independent listing/grep confirm no dangling references.
+- **PROVEN refund-heavy display fix (code-level):** Home/Insights now filter positive category slices and use a positive total with a neutral empty state; day-header and net-cash-flow signs are corrected and labels use “Net spending.” Runtime visual behavior is unverified without a device.
+- **PROVEN emulator E2E:** headless `Medium_Phone_API_36.1` (API 36.1, serial emulator-5554, boot ~75s) ran all five classes separately: GuestJourneyTest 1/0 failures 84.2s (one systemui ANR focus retry), RepositoryIntegrationTest 2 tests exit 0 56s, AppLockTest 1/0 88.7s, BackupRestoreTest 1/0 63.8s, DemoDataTest 1/0 17.8s. App data cleared/uninstalled, emulator killed.
+- **PROVEN release build:** `:app:assembleRelease` exits 0 with `optimization { enable = true }`; unsigned APK 10,663,390 bytes (~10.2 MiB), no custom ProGuard rules. A temporary debug-keystore-signed copy installed, launched MainActivity to resumed state with no fatal/E `mizani` logs; test-signed copy deleted. Production signing remains absent.
+- **PROVEN final docs/report sync:** README/VERIFICATION/report reflect 87 tests, debug 31,141,566-byte APK, unsigned 10,663,390-byte release, emulator pass, cleanup, and residual risks.
+- **CLEANUP:** emulator logs/screenshots/test APKs deleted; no screenshots remain (only launcher mipmaps); androidTest outputs/reports deleted. JVM test reports are being removed as the last cleanup step.
+
+## Open questions / limits
+- Production signing key absent; localization English-only; manual 9-step/TalkBack and real-spreadsheet CSV unverified; PIN wall-clock/atomicity residual; release R8 runtime smoke passed but production-signed release not tested.

@@ -1,0 +1,16 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- 108dp adaptive canvas: the brand-safe clear space is the central 66dp
+         safe zone (radius 33 from the 54,54 pivot). Scale 1.0 keeps the M mark
+         inside that zone so it never touches the adaptive-icon mask. -->
+    <group android:pivotX="54" android:pivotY="54"
+        android:scaleX="1.0" android:scaleY="1.0">
+        <path android:fillColor="@android:color/transparent"
+            android:strokeColor="#F7FAF8" android:strokeWidth="7.5"
+            android:strokeLineCap="round" android:strokeLineJoin="round"
+            android:pathData="M31 72 V44 Q31 35 39 35 Q45 35 48 41 L54 54 L60 41 Q63 35 69 35 Q77 35 77 44 V72"/>
+        <path android:fillColor="#E8BF6A"
+            android:pathData="M54,66 C56.21,66 58,67.79 58,70 C58,72.21 56.21,74 54,74 C51.79,74 50,72.21 50,70 C50,67.79 51.79,66 54,66 Z"/>
+    </group>
+</vector>
