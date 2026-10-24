@@ -1,6 +1,7 @@
 package com.mizani.money.feature.budget
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -37,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.mizani.money.R
 import com.mizani.money.core.model.BudgetPeriodType
 import com.mizani.money.core.model.CategoryDefaults
 import com.mizani.money.core.model.CategoryType
@@ -57,6 +59,7 @@ import com.mizani.money.ui.components.MizaniTopBar
 import com.mizani.money.ui.components.PickerOption
 import com.mizani.money.ui.components.SmallPill
 import com.mizani.money.ui.components.Spacing
+import com.mizani.money.ui.components.MizaniCelebration
 import com.mizani.money.ui.components.StatusBanner
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -96,7 +99,7 @@ fun BudgetScreen(
     }
 
     var name by rememberSaveable(budgetId) {
-        mutableStateOf(existing?.name ?: "${DateText.month(today)} budget")
+        mutableStateOf(existing?.name ?: "${DateText.month(today)} plan")
     }
     var periodType by rememberSaveable(budgetId) {
         mutableStateOf(existing?.periodType ?: BudgetPeriodType.MONTHLY)
@@ -146,6 +149,7 @@ fun BudgetScreen(
     var optionsTarget by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var saving by remember { mutableStateOf(false) }
+    var showCelebration by remember { mutableStateOf(false) }
     // Progressive disclosure: a new budget shows only the essential default pack; editing keeps
     // every existing line (even at zero) plus essentials. The rest is one toggle away.
     var showAllCategories by rememberSaveable(budgetId) { mutableStateOf(false) }
@@ -187,6 +191,7 @@ fun BudgetScreen(
     }
 
     fun save() {
+        if (saving) return
         error = null
         val inputs = categoryIds
             .mapNotNull { categoryId ->
@@ -217,15 +222,21 @@ fun BudgetScreen(
                     end = end,
                     lines = inputs,
                 )
-            }.onSuccess { onSaved() }
-                .onFailure { error = it.message ?: "Could not save this budget. Try again." }
-            saving = false
+            }.onSuccess {
+                // Keep saving = true until the celebration overlay finishes (its
+                // onSaved navigates away) so a double-tap cannot save twice.
+                showCelebration = true
+            }.onFailure {
+                saving = false
+                error = it.message ?: "Could not save this plan. Try again."
+            }
         }
     }
 
+    Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize()) {
         MizaniTopBar(
-            title = if (existing == null) "New budget" else "Edit budget",
+            title = if (existing == null) "New plan" else "Edit plan",
             subtitle = DateText.rangeLabel(com.mizani.money.core.time.DateRange(start, end)),
             onBack = onBack,
             actions = {
@@ -242,8 +253,9 @@ fun BudgetScreen(
         ) {
             if (budgetId != null && existing == null) {
                 EmptyState(
-                    title = "Budget not found",
-                    body = "It may have been deleted. Go back and choose another budget.",
+                    title = "Plan not found",
+                    body = "It may have been deleted. Go back and choose another plan.",
+                    iconRes = R.drawable.ic_ph_chart_donut,
                     actionLabel = "Go back",
                     onAction = onBack,
                 )
@@ -261,7 +273,7 @@ fun BudgetScreen(
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Budget name") },
+                label = { Text("Plan name") },
                 singleLine = true,
                 shape = MaterialTheme.shapes.small,
                 modifier = Modifier.fillMaxWidth(),
@@ -407,15 +419,20 @@ fun BudgetScreen(
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = MaterialTheme.shapes.small,
             ) {
-                Text(if (saving) "Saving…" else "Save budget")
+                Text(if (saving) "Saving…" else "Save plan")
             }
             Text(
-                "Rollover is off by default. Repairs or refunds reduce eligible spending in the original category. " +
-                    "Transfers and adjustments never count toward a budget line.",
+                "Rollover is off by default. Repairs and refunds reduce the original category's eligible " +
+                    "spending; transfers never count.",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+
+    if (showCelebration) {
+        MizaniCelebration(onFinished = { showCelebration = false; onSaved() })
+    }
     }
 }
 

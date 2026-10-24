@@ -4,26 +4,41 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mizani.money.feature.lock.LockScreen
 import com.mizani.money.feature.onboarding.OnboardingScreen
 import com.mizani.money.ui.AppUiState
@@ -31,6 +46,8 @@ import com.mizani.money.ui.AppViewModel
 import com.mizani.money.ui.MizaniNavHost
 import com.mizani.money.ui.components.MizaniMark
 import com.mizani.money.ui.components.Spacing
+import com.mizani.money.ui.theme.DeepTeal
+import com.mizani.money.ui.theme.Emerald
 import com.mizani.money.ui.theme.MizaniTheme
 
 class MainActivity : FragmentActivity() {
@@ -65,43 +82,103 @@ class MainActivity : FragmentActivity() {
 
 @Composable
 fun MizaniRoot(vm: AppViewModel, state: AppUiState) {
-    when {
-        state.loading -> SplashScreen()
-        !state.settings.onboardingComplete || state.snapshot.workspace == null -> {
-            OnboardingScreen(vm)
+    // Wrap in a Surface so non-Scaffold screens (splash, onboarding, lock) inherit the
+    // theme's contentColor. Without this, LocalContentColor defaults to black in dark mode,
+    // which fails contrast on the dark page (1.25:1 on #0B2028).
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+    ) {
+        when {
+            state.loading -> SplashScreen()
+            !state.settings.onboardingComplete || state.snapshot.workspace == null -> {
+                OnboardingScreen(vm)
+            }
+            state.locked -> LockScreen(vm, state.settings.biometricEnabled)
+            else -> MizaniNavHost(vm, state)
         }
-        state.locked -> LockScreen(vm, state.settings.biometricEnabled)
-        else -> MizaniNavHost(vm, state)
     }
 }
 
 @Composable
 private fun SplashScreen() {
+    // A brand gradient backdrop with a breathing mark, name, tagline and a thin progress bar.
+    // No artificial delay: the splash is dismissed the moment the ViewModel's state is ready.
+    val transition = rememberInfiniteTransition(label = "splash-pulse")
+    val pulse by transition.animateFloat(
+        initialValue = 0.85f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1100, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "splash-pulse",
+    )
+    val shimmer by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1400, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "splash-shimmer",
+    )
+    val loadingLabel = stringResource(R.string.splash_loading)
+
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(DeepTeal, Emerald))),
         contentAlignment = Alignment.Center,
     ) {
         Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.xl),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            MizaniMark(size = 84)
-            Spacer(Modifier.height(Spacing.lg))
-            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium)
+            MizaniMark(size = 96).let { mark ->
+                // Overlay a subtle pulse via a wrapper that scales/alpha-animates the mark.
+                Box(
+                    modifier = Modifier
+                        .scale(pulse)
+                        .alpha(0.6f + 0.4f * pulse),
+                ) { mark }
+            }
+            Spacer(Modifier.height(Spacing.xl))
+            Text(
+                stringResource(R.string.app_name),
+                style = MaterialTheme.typography.displaySmall,
+                color = Color.White,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(Spacing.sm))
             Text(
                 stringResource(R.string.app_tagline),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = Color.White,
+                textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(Spacing.xl))
-            // Announced to screen readers so the blank wait reads as loading, not a dead end.
-            val loadingLabel = stringResource(R.string.splash_loading)
-            CircularProgressIndicator(
+            Spacer(Modifier.height(Spacing.xxl))
+            // Thin brand progress bar with a travelling highlight; reads as loading to screen readers.
+            Box(
                 modifier = Modifier
-                    .size(24.dp)
+                    .fillMaxWidth(0.5f)
+                    .height(3.dp)
+                    .clip(MaterialTheme.shapes.small)
+                    .background(Color.White.copy(alpha = 0.25f))
                     .semantics { contentDescription = loadingLabel },
-                strokeWidth = 2.dp,
-            )
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(shimmer)
+                        .height(3.dp)
+                        .clip(MaterialTheme.shapes.small)
+                        .background(Color.White),
+                )
+            }
         }
     }
 }

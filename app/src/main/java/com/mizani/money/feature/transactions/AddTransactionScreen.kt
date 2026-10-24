@@ -65,6 +65,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.mizani.money.R
 import com.mizani.money.core.model.CategoryType
 import com.mizani.money.core.model.Ids
 import com.mizani.money.core.model.TransactionType
@@ -76,6 +77,7 @@ import com.mizani.money.ui.AppUiState
 import com.mizani.money.ui.AppViewModel
 import com.mizani.money.ui.components.DateField
 import com.mizani.money.ui.components.EmptyState
+import com.mizani.money.ui.components.MizaniCelebration
 import com.mizani.money.ui.components.MizaniAmountField
 import com.mizani.money.ui.components.MizaniConfirmDialog
 import com.mizani.money.ui.components.MizaniIcons
@@ -88,7 +90,6 @@ import com.mizani.money.ui.components.WalletAvatar
 import com.mizani.money.ui.components.parseHexColor
 import com.mizani.money.ui.theme.DeepTeal
 import com.mizani.money.ui.theme.Emerald
-import com.mizani.money.ui.theme.EmeraldBright
 import com.mizani.money.ui.theme.Mint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -158,6 +159,7 @@ fun AddTransactionScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var saving by remember { mutableStateOf(false) }
     var showDelete by remember { mutableStateOf(false) }
+    var showCelebration by remember { mutableStateOf(false) }
     // Advanced types stay collapsed; reveal them only on demand, or when editing one.
     var showAdvancedTypes by rememberSaveable(existing?.id) {
         mutableStateOf(
@@ -193,6 +195,7 @@ fun AddTransactionScreen(
     val feeMinor = if (feeText.isBlank()) 0L else (MoneyFormat.parse(feeText, currency) ?: 0L)
 
     fun save() {
+        if (saving) return
         error = null
         if (amountMinor <= 0) {
             error = "Enter an amount greater than zero"
@@ -237,9 +240,14 @@ fun AddTransactionScreen(
             // Room's withTransaction resumes on its TransactionExecutor thread; hop back to the
             // main thread before touching UI state or navigating (popBackStack must be main-thread).
             withContext(Dispatchers.Main) {
-                saving = false
-                result.onSuccess { onDone() }
-                    .onFailure { error = it.message ?: "Could not save this transaction" }
+                result.onSuccess {
+                    // Keep saving = true until the celebration overlay finishes (its
+                    // onDone navigates away) so a double-tap cannot save twice.
+                    showCelebration = true
+                }.onFailure {
+                    saving = false
+                    error = it.message ?: "Could not save this transaction"
+                }
             }
         }
     }
@@ -266,6 +274,7 @@ fun AddTransactionScreen(
         )
     }
 
+    Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize().imePadding()) {
         MizaniTopBar(
             title = if (existing == null) "New transaction" else "Edit transaction",
@@ -291,6 +300,7 @@ fun AddTransactionScreen(
                 EmptyState(
                     title = "No wallet yet",
                     body = "Add a wallet from More → Wallets before recording a transaction.",
+                    iconRes = R.drawable.ic_ph_wallet,
                     actionLabel = "Go back",
                     onAction = onBack,
                 )
@@ -360,7 +370,7 @@ fun AddTransactionScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(MaterialTheme.shapes.extraLarge)
-                    .background(Brush.linearGradient(listOf(DeepTeal, Emerald, EmeraldBright)))
+                    .background(Brush.linearGradient(listOf(DeepTeal, Emerald)))
                     .padding(20.dp),
             ) {
                 Column {
@@ -373,7 +383,7 @@ fun AddTransactionScreen(
                                 else -> "Amount"
                             },
                             style = MaterialTheme.typography.labelMedium,
-                            color = Color.White.copy(alpha = 0.7f),
+                            color = Color.White,
                             modifier = Modifier.weight(1f),
                         )
                         Surface(
@@ -393,7 +403,7 @@ fun AddTransactionScreen(
                         Text(
                             currency.symbol,
                             style = MaterialTheme.typography.titleMedium,
-                            color = Color.White.copy(alpha = 0.7f),
+                            color = Color.White,
                         )
                         Spacer(Modifier.width(Spacing.sm))
                         Box(modifier = Modifier.weight(1f)) {
@@ -424,14 +434,14 @@ fun AddTransactionScreen(
                         Text(
                             MoneyFormat.format(amountMinor, currency),
                             style = MaterialTheme.typography.labelMedium,
-                            color = Color.White.copy(alpha = 0.7f),
+                            color = Color.White,
                         )
                     }
                     Spacer(Modifier.height(Spacing.xs))
                     Text(
                         "${amountWallet?.name ?: ""} · ${MoneyFormat.format(balances[walletId] ?: 0, currency)} available",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.65f),
+                        color = Color.White,
                     )
                     if (type == TransactionType.ADJUSTMENT) {
                         Spacer(Modifier.height(Spacing.sm))
@@ -730,6 +740,11 @@ fun AddTransactionScreen(
                     }
                 }
             }
+        }
+    }
+
+        if (showCelebration) {
+            MizaniCelebration(onFinished = { showCelebration = false; onDone() })
         }
     }
 }

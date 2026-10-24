@@ -80,8 +80,8 @@ fun RecurringDialog(
     if (showArchiveConfirm && initial != null) {
         MizaniConfirmDialog(
             title = if (type == RecurringType.BILL) "Archive this bill?" else "Archive this expected income?",
-            body = "It stops appearing in ${if (type == RecurringType.BILL) "bills" else "expected income"} and is not " +
-                "included in planning. You can add it again later.",
+            body = "It stops appearing in ${if (type == RecurringType.BILL) "bills" else "expected income"} " +
+                "and in planning. You can add it again later.",
             confirmLabel = "Archive",
             destructive = true,
             onConfirm = {
@@ -338,7 +338,7 @@ fun ContributeGoalDialog(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Text(
-                    "If the goal has a linked savings wallet, this records a transfer. Transfers are not spending.",
+                    "If you choose a wallet, the money moves from it as a transfer. Transfers are not spending.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

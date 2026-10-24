@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -53,7 +54,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -70,6 +73,27 @@ import com.mizani.money.data.repo.LedgerSnapshot
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+import android.provider.Settings
+import androidx.compose.animation.core.EaseOutCubic
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
+import kotlinx.coroutines.delay
+import kotlin.math.cos
+import kotlin.math.sin
 
 object Spacing {
     val xs = 4.dp
@@ -248,34 +272,192 @@ fun EmptyState(
     body: String,
     modifier: Modifier = Modifier,
     icon: androidx.compose.ui.graphics.vector.ImageVector = Icons.Rounded.Inbox,
+    iconRes: Int? = null,
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
+    compact: Boolean = false,
 ) {
+    // Layered translucent brand circles behind a themed icon tile, with a small floating
+    // accent sparkle. Compact variant drops the circles and the CTA gap for use inside cards.
+    val ringSize = if (compact) 64.dp else 96.dp
     Column(
-        modifier = modifier.fillMaxWidth().padding(vertical = Spacing.xxl, horizontal = Spacing.xl),
+        modifier = modifier.fillMaxWidth().padding(vertical = if (compact) Spacing.lg else Spacing.xxl, horizontal = Spacing.xl),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(
-            modifier = Modifier
-                .size(64.dp)
-                .clip(MaterialTheme.shapes.medium)
-                .background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+        Box(modifier = Modifier.size(ringSize), contentAlignment = Alignment.Center) {
+            if (!compact) {
+                Box(
+                    Modifier.size(ringSize).clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                )
+                Box(
+                    Modifier.size((ringSize.value * 0.6f).dp).clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.20f)),
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(MaterialTheme.shapes.medium)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (iconRes != null) {
+                    Icon(
+                        painter = painterResource(iconRes),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(32.dp),
+                    )
+                } else {
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(32.dp),
+                    )
+                }
+            }
+            if (!compact) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_ph_sparkle),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(18.dp).align(Alignment.TopEnd).padding(6.dp),
+                )
+            }
         }
-        Spacer(Modifier.height(Spacing.lg))
-        Text(title, style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(if (compact) Spacing.md else Spacing.lg))
+        Text(
+            title,
+            style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center,
+        )
         Spacer(Modifier.height(Spacing.xs))
         Text(
             body,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            textAlign = TextAlign.Center,
         )
         if (actionLabel != null && onAction != null) {
             Spacer(Modifier.height(Spacing.lg))
             OutlinedButton(onClick = onAction) { Text(actionLabel) }
+        }
+    }
+}
+
+/**
+ * A brief, dependency-free success celebration: an animated check drawn on a brand circle with a
+ * handful of confetti chips. Runs for ~650ms then calls [onFinished]. The whole visual is skipped
+ * (only the polite "Saved" announcement fires) when the system animator duration scale is 0, so
+ * users who disable animations aren't delayed. Trigger haptic feedback once at the start.
+ */
+@Composable
+fun MizaniCelebration(
+    onFinished: () -> Unit,
+) {
+    val context = LocalContext.current
+    val animatorScale = remember {
+        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
+    }
+    val showVisual = animatorScale != 0f
+    val haptics = LocalHapticFeedback.current
+
+    LaunchedEffect(Unit) {
+        if (showVisual) {
+            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            delay(650)
+        }
+        onFinished()
+    }
+
+    // The "Saved" live-region node is always composed (never gated behind an early return), so
+    // the polite announcement fires for screen readers even when the visual is skipped.
+    val progress by animateFloatAsState(
+        targetValue = 1f,
+        animationSpec = tween(durationMillis = 550, easing = EaseOutCubic),
+        label = "celebrate",
+    )
+    val circleColor = MaterialTheme.colorScheme.primary
+    val bgColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .then(
+                if (showVisual) {
+                    Modifier
+                        .background(bgColor)
+                        // Consume every pointer event so taps during the celebration cannot
+                        // reach the form beneath (e.g. a double-tapped Save button).
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+                                }
+                            }
+                        }
+                } else {
+                    Modifier
+                },
+            )
+            // Polite live region announces the save without interrupting reading.
+            .semantics(mergeDescendants = true) {
+                contentDescription = "Saved"
+                liveRegion = LiveRegionMode.Polite
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        if (showVisual) {
+            Canvas(modifier = Modifier.size(120.dp)) {
+                val radius = size.minDimension / 2f
+                val cx = center.x
+                val cy = center.y
+                val sweep = (progress.coerceIn(0f, 1f)) * 360f
+                drawArc(
+                    color = circleColor,
+                    startAngle = -90f,
+                    sweepAngle = sweep,
+                    useCenter = false,
+                    style = Stroke(width = size.minDimension * 0.12f, cap = StrokeCap.Round),
+                )
+                // Confetti chips: deterministic offsets so layout is stable across devices.
+                val confetti = listOf(
+                    Offset(-1.4f, -0.6f) to Color(0xFF0A9C8B),
+                    Offset(1.3f, -0.9f) to Color(0xFF2ECC71),
+                    Offset(-1.1f, 1.2f) to Color(0xFF3F6F76),
+                    Offset(1.5f, 1.0f) to Color(0xFF76D7C2),
+                    Offset(0.2f, -1.5f) to Color(0xFF087F72),
+                )
+                val pop = progress.coerceIn(0f, 1f)
+                confetti.forEach { (frac, color) ->
+                    val dist = radius * (1.2f + 0.6f * pop)
+                    val px = cx + frac.x * dist
+                    val py = cy + frac.y * dist
+                    val chip = radius * 0.10f
+                    val point = Offset(px.toFloat(), py.toFloat())
+                    drawCircle(color = color.copy(alpha = (1f - pop * 0.3f).coerceIn(0f, 1f)), radius = chip, center = point)
+                }
+                // Check stroke reveals as the arc completes.
+                if (progress > 0.45f) {
+                    val reveal = ((progress - 0.45f) / 0.55f).coerceIn(0f, 1f)
+                    val pw = radius * 0.45f
+                    val strokeW = radius * 0.12f
+                    val seg1 = Path().apply {
+                        moveTo(cx - pw * 0.5f, cy)
+                        lineTo(cx - pw * 0.12f, cy + pw * 0.4f)
+                    }
+                    val seg2 = Path().apply {
+                        moveTo(cx - pw * 0.12f, cy + pw * 0.4f)
+                        lineTo(cx + pw * 0.55f, cy - pw * 0.38f)
+                    }
+                    drawPath(seg1, color = circleColor, style = Stroke(width = strokeW, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                    if (reveal > 0.4f) {
+                        drawPath(seg2, color = circleColor, style = Stroke(width = strokeW, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                    }
+                }
+            }
         }
     }
 }

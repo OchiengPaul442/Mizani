@@ -1,5 +1,9 @@
 package com.mizani.money.ui
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -22,7 +26,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.compose.animation.core.tween
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -57,6 +63,57 @@ private val tabs = listOf(
 )
 
 private val topLevelRoutes = tabs.map { it.route }.toSet()
+
+// Direction-aware slide spec shared by every destination. The scope's initialState/targetState are
+// the NavBackStackEntry endpoints; their route depths decide which way the slide goes. Bottom tabs
+// use their left-to-right index, detail routes sit deeper, so navigating rightward in the bar (or
+// into any detail screen) slides content in from the right, and popping back reverses it.
+// ~280ms horizontal tween; direction follows route depth (see navEnter/navExit).
+private fun navEnter(
+    scope: androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>,
+): EnterTransition {
+    val from = depthOf(scope.initialState.destination.route)
+    val to = depthOf(scope.targetState.destination.route)
+    val towardsEnd = to >= from
+    return slideInHorizontally(animationSpec = tween(280)) { fullWidth ->
+        if (towardsEnd) fullWidth else -fullWidth
+    }
+}
+
+private fun navExit(
+    scope: androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>,
+): ExitTransition {
+    val from = depthOf(scope.initialState.destination.route)
+    val to = depthOf(scope.targetState.destination.route)
+    val towardsEnd = to >= from
+    return slideOutHorizontally(animationSpec = tween(280)) { fullWidth ->
+        if (towardsEnd) -fullWidth else fullWidth
+    }
+}
+
+// Pop transitions: backing out of a detail always feels like "going back", regardless of
+// depthOf() tying (e.g. detail -> detail such as Settings -> About). The incoming screen
+// slides in from the left and the outgoing one exits to the right.
+private fun navPopEnter(
+    scope: androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>,
+): EnterTransition = slideInHorizontally(animationSpec = tween(280)) { fullWidth -> -fullWidth }
+
+private fun navPopExit(
+    scope: androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>,
+): ExitTransition = slideOutHorizontally(animationSpec = tween(280)) { fullWidth -> fullWidth }
+
+// Maps a route to an integer depth used to decide slide direction. Bottom tabs use their index;
+// everything else (detail screens) is pushed below the deepest tab so navigating into any detail
+// always slides forward, and popping back reverses it.
+private fun depthOf(route: String?): Int = when (route) {
+    "home" -> 0
+    "transactions" -> 1
+    "plan" -> 2
+    "insights" -> 3
+    "more" -> 4
+    null -> -1
+    else -> 10
+}
 
 @Composable
 fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
@@ -113,7 +170,13 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
             startDestination = "home",
             modifier = Modifier.padding(padding),
         ) {
-            composable("home") {
+            composable(
+                "home",
+                enterTransition = ::navEnter,
+                exitTransition = ::navExit,
+                popEnterTransition = ::navPopEnter,
+                popExitTransition = ::navPopExit,
+            ) {
                 HomeScreen(
                     vm = vm,
                     state = state,
@@ -127,7 +190,13 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                     onOpenSettings = { navController.navigate("settings") },
                 )
             }
-            composable("transactions") {
+            composable(
+                "transactions",
+                enterTransition = ::navEnter,
+                exitTransition = ::navExit,
+                popEnterTransition = ::navPopEnter,
+                popExitTransition = ::navPopExit,
+            ) {
                 TransactionsScreen(
                     vm = vm,
                     state = state,
@@ -135,7 +204,13 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                     onAdd = { navController.navigate("add") },
                 )
             }
-            composable("plan") {
+            composable(
+                "plan",
+                enterTransition = ::navEnter,
+                exitTransition = ::navExit,
+                popEnterTransition = ::navPopEnter,
+                popExitTransition = ::navPopExit,
+            ) {
                 PlanScreen(
                     vm = vm,
                     state = state,
@@ -148,17 +223,35 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                     onOpenDebts = { navController.navigate("debts") },
                 )
             }
-            composable("insights") {
+            composable(
+                "insights",
+                enterTransition = ::navEnter,
+                exitTransition = ::navExit,
+                popEnterTransition = ::navPopEnter,
+                popExitTransition = ::navPopExit,
+            ) {
                 InsightsScreen(vm = vm, state = state, onOpenPlan = { openTopLevel("plan") })
             }
-            composable("more") {
+            composable(
+                "more",
+                enterTransition = ::navEnter,
+                exitTransition = ::navExit,
+                popEnterTransition = ::navPopEnter,
+                popExitTransition = ::navPopExit,
+            ) {
                 MoreScreen(
                     vm = vm,
                     state = state,
                     onNavigate = { route -> navController.navigate(route) },
                 )
             }
-            composable("add") {
+            composable(
+                "add",
+                enterTransition = ::navEnter,
+                exitTransition = ::navExit,
+                popEnterTransition = ::navPopEnter,
+                popExitTransition = ::navPopExit,
+            ) {
                 AddTransactionScreen(
                     vm = vm,
                     state = state,
@@ -167,7 +260,13 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable("edit/{id}") { entry ->
+            composable(
+                "edit/{id}",
+                enterTransition = ::navEnter,
+                exitTransition = ::navExit,
+                popEnterTransition = ::navPopEnter,
+                popExitTransition = ::navPopExit,
+            ) { entry ->
                 AddTransactionScreen(
                     vm = vm,
                     state = state,
@@ -176,16 +275,40 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable("wallets") {
+            composable(
+                "wallets",
+                enterTransition = ::navEnter,
+                exitTransition = ::navExit,
+                popEnterTransition = ::navPopEnter,
+                popExitTransition = ::navPopExit,
+            ) {
                 WalletsScreen(vm = vm, state = state, onBack = { navController.popBackStack() })
             }
-            composable("categories") {
+            composable(
+                "categories",
+                enterTransition = ::navEnter,
+                exitTransition = ::navExit,
+                popEnterTransition = ::navPopEnter,
+                popExitTransition = ::navPopExit,
+            ) {
                 CategoriesScreen(vm = vm, state = state, onBack = { navController.popBackStack() })
             }
-            composable("debts") {
+            composable(
+                "debts",
+                enterTransition = ::navEnter,
+                exitTransition = ::navExit,
+                popEnterTransition = ::navPopEnter,
+                popExitTransition = ::navPopExit,
+            ) {
                 DebtsScreen(vm = vm, state = state, onBack = { navController.popBackStack() })
             }
-            composable("budget/new") {
+            composable(
+                "budget/new",
+                enterTransition = ::navEnter,
+                exitTransition = ::navExit,
+                popEnterTransition = ::navPopEnter,
+                popExitTransition = ::navPopExit,
+            ) {
                 BudgetScreen(
                     vm = vm,
                     state = state,
@@ -194,7 +317,13 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                     onSaved = { navController.popBackStack() },
                 )
             }
-            composable("budget/{id}") { entry ->
+            composable(
+                "budget/{id}",
+                enterTransition = ::navEnter,
+                exitTransition = ::navExit,
+                popEnterTransition = ::navPopEnter,
+                popExitTransition = ::navPopExit,
+            ) { entry ->
                 BudgetScreen(
                     vm = vm,
                     state = state,
@@ -203,7 +332,13 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                     onSaved = { navController.popBackStack() },
                 )
             }
-            composable("goal/new") {
+            composable(
+                "goal/new",
+                enterTransition = ::navEnter,
+                exitTransition = ::navExit,
+                popEnterTransition = ::navPopEnter,
+                popExitTransition = ::navPopExit,
+            ) {
                 GoalScreen(
                     vm = vm,
                     state = state,
@@ -211,7 +346,13 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable("goal/{id}") { entry ->
+            composable(
+                "goal/{id}",
+                enterTransition = ::navEnter,
+                exitTransition = ::navExit,
+                popEnterTransition = ::navPopEnter,
+                popExitTransition = ::navPopExit,
+            ) { entry ->
                 GoalScreen(
                     vm = vm,
                     state = state,
@@ -219,7 +360,13 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable("settings") {
+            composable(
+                "settings",
+                enterTransition = ::navEnter,
+                exitTransition = ::navExit,
+                popEnterTransition = ::navPopEnter,
+                popExitTransition = ::navPopExit,
+            ) {
                 SettingsScreen(
                     vm = vm,
                     state = state,
@@ -227,10 +374,22 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                     onOpenAbout = { navController.navigate("about") },
                 )
             }
-            composable("about") {
+            composable(
+                "about",
+                enterTransition = ::navEnter,
+                exitTransition = ::navExit,
+                popEnterTransition = ::navPopEnter,
+                popExitTransition = ::navPopExit,
+            ) {
                 AboutScreen(state = state, onBack = { navController.popBackStack() })
             }
-            composable("account") {
+            composable(
+                "account",
+                enterTransition = ::navEnter,
+                exitTransition = ::navExit,
+                popEnterTransition = ::navPopEnter,
+                popExitTransition = ::navPopExit,
+            ) {
                 AccountScreen(onBack = { navController.popBackStack() })
             }
         }

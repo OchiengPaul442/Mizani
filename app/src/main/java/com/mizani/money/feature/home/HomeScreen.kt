@@ -23,6 +23,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.TipsAndUpdates
+import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -63,6 +64,7 @@ import com.mizani.money.feature.home.components.UpcomingList
 import com.mizani.money.ui.AppUiState
 import com.mizani.money.ui.AppViewModel
 import com.mizani.money.ui.components.DateRangePickerDialog
+import com.mizani.money.ui.components.EmptyState
 import com.mizani.money.ui.components.InsightCard
 import com.mizani.money.ui.components.MizaniCard
 import com.mizani.money.ui.components.MizaniDonutChart
@@ -74,8 +76,6 @@ import com.mizani.money.ui.components.Spacing
 import com.mizani.money.ui.components.parseHexColor
 import com.mizani.money.ui.theme.DeepTeal
 import com.mizani.money.ui.theme.Emerald
-import com.mizani.money.ui.theme.EmeraldBright
-import com.mizani.money.ui.theme.Mint
 import java.time.LocalTime
 import kotlin.math.roundToInt
 
@@ -172,13 +172,6 @@ fun HomeScreen(
         if (snapshot.transactions.isEmpty()) {
             // One clear first step: a single hero with one action, nothing competing with it.
             GetStartedHero(onAdd = onAdd)
-            MizaniCard(containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
-                Text(
-                    "You can add a transaction and create a budget from Plan whenever you choose.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
             return@Column
         }
 
@@ -232,10 +225,12 @@ fun HomeScreen(
             }
         } else {
             SectionBlock(title = "Upcoming", actionLabel = "Add a bill", onAction = onOpenPlan) {
-                Text(
-                    stringResource(R.string.home_upcoming_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                // Section header already carries the "Add a bill" action, so no CTA here.
+                EmptyState(
+                    title = "No bills yet",
+                    body = "Recurring bills show up here before they are due.",
+                    iconRes = R.drawable.ic_ph_receipt,
+                    compact = true,
                 )
             }
         }
@@ -245,10 +240,11 @@ fun HomeScreen(
         val positiveSlices = current.categorySlices.filter { it.amountMinor > 0 }
         SectionBlock(title = "Where your money went", actionLabel = "Insights", onAction = onOpenInsights) {
             if (positiveSlices.isEmpty()) {
-                Text(
-                    "No net spending recorded in this period.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                EmptyState(
+                    title = "No spending yet",
+                    body = "Your category chart appears after the first expense.",
+                    iconRes = R.drawable.ic_ph_chart_donut,
+                    compact = true,
                 )
             } else {
                 val positiveTotal = positiveSlices.sumOf { it.amountMinor }
@@ -356,16 +352,44 @@ private fun SectionBlock(
  */
 @Composable
 private fun GetStartedHero(onAdd: () -> Unit) {
-    val white70 = Color.White.copy(alpha = 0.70f)
+    // Gradient capped at Emerald: opaque white reads at >=4.79:1, comfortably clearing
+    // the 4.5:1 threshold for normal text on the lightest stop.
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.extraLarge)
-            .background(Brush.linearGradient(listOf(DeepTeal, Emerald, EmeraldBright)))
+            .background(Brush.linearGradient(listOf(DeepTeal, Emerald)))
             .padding(20.dp),
     ) {
         Column {
-            Text("GET STARTED", style = MaterialTheme.typography.labelSmall, color = white70)
+            // Compact illustration cluster: wallet + coins + chart donut, solid white on the gradient.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(bottom = Spacing.md),
+            ) {
+                listOf(
+                    R.drawable.ic_ph_wallet to 36,
+                    R.drawable.ic_ph_coins to 30,
+                    R.drawable.ic_ph_chart_donut to 36,
+                ).forEachIndexed { index, (res, size) ->
+                    if (index > 0) Spacer(Modifier.width(Spacing.sm))
+                    Box(
+                        modifier = Modifier
+                            .size((size + 16).dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.18f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            painter = painterResource(res),
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(size.dp),
+                        )
+                    }
+                }
+            }
+            Text("Get started", style = MaterialTheme.typography.labelMedium, color = Color.White)
             Spacer(Modifier.height(Spacing.sm))
             Text(
                 stringResource(R.string.home_get_started_title),
@@ -376,7 +400,7 @@ private fun GetStartedHero(onAdd: () -> Unit) {
             Text(
                 stringResource(R.string.home_get_started_body),
                 style = MaterialTheme.typography.bodySmall,
-                color = white70,
+                color = Color.White,
             )
             Spacer(Modifier.height(Spacing.lg))
             Button(
@@ -412,32 +436,30 @@ private fun BudgetHero(
     // Always white on the emerald gradient: gold text fails WCAG contrast for the
     // most-read figure, so gold is reserved for non-text accents elsewhere.
     val remainingColor = Color.White
-    val white70 = Color.White.copy(alpha = 0.70f)
-    val white65 = Color.White.copy(alpha = 0.65f)
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.extraLarge)
-            .background(Brush.linearGradient(listOf(DeepTeal, Emerald, EmeraldBright)))
+            .background(Brush.linearGradient(listOf(DeepTeal, Emerald)))
             .padding(20.dp),
     ) {
         Column {
             Text(
                 budget.budget.name.ifBlank { "This period" }.uppercase(),
                 style = MaterialTheme.typography.labelSmall,
-                color = white70,
+                color = Color.White,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(Spacing.lg))
-            Text("Remaining", style = MaterialTheme.typography.labelMedium, color = white65)
+            Text("Remaining", style = MaterialTheme.typography.labelMedium, color = Color.White)
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
                     currency.symbol,
                     style = MaterialTheme.typography.titleMedium,
-                    color = white70,
+                    color = Color.White,
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
@@ -447,14 +469,14 @@ private fun BudgetHero(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.semantics {
-                        contentDescription = "Budget remaining ${MoneyFormat.format(remaining, currency)}"
+                        contentDescription = "Plan remaining ${MoneyFormat.format(remaining, currency)}"
                     },
                 )
             }
             Text(
                 "of ${MoneyFormat.format(planned, currency)} planned",
                 style = MaterialTheme.typography.bodySmall,
-                color = white65,
+                color = Color.White,
             )
             Spacer(Modifier.height(Spacing.lg))
             ProgressBar(
@@ -463,7 +485,8 @@ private fun BudgetHero(
                 } else {
                     (budget.spentMinor.toDouble() / budget.availableMinor).toFloat()
                 },
-                color = Mint,
+                // White fill keeps >=3:1 against the Emerald track/gradient (Mint was ~2.9:1).
+                color = Color.White,
                 trackColor = Color.White.copy(alpha = 0.20f),
                 height = 6,
             )
@@ -472,13 +495,13 @@ private fun BudgetHero(
                 Text(
                     "Spent ${MoneyFormat.format(budget.spentMinor, currency)}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = white70,
+                    color = Color.White,
                 )
                 Spacer(Modifier.weight(1f))
                 Text(
                     "${budget.usedPercent.roundToInt()}% used",
                     style = MaterialTheme.typography.bodySmall,
-                    color = white70,
+                    color = Color.White,
                 )
             }
             Spacer(Modifier.height(Spacing.md))
@@ -489,17 +512,18 @@ private fun BudgetHero(
                     Text(
                         "Funded ${MoneyFormat.format(budget.fundedMinor, currency)}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = white70,
+                        color = Color.White,
                     )
                     Text(
                         "Unfunded ${MoneyFormat.format(unfunded, currency)}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = white70,
+                        color = Color.White,
                     )
                 }
                 TextButton(
                     onClick = { onOpenBudget(budget.budget.id) },
-                    colors = ButtonDefaults.textButtonColors(contentColor = Mint),
+                    // Mint text fails contrast on the Emerald gradient (~2.9:1); use solid white (>=4.9:1).
+                    colors = ButtonDefaults.textButtonColors(contentColor = Color.White),
                 ) {
                     Text(stringResource(R.string.home_open_budget))
                 }
@@ -510,23 +534,22 @@ private fun BudgetHero(
 
 @Composable
 private fun EmptyBudgetHero(onCreateBudget: () -> Unit) {
-    val white70 = Color.White.copy(alpha = 0.70f)
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.extraLarge)
-            .background(Brush.linearGradient(listOf(DeepTeal, Emerald, EmeraldBright)))
+            .background(Brush.linearGradient(listOf(DeepTeal, Emerald)))
             .padding(20.dp),
     ) {
         Column {
-            Text("PLAN THIS MONTH", style = MaterialTheme.typography.labelSmall, color = white70)
+            Text("Plan this month", style = MaterialTheme.typography.labelSmall, color = Color.White)
             Spacer(Modifier.height(Spacing.sm))
-            Text("No budget yet", style = MaterialTheme.typography.headlineMedium, color = Color.White)
+            Text("No plan yet", style = MaterialTheme.typography.headlineMedium, color = Color.White)
             Spacer(Modifier.height(Spacing.xs))
             Text(
                 "Set planned amounts for the categories that matter and mark what you have funded.",
                 style = MaterialTheme.typography.bodySmall,
-                color = white70,
+                color = Color.White,
             )
             Spacer(Modifier.height(Spacing.lg))
             Button(
@@ -536,7 +559,7 @@ private fun EmptyBudgetHero(onCreateBudget: () -> Unit) {
                     contentColor = DeepTeal,
                 ),
             ) {
-                Text("Create a budget")
+                Text("Create a plan")
             }
         }
     }
@@ -571,7 +594,7 @@ private fun SafeToSpendCard(
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "SAFE TO SPEND / DAY",
+                        "Safe to spend / day",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f),
@@ -607,7 +630,7 @@ private fun SafeToSpendCard(
                         )
                     }
                     Text(
-                        "through ${DateText.short(metrics.period.end)} · from your funded flexible budget",
+                        "through ${DateText.short(metrics.period.end)} · from your funded flexible plan",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -618,7 +641,7 @@ private fun SafeToSpendCard(
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
-                        "Fund your flexible budget to see a daily amount.",
+                        "Fund your flexible plan to see a daily amount.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -627,8 +650,8 @@ private fun SafeToSpendCard(
                 if (expanded) {
                     Spacer(Modifier.height(Spacing.xs))
                     Text(
-                        "Safe-to-spend = funded flexible budget remaining minus bills due before the period ends, " +
-                            "divided by the days left. It uses only the information you entered; it is guidance, not a guarantee.",
+                        "Funded flexible plan remaining, minus bills due before the period ends, " +
+                            "divided by days left. Based on the information you entered.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

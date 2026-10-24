@@ -8,6 +8,9 @@
     <string name="common_ok">OK</string>
     <string name="how_calculated_show">How this is calculated</string>
     <string name="how_calculated_hide">Hide calculation</string>
+    <string name="country">Country</string>
+    <string name="primary_currency">Primary currency</string>
+    <string name="suggestions">Suggestions</string>
 
     <!-- Splash -->
     <string name="splash_loading">Loading your data…</string>
@@ -20,8 +23,30 @@
     <string name="onboarding_continue_without_account">Continue without account</string>
     <string name="onboarding_about_accounts">About accounts</string>
     <string name="onboarding_accounts_title">Accounts are optional</string>
-    <string name="onboarding_accounts_body">Mizani works fully offline in this build: no account is required, and no financial data leaves your phone. There is nothing to sign in to yet. You can create an encrypted backup from More → Backup at any time.</string>
+    <string name="onboarding_accounts_body">Mizani works fully offline: no account is required and no financial data leaves your phone. Create an encrypted backup from More → Export &amp; backup anytime.</string>
     <string name="onboarding_not_now">Not now</string>
+    <string name="onboarding_welcome_title">Your money, in balance.</string>
+    <string name="onboarding_welcome_subtitle">Track spending and plan ahead.</string>
+    <string name="onboarding_chip_offline">Offline first</string>
+    <string name="onboarding_chip_encrypted">Encrypted</string>
+    <string name="onboarding_chip_no_signup">No sign-up</string>
+    <string name="onboarding_country_title">Set your country</string>
+    <string name="onboarding_country_subtitle">Shapes wallet suggestions and currency.</string>
+    <string name="onboarding_country_continue">Continue</string>
+    <string name="onboarding_country_skip">Skip</string>
+    <string name="onboarding_wallet_title">Add your first wallet</string>
+    <string name="onboarding_wallet_subtitle">Cash, mobile money or bank.</string>
+    <string name="onboarding_wallet_name_label">Wallet name</string>
+    <string name="onboarding_wallet_type_label">Type</string>
+    <string name="onboarding_wallet_continue">Continue</string>
+    <string name="onboarding_wallet_skip">Skip</string>
+    <string name="onboarding_ready_title">You are ready</string>
+    <string name="onboarding_ready_subtitle">Encrypted on this device. No cloud.</string>
+    <string name="onboarding_ready_balance_label">Starting balance (optional)</string>
+    <string name="onboarding_ready_start">Start using Mizani</string>
+    <string name="onboarding_ready_encrypted">You can back it up later from More.</string>
+    <string name="onboarding_ready_preparing">Preparing your workspace…</string>
+    <string name="onboarding_continue">Continue</string>
 
     <!-- Home -->
     <string name="home_add_transaction">Add transaction</string>
@@ -29,7 +54,7 @@
     <string name="home_get_started_body">Add your first income or expense — it takes a few seconds and works completely offline.</string>
     <string name="home_upcoming_empty">Add recurring bills so Mizani can plan for them before they are due.</string>
     <string name="home_upcoming_tile">Due %1$s</string>
-    <string name="home_open_budget">Open budget</string>
+    <string name="home_open_budget">Open plan</string>
     <string name="home_loading">Loading your summary…</string>
     <string name="home_safe_info_show">How safe-to-spend is calculated</string>
     <string name="home_safe_info_hide">Hide how safe-to-spend is calculated</string>

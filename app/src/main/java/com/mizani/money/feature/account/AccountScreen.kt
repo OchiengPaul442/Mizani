@@ -45,12 +45,11 @@ fun AccountScreen(onBack: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.PhoneAndroid, contentDescription = null)
                     Spacer(Modifier.width(Spacing.sm))
-                    Text("No account required", style = MaterialTheme.typography.titleMedium)
+                    Text("Works offline", style = MaterialTheme.typography.titleMedium)
                 }
                 Spacer(Modifier.height(Spacing.sm))
                 Text(
-                    "Mizani is complete without signing up. Your wallets, transactions, budgets and insights work " +
-                        "offline from the first screen. Nothing is uploaded.",
+                    "Everything in Mizani — wallets, transactions, plans and insights — runs on this phone.",
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
@@ -59,21 +58,21 @@ fun AccountScreen(onBack: () -> Unit) {
             ModeCard(
                 icon = Icons.Rounded.PersonOff,
                 title = "On this phone",
-                body = "Everything lives in the encrypted database on this device. No sign-up, no server and no " +
-                    "background network traffic.",
+                body = "Everything lives in the encrypted database on this device, with no background " +
+                    "network traffic.",
                 active = true,
             )
             ModeCard(
                 icon = Icons.Rounded.FileUpload,
                 title = "Encrypted backup",
-                body = "Create a passphrase-protected .mizani file and restore it later on this or another phone. " +
-                    "Anyone with the file and its passphrase can read it, so keep both safe.",
+                body = "Save a passphrase-protected .mizani file and restore it on this or another phone. " +
+                    "Anyone with the file and passphrase can read it, so keep both safe.",
                 active = false,
             )
             ModeCard(
                 icon = Icons.Rounded.CloudOff,
                 title = "No cloud sync",
-                body = "Mizani has no servers and no online accounts, so nothing is ever uploaded. An encrypted " +
+                body = "Mizani has no servers or online accounts, so nothing is ever uploaded. An encrypted " +
                     "backup file is the only way to move your data between devices.",
                 active = false,
             )
@@ -86,16 +85,16 @@ fun AccountScreen(onBack: () -> Unit) {
                 }
                 Spacer(Modifier.height(Spacing.sm))
                 Text(
-                    "No advertising, no sale of transaction data, no account required for budgeting, and local " +
-                        "export always stays available.",
+                    "No advertising and no sale of transaction data. Planning needs no account, and " +
+                        "local export is always available.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
             Text(
-                "Mizani does not have the internet permission, so it cannot send your financial data anywhere. " +
-                    "Everything you record stays on this phone until you export or back it up yourself.",
+                "Mizani has no internet permission, so your records cannot leave this phone unless you " +
+                    "export them.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

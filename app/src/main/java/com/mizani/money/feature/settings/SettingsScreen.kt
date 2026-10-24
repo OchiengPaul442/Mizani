@@ -267,9 +267,8 @@ fun SettingsScreen(
             title = { Text("CSV is not encrypted") },
             text = {
                 Text(
-                    "A CSV file is readable by any app or person who can open it. It includes transaction dates, " +
-                        "amounts, wallets, categories, payees and notes. Share it only with someone you trust, and " +
-                        "delete the file when you are done. Use the encrypted backup for safer storage.",
+                    "CSV is not encrypted and includes dates, amounts, wallets, categories, payees and notes. " +
+                        "Share it only with people you trust and delete it when done; an encrypted backup is safer.",
                 )
             },
             confirmButton = {
@@ -290,7 +289,7 @@ fun SettingsScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     Text(
-                        "The backup is encrypted with AES-GCM using a key derived from this passphrase. " +
+                        "Encrypted with a key derived from this passphrase. " +
                             "There is no recovery if you forget it.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -406,9 +405,8 @@ fun SettingsScreen(
                     )
                     Spacer(Modifier.height(Spacing.sm))
                     Text(
-                        "This replaces every wallet, transaction, budget, goal, bill and debt currently on this phone. " +
-                            "The import runs in one database transaction and is validated first, so a failed import " +
-                            "does not partially overwrite your ledger.",
+                        "This replaces every wallet, transaction, plan, goal, bill and debt on this phone. " +
+                            "Validation runs first, so a failed import does not partially overwrite your ledger.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                     )
@@ -444,8 +442,8 @@ fun SettingsScreen(
     if (showDeleteConfirm) {
         MizaniConfirmDialog(
             title = "Delete all local data?",
-            body = "Every wallet, transaction, budget, goal, bill and debt on this phone will be deleted. " +
-                "This cannot be undone without an encrypted backup. The app lock and settings will also reset.",
+            body = "Every wallet, transaction, plan, goal, bill and debt on this phone will be deleted. " +
+                "This cannot be undone without an encrypted backup; app lock and settings also reset.",
             confirmLabel = "Delete everything",
             destructive = true,
             onConfirm = {
@@ -690,9 +688,8 @@ private fun CountryCurrencyDialog(
                     )
                 }
                 Text(
-                    "The primary currency is fixed for this workspace. Changing it would require converting " +
-                        "historical amounts, and Mizani never invents an exchange rate. Country only affects " +
-                        "suggestions and labels.",
+                    "The primary currency is fixed after setup. Export your data, then reset or restore " +
+                        "a backup to change it.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -49,6 +49,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.mizani.money.R
 import com.mizani.money.core.model.WalletType
 import com.mizani.money.core.money.Currency
 import com.mizani.money.core.money.MoneyFormat
@@ -171,6 +172,7 @@ fun WalletsScreen(
                 EmptyState(
                     title = "No active wallets",
                     body = "Create a cash, mobile-money, bank, card or savings wallet to start.",
+                    iconRes = R.drawable.ic_ph_wallet,
                     actionLabel = "Add wallet",
                     onAction = { editing = null; showDialog = true },
                 )

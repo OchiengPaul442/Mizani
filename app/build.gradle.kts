@@ -23,6 +23,11 @@ android {
         }
     }
 
+    androidResources {
+        // English-only UI; drop unused library translations (AGP 9.4 replacement for resourceConfigurations).
+        localeFilters += listOf("en")
+    }
+
     buildTypes {
         release {
             // R8 code shrinking + resource optimization enabled (AGP 9.3+ DSL).
@@ -32,6 +37,9 @@ android {
             // src/release/keepRules/*.keep and re-run :app:assembleRelease.
             optimization {
                 enable = true
+            }
+            ndk {
+                abiFilters += listOf("arm64-v8a", "armeabi-v7a")
             }
         }
     }

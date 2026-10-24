@@ -53,6 +53,7 @@ import com.mizani.money.data.local.DebtEntity
 import com.mizani.money.data.repo.LedgerSnapshot
 import com.mizani.money.ui.AppUiState
 import com.mizani.money.ui.AppViewModel
+import com.mizani.money.R
 import com.mizani.money.ui.components.DateField
 import com.mizani.money.ui.components.EmptyState
 import com.mizani.money.ui.components.MizaniAmountField
@@ -180,8 +181,8 @@ fun DebtsScreen(
             }
 
             Text(
-                "Debt tracking is for awareness only. Mizani does not provide credit scores, eligibility decisions or " +
-                    "recommendations to borrow.",
+                "Debt tracking is for awareness only; Mizani does not provide credit scores, eligibility decisions or " +
+                    "borrowing advice.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -189,8 +190,8 @@ fun DebtsScreen(
             if (active.isEmpty()) {
                 EmptyState(
                     title = "No debts tracked",
-                    body = "Add a balance, required payment and next due date to see payment burden alongside your budget.",
-                    icon = Icons.Rounded.AccountBalance,
+                    body = "Add a balance, required payment and next due date to see payment burden alongside your plan.",
+                    iconRes = R.drawable.ic_ph_bank,
                     actionLabel = "Add debt",
                     onAction = { editing = null; showDialog = true },
                 )

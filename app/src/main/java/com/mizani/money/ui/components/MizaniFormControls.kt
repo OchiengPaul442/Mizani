@@ -122,7 +122,7 @@ fun MizaniAmountField(
         label = { Text(label) },
         prefix = {
             Text(
-                currency.symbol + "  ",
+                currency.symbol + " ",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -55,7 +55,9 @@ val OutlineVariantLight = Color(0xFFE1ECE8)
 val SurfaceDarkLowest = Color(0xFF07161C)
 val SurfaceDarkLow = Color(0xFF0D252C) // compact card tone raised above the #0B2028 page
 val SurfaceDarkHighest = Color(0xFF1A3D45)
-val OutlineDark = Color(0xFF3D5A60)
+// Lightened from #3D5A60 so the 3:1 UI-component contrast threshold is met against the
+// #0B2028 dark background (measured ~3.9:1). Kept subtle so dark mode stays dark.
+val OutlineDark = Color(0xFF53757A)
 val ForegroundDark = Color(0xFFEAF4F1)
 
 // Error roles

@@ -75,17 +75,16 @@ fun AboutScreen(state: AppUiState, onBack: () -> Unit) {
                 }
                 Spacer(Modifier.height(Spacing.sm))
                 Text(
-                    "Wallets, transactions, budgets, goals, bills, debts, notes and balances are stored only in the " +
-                        "encrypted local database. Uninstalling the app removes this local data. Without an exported " +
-                        "backup it cannot be recovered.",
+                    "Wallets, transactions, plans, goals, bills, debts, notes and balances live only in the " +
+                        "encrypted local database. Uninstalling removes them, and only an exported backup " +
+                        "can restore them.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(Spacing.md))
                 Text(
-                    "If someone copies the database file without the device Keystore key, the content is not readable. " +
-                        "Android manufacturer device-transfer tools can vary, which is why the platform backup rules " +
-                        "explicitly exclude this data and the database remains encrypted.",
+                    "If someone copies the database file without the device Keystore key, the content is " +
+                        "not readable.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -99,8 +98,8 @@ fun AboutScreen(state: AppUiState, onBack: () -> Unit) {
                 }
                 Spacer(Modifier.height(Spacing.sm))
                 Text(
-                    "This app contains no analytics SDK, no crash reporter that sends financial values, no advertising " +
-                        "identifier and no server-side profiling. Financial figures never appear in application logs.",
+                    "There is no crash reporter or advertising identifier, and no server-side profiling. " +
+                        "Financial figures never appear in application logs.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -111,8 +110,8 @@ fun AboutScreen(state: AppUiState, onBack: () -> Unit) {
                 Spacer(Modifier.height(Spacing.sm))
                 Text(
                     "Mizani is not a bank, payment processor, wallet holding customer funds, lender, credit-scoring " +
-                        "service, investment broker or tax platform. It does not provide credit decisions or guarantee " +
-                        "that safe-to-spend amounts will be sufficient.",
+                        "service, investment broker or tax service. It gives no credit decisions and cannot " +
+                        "guarantee that safe-to-spend amounts will be sufficient.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -122,9 +121,8 @@ fun AboutScreen(state: AppUiState, onBack: () -> Unit) {
                 Text("Your controls", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(Spacing.sm))
                 Text(
-                    "Create a full encrypted backup or a CSV at any time from Settings. Delete all local data from " +
-                        "Settings with confirmation. App lock adds a 6-digit PIN and optional biometric unlock. " +
-                        "Cloud backup to an online account is not available in Mizani and is never silently enabled.",
+                    "Create an encrypted backup or a CSV any time from Settings, and delete all local data " +
+                        "with confirmation. App lock adds a 6-digit PIN with optional biometric unlock.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

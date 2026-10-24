@@ -1,10 +1,17 @@
 package com.mizani.money.feature.onboarding
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,9 +23,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -33,10 +41,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -53,29 +59,35 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mizani.money.R
 import com.mizani.money.core.model.CountryPacks
+import com.mizani.money.core.model.WalletSuggestion
 import com.mizani.money.core.model.WalletType
 import com.mizani.money.core.money.Currencies
 import com.mizani.money.core.money.Currency
 import com.mizani.money.core.money.MoneyFormat
 import com.mizani.money.ui.AppViewModel
 import com.mizani.money.ui.components.MizaniAmountField
-import com.mizani.money.ui.components.MizaniMark
 import com.mizani.money.ui.components.MizaniIcons
+import com.mizani.money.ui.components.MizaniMark
 import com.mizani.money.ui.components.MizaniPicker
 import com.mizani.money.ui.components.PickerOption
 import com.mizani.money.ui.components.Spacing
 import com.mizani.money.ui.theme.DeepTeal
 import com.mizani.money.ui.theme.Emerald
+import com.mizani.money.ui.theme.EmeraldDeep
 import com.mizani.money.ui.theme.Mint
 import kotlinx.coroutines.launch
 
@@ -93,7 +105,6 @@ fun OnboardingScreen(vm: AppViewModel) {
     val scope = rememberCoroutineScope()
     val pack = CountryPacks.byCode(countryCode)
     val currency = Currencies.byCode(currencyCode)
-    // Resolved here (composable context) so the plain local `finish` closure can use them.
     val balanceErrorText = stringResource(R.string.onboarding_error_balance)
     val walletNameErrorText = stringResource(R.string.onboarding_error_wallet_name)
     val workspaceErrorText = stringResource(R.string.onboarding_error_workspace)
@@ -142,9 +153,7 @@ fun OnboardingScreen(vm: AppViewModel) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (step > 0) {
-                    IconButton(onClick = { step-- }) {
-                        Icon(Icons.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back))
-                    }
+                    IconButton(onClick = { step-- }, cd = stringResource(R.string.common_back))
                 } else {
                     Spacer(Modifier.size(48.dp))
                 }
@@ -154,11 +163,19 @@ fun OnboardingScreen(vm: AppViewModel) {
                 Spacer(Modifier.size(48.dp))
             }
 
-            Spacer(Modifier.height(Spacing.lg))
+            Spacer(Modifier.height(Spacing.sm))
 
+            // Horizontal slide between steps: forward slides in from the right, back from the left.
             AnimatedContent(
                 targetState = step,
-                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                transitionSpec = {
+                    val forward = targetState > initialState
+                    val sign = if (forward) 1 else -1
+                    (slideInHorizontally(animationSpec = tween(280)) { full -> sign * full })
+                        .togetherWith(
+                            slideOutHorizontally(animationSpec = tween(280)) { full -> -sign * full },
+                        )
+                },
                 label = "onboarding",
             ) { current ->
                 when (current) {
@@ -171,11 +188,11 @@ fun OnboardingScreen(vm: AppViewModel) {
                         currencyCode = currencyCode,
                         onCountryChange = { selected ->
                             countryCode = selected
-                            val nextCurrency = CountryPacks.byCode(selected).currencyCode
-                            currencyCode = nextCurrency
+                            currencyCode = CountryPacks.byCode(selected).currencyCode
                         },
                         onCurrencyChange = { currencyCode = it },
                         onContinue = { step = 2 },
+                        onSkip = { step = 2 },
                     )
                     2 -> WalletStep(
                         packSuggestions = pack.walletSuggestions,
@@ -196,12 +213,17 @@ fun OnboardingScreen(vm: AppViewModel) {
                                 step = 3
                             }
                         },
+                        onSkip = {
+                            if (walletName.isBlank()) {
+                                walletName = "Cash"
+                                walletType = WalletType.CASH
+                            }
+                            step = 3
+                        },
                     )
                     else -> ReadyStep(
-                        countryName = pack.name,
                         currency = currency,
                         walletName = walletName,
-                        walletType = walletType,
                         balanceText = balanceText,
                         onBalanceChange = { input -> balanceText = input },
                         saving = saving,
@@ -232,9 +254,16 @@ fun OnboardingScreen(vm: AppViewModel) {
     }
 }
 
+// Reusable icon button with a stable 48dp touch target.
+@Composable
+private fun IconButton(onClick: () -> Unit, cd: String) {
+    androidx.compose.material3.IconButton(onClick = onClick, modifier = Modifier.size(48.dp)) {
+        Icon(Icons.Rounded.ArrowBack, contentDescription = cd)
+    }
+}
+
 @Composable
 private fun StepDots(current: Int, total: Int) {
-    // Decorative progress indicator: announced as one description, not as N loose boxes.
     val stepDescription = stringResource(R.string.onboarding_step_of, current + 1, total)
     Row(
         modifier = Modifier.semantics { contentDescription = stepDescription },
@@ -248,64 +277,129 @@ private fun StepDots(current: Int, total: Int) {
                     .clip(CircleShape)
                     .background(
                         if (index <= current) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.outlineVariant,
+                        else MaterialTheme.colorScheme.outline,
                     ),
             )
         }
     }
 }
 
+// A decorative illustration block: soft concentric circles with a primary Phosphor icon and
+// floating secondary chips that drift gently forever. Decorative (not announced).
+@Composable
+private fun IllustrationArt(
+    modifier: Modifier = Modifier,
+    primaryRes: Int,
+    secondaryRes: Int,
+    tertiaryRes: Int,
+    tint: Color = MaterialTheme.colorScheme.onPrimaryContainer,
+) {
+    val drift by rememberInfiniteTransition(label = "float").animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3200, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "float",
+    )
+    val wobbleX = kotlin.math.sin(drift * Math.PI * 2).toFloat() * 10f
+    val wobbleY = kotlin.math.cos(drift * Math.PI * 2).toFloat() * 8f
+
+    Box(modifier = modifier.size(200.dp), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .size(200.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)),
+        )
+        Box(
+            modifier = Modifier
+                .size(150.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)),
+        )
+        Icon(
+            painter = painterResource(primaryRes),
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(92.dp),
+        )
+        FloatingChip(res = secondaryRes, size = 44, offsetX = (-70 + wobbleX), offsetY = (-48 + wobbleY), tint = tint)
+        FloatingChip(res = tertiaryRes, size = 40, offsetX = (72 - wobbleX), offsetY = (44 - wobbleY), tint = tint)
+    }
+}
+
+@Composable
+private fun FloatingChip(res: Int, size: Int, offsetX: Float, offsetY: Float, tint: Color) {
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    Box(
+        modifier = Modifier
+            .graphicsLayer {
+                translationX = with(density) { offsetX.dp.toPx() }
+                translationY = with(density) { offsetY.dp.toPx() }
+            }
+            .size((size + 18).dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painter = painterResource(res),
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(size.dp),
+        )
+    }
+}
+
 @Composable
 private fun WelcomeStep(onGuest: () -> Unit, onCreateAccount: () -> Unit) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.extraLarge)
-            .background(Brush.linearGradient(listOf(DeepTeal, Emerald, Color(0xFF0F5A57))))
-            .padding(20.dp),
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            MizaniMark(size = 56)
-            Spacer(Modifier.width(Spacing.md))
-            Column {
-                Text(
-                    "MIZANI",
-                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 3.sp),
-                    color = Mint,
-                )
-                Text(
-                    "Personal money, offline",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.7f),
-                )
-            }
-        }
-        Spacer(Modifier.height(24.dp))
-        Text(
-            "Your money, in balance.",
-            style = MaterialTheme.typography.displayMedium,
-            color = Color.White,
-            maxLines = 2,
+        IllustrationArt(
+            primaryRes = R.drawable.ic_ph_wallet,
+            secondaryRes = R.drawable.ic_ph_chart_donut,
+            tertiaryRes = R.drawable.ic_ph_shield_check,
         )
+        Spacer(Modifier.height(Spacing.lg))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            MizaniMark(size = 36)
+            Spacer(Modifier.width(Spacing.sm))
+            Text(
+                "MIZANI",
+                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 3.sp, color = MaterialTheme.colorScheme.primary),
+            )
+        }
         Spacer(Modifier.height(Spacing.md))
         Text(
-            "Understand your money, even offline. Cash, mobile money and bank accounts in one calm place — " +
-                "built for income that does not always arrive on the same day.",
-            style = MaterialTheme.typography.bodyLarge,
-            color = Color.White.copy(alpha = 0.8f),
+            stringResource(R.string.onboarding_welcome_title),
+            style = MaterialTheme.typography.displaySmall,
+            textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(20.dp))
-        FeatureLine(Icons.Rounded.OfflineBolt, "Works without internet, from the first screen")
         Spacer(Modifier.height(Spacing.sm))
-        FeatureLine(Icons.Rounded.PersonOff, "No account needed. Your data stays on this phone")
-        Spacer(Modifier.height(Spacing.sm))
-        FeatureLine(Icons.Rounded.Lock, "Encrypted local database and optional app lock")
-        Spacer(Modifier.height(24.dp))
+        Text(
+            stringResource(R.string.onboarding_welcome_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(Spacing.lg))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.CenterHorizontally),
+        ) {
+            ValueChip(Icons.Rounded.OfflineBolt, stringResource(R.string.onboarding_chip_offline))
+            ValueChip(Icons.Rounded.Lock, stringResource(R.string.onboarding_chip_encrypted))
+            ValueChip(Icons.Rounded.PersonOff, stringResource(R.string.onboarding_chip_no_signup))
+        }
+        Spacer(Modifier.height(Spacing.xl))
         Button(
             onClick = onGuest,
             modifier = Modifier.fillMaxWidth().height(52.dp),
             shape = MaterialTheme.shapes.small,
-            colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = DeepTeal),
         ) {
             Text(stringResource(R.string.onboarding_continue_without_account), style = MaterialTheme.typography.titleSmall)
         }
@@ -314,37 +408,26 @@ private fun WelcomeStep(onGuest: () -> Unit, onCreateAccount: () -> Unit) {
             onClick = onCreateAccount,
             modifier = Modifier.fillMaxWidth().height(52.dp),
             shape = MaterialTheme.shapes.small,
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.7f)),
         ) {
-            // Opens an explanation, not a sign-up flow: the label must not promise one.
             Text(stringResource(R.string.onboarding_about_accounts))
         }
-        Spacer(Modifier.height(Spacing.md))
-        Text(
-            "Guest mode is complete. You never need an account to use Mizani.",
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.6f),
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
-        )
     }
 }
 
 @Composable
-private fun FeatureLine(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .background(Mint.copy(alpha = 0.10f)),
-            contentAlignment = Alignment.Center,
+private fun ValueChip(icon: ImageVector, label: String) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.small,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
-            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(17.dp))
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+            Text(label, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium)
         }
-        Spacer(Modifier.width(Spacing.md))
-        Text(text, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.9f))
     }
 }
 
@@ -355,18 +438,26 @@ private fun CountryStep(
     onCountryChange: (String) -> Unit,
     onCurrencyChange: (String) -> Unit,
     onContinue: () -> Unit,
+    onSkip: () -> Unit,
 ) {
     val country = CountryPacks.byCode(countryCode)
-    Column {
-        Text("Where do you keep your money?", style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.height(Spacing.sm))
+    Column(modifier = Modifier.fillMaxWidth()) {
+        IllustrationArt(
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            primaryRes = R.drawable.ic_ph_globe,
+            secondaryRes = R.drawable.ic_ph_bank,
+            tertiaryRes = R.drawable.ic_ph_coins,
+        )
+        Spacer(Modifier.height(Spacing.lg))
+        Text(stringResource(R.string.onboarding_country_title), style = MaterialTheme.typography.headlineMedium)
+        Spacer(Modifier.height(Spacing.xs))
         Text(
-            "Sets your wallet suggestions and primary currency. You can change these later.",
+            stringResource(R.string.onboarding_country_subtitle),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(Modifier.height(Spacing.xl))
-        Text("Country", style = MaterialTheme.typography.labelLarge)
+        Spacer(Modifier.height(Spacing.lg))
+        Text(stringResource(R.string.country), style = MaterialTheme.typography.labelLarge)
         Spacer(Modifier.height(6.dp))
         MizaniPicker(
             selectedText = country.name,
@@ -375,7 +466,7 @@ private fun CountryStep(
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(Spacing.lg))
-        Text("Primary currency", style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.primary_currency), style = MaterialTheme.typography.labelLarge)
         Spacer(Modifier.height(6.dp))
         MizaniPicker(
             selectedText = "${Currencies.byCode(currencyCode).code} · ${Currencies.byCode(currencyCode).name}",
@@ -392,40 +483,52 @@ private fun CountryStep(
                 Icon(MizaniIcons.wallet(WalletType.MOBILE_MONEY), contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.width(Spacing.md))
                 Text(
-                    "Common here: ${country.mobileMoneyProviders.joinToString(", ")}. You can add any wallet yourself.",
+                    "Common here: ${country.mobileMoneyProviders.joinToString(", ")}.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
-        Spacer(Modifier.height(Spacing.xxl))
+        Spacer(Modifier.height(Spacing.xl))
         Button(onClick = onContinue, modifier = Modifier.fillMaxWidth().height(54.dp), shape = MaterialTheme.shapes.small) {
-            Text("Continue")
+            Text(stringResource(R.string.onboarding_country_continue))
+        }
+        Spacer(Modifier.height(8.dp))
+        TextButton(onClick = onSkip, modifier = Modifier.fillMaxWidth().height(48.dp), shape = MaterialTheme.shapes.small) {
+            Text(stringResource(R.string.onboarding_country_skip))
         }
     }
 }
 
 @Composable
 private fun WalletStep(
-    packSuggestions: List<com.mizani.money.core.model.WalletSuggestion>,
+    packSuggestions: List<WalletSuggestion>,
     walletName: String,
     walletType: WalletType,
     error: String?,
     onNameChange: (String) -> Unit,
     onTypeChange: (WalletType) -> Unit,
-    onPickSuggestion: (com.mizani.money.core.model.WalletSuggestion) -> Unit,
+    onPickSuggestion: (WalletSuggestion) -> Unit,
     onContinue: () -> Unit,
+    onSkip: () -> Unit,
 ) {
-    Column {
-        Text("Add your first wallet", style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.height(Spacing.sm))
+    Column(modifier = Modifier.fillMaxWidth()) {
+        IllustrationArt(
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            primaryRes = R.drawable.ic_ph_wallet,
+            secondaryRes = R.drawable.ic_ph_coins,
+            tertiaryRes = R.drawable.ic_ph_bank,
+        )
+        Spacer(Modifier.height(Spacing.lg))
+        Text(stringResource(R.string.onboarding_wallet_title), style = MaterialTheme.typography.headlineMedium)
+        Spacer(Modifier.height(Spacing.xs))
         Text(
-            "Any place your money lives — cash, mobile money or a bank account.",
+            stringResource(R.string.onboarding_wallet_subtitle),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(Modifier.height(Spacing.xl))
-        Text("Suggestions", style = MaterialTheme.typography.labelLarge)
+        Spacer(Modifier.height(Spacing.lg))
+        Text(stringResource(R.string.suggestions), style = MaterialTheme.typography.labelLarge)
         Spacer(Modifier.height(Spacing.sm))
         packSuggestions.forEach { suggestion ->
             val selected = walletName == suggestion.name && walletType == suggestion.type
@@ -452,20 +555,23 @@ private fun WalletStep(
                         Text(suggestion.name, style = MaterialTheme.typography.titleSmall)
                         Text(suggestion.type.label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    if (selected) Icon(Icons.Rounded.Check, contentDescription = "Selected")
+                    if (selected) Icon(Icons.Rounded.Check, contentDescription = stringResource(R.string.common_ok))
                 }
             }
         }
         Spacer(Modifier.height(Spacing.lg))
-        OutlinedTextField(
+        Text(stringResource(R.string.onboarding_wallet_name_label), style = MaterialTheme.typography.labelLarge)
+        Spacer(Modifier.height(6.dp))
+        androidx.compose.material3.OutlinedTextField(
             value = walletName,
             onValueChange = onNameChange,
-            label = { Text("Wallet name") },
             singleLine = true,
             shape = MaterialTheme.shapes.small,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(Spacing.md))
+        Text(stringResource(R.string.onboarding_wallet_type_label), style = MaterialTheme.typography.labelLarge)
+        Spacer(Modifier.height(6.dp))
         MizaniPicker(
             selectedText = "Type · ${walletType.label}",
             options = WalletType.entries.map { PickerOption(it.name, it.label) },
@@ -474,7 +580,6 @@ private fun WalletStep(
         )
         if (error != null) {
             Spacer(Modifier.height(Spacing.md))
-            // Announced when it appears so validation is not visual-only.
             Text(
                 error,
                 color = MaterialTheme.colorScheme.error,
@@ -482,65 +587,64 @@ private fun WalletStep(
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
             )
         }
-        Spacer(Modifier.height(Spacing.xxl))
+        Spacer(Modifier.height(Spacing.xl))
         Button(onClick = onContinue, modifier = Modifier.fillMaxWidth().height(54.dp), shape = MaterialTheme.shapes.small) {
-            Text("Continue")
+            Text(stringResource(R.string.onboarding_wallet_continue))
+        }
+        Spacer(Modifier.height(8.dp))
+        TextButton(onClick = onSkip, modifier = Modifier.fillMaxWidth().height(48.dp), shape = MaterialTheme.shapes.small) {
+            Text(stringResource(R.string.onboarding_wallet_skip))
         }
     }
 }
 
 @Composable
 private fun ReadyStep(
-    countryName: String,
     currency: Currency,
     walletName: String,
-    walletType: WalletType,
     balanceText: String,
     onBalanceChange: (String) -> Unit,
     saving: Boolean,
     error: String?,
     onFinish: () -> Unit,
 ) {
-    Column {
-        Text("Start from where you are", style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.height(Spacing.sm))
+    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        IllustrationArt(
+            primaryRes = R.drawable.ic_ph_shield_check,
+            secondaryRes = R.drawable.ic_ph_check_circle,
+            tertiaryRes = R.drawable.ic_ph_sparkle,
+        )
+        Spacer(Modifier.height(Spacing.lg))
+        Text(stringResource(R.string.onboarding_ready_title), style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
+        Spacer(Modifier.height(Spacing.xs))
         Text(
-            "Enter the current balance of this wallet if you know it. Skipping is fine — you can add it later.",
+            stringResource(R.string.onboarding_ready_subtitle),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(Spacing.xl))
+        Spacer(Modifier.height(Spacing.lg))
         Surface(
-            color = MaterialTheme.colorScheme.primaryContainer,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
             shape = MaterialTheme.shapes.large,
         ) {
-            Column(Modifier.fillMaxWidth().padding(Spacing.xl)) {
+            Column(Modifier.fillMaxWidth().padding(Spacing.lg)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(MizaniIcons.wallet(walletType), contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Icon(MizaniIcons.wallet(WalletType.CASH), contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.width(Spacing.md))
-                    Column {
-                        Text(walletName.ifBlank { walletType.label }, style = MaterialTheme.typography.titleMedium)
-                        Text("${walletType.label} · ${currency.code}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f))
-                    }
+                    Text(walletName.ifBlank { WalletType.CASH.label }, style = MaterialTheme.typography.titleMedium)
                 }
-                Spacer(Modifier.height(Spacing.lg))
+                Spacer(Modifier.height(Spacing.md))
                 MizaniAmountField(
                     value = balanceText,
                     onValueChange = onBalanceChange,
-                    label = "Starting balance (optional)",
+                    label = stringResource(R.string.onboarding_ready_balance_label),
                     currency = currency,
-                )
-                Spacer(Modifier.height(Spacing.md))
-                Text(
-                    "Country: $countryName · Currency: ${currency.code}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f),
                 )
             }
         }
         if (error != null) {
             Spacer(Modifier.height(Spacing.md))
-            // Announced when it appears so validation is not visual-only.
             Text(
                 error,
                 color = MaterialTheme.colorScheme.error,
@@ -550,10 +654,10 @@ private fun ReadyStep(
         }
         Spacer(Modifier.height(Spacing.md))
         Text(
-            "Your information is stored in an encrypted database on this device. Uninstalling the app without an " +
-                "export removes guest data permanently.",
+            stringResource(R.string.onboarding_ready_encrypted),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(Spacing.xl))
         Button(
@@ -562,15 +666,7 @@ private fun ReadyStep(
             modifier = Modifier.fillMaxWidth().height(54.dp),
             shape = MaterialTheme.shapes.small,
         ) {
-            Text(if (saving) "Preparing your workspace…" else "Start using Mizani")
+            Text(if (saving) stringResource(R.string.onboarding_ready_preparing) else stringResource(R.string.onboarding_ready_start))
         }
-        Spacer(Modifier.height(Spacing.sm))
-        Text(
-            "You can leave the balance blank and add it later.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
-        )
     }
 }

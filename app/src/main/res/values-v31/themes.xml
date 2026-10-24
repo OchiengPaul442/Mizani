@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- API 31+ window splash screen so the cold start matches the Compose splash theme. -->
+    <style name="Theme.Mizani" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@drawable/mizani_launch_background</item>
+        <item name="android:windowSplashScreenBackground">@color/mizani_window_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/mizani_splash_logo</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/mizani_window_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
+</resources>

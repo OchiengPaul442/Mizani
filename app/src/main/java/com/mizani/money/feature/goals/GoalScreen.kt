@@ -43,6 +43,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.mizani.money.R
 import com.mizani.money.core.model.WalletType
 import com.mizani.money.core.money.MoneyFormat
 import com.mizani.money.core.time.DateText
@@ -55,6 +56,7 @@ import com.mizani.money.ui.components.EmptyState
 import com.mizani.money.ui.components.MizaniAmountField
 import com.mizani.money.ui.components.MizaniCard
 import com.mizani.money.ui.components.MizaniConfirmDialog
+import com.mizani.money.ui.components.MizaniCelebration
 import com.mizani.money.ui.components.MizaniIcons
 import com.mizani.money.ui.components.MizaniPicker
 import com.mizani.money.ui.components.MizaniTopBar
@@ -101,6 +103,7 @@ fun GoalScreen(
     var note by rememberSaveable(goalId) { mutableStateOf(existing?.note ?: "") }
     var showContribute by remember { mutableStateOf(false) }
     var showArchive by remember { mutableStateOf(false) }
+    var showCelebration by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
     var saving by remember { mutableStateOf(false) }
@@ -123,7 +126,7 @@ fun GoalScreen(
                     runCatching { vm.finance.contributeToGoal(existing.id, amount, walletId, today) }
                         .onSuccess {
                             showContribute = false
-                            message = "Contribution added."
+                            showCelebration = true
                         }
                         .onFailure { error = it.message ?: "Could not add this contribution. Try again." }
                 }
@@ -181,6 +184,7 @@ fun GoalScreen(
         }
     }
 
+    Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize()) {
         MizaniTopBar(
             title = if (existing == null) "New goal" else existing.name,
@@ -208,6 +212,7 @@ fun GoalScreen(
                 EmptyState(
                     title = "Goal not found",
                     body = "It may have been deleted. Go back and choose another goal.",
+                    iconRes = R.drawable.ic_ph_shield_check,
                     actionLabel = "Go back",
                     onAction = onBack,
                 )
@@ -429,5 +434,9 @@ fun GoalScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+    if (showCelebration) {
+        MizaniCelebration(onFinished = { showCelebration = false })
+    }
     }
 }

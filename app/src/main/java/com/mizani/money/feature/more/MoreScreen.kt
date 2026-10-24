@@ -2,7 +2,6 @@ package com.mizani.money.feature.more
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,16 +9,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountBalance
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Category
-import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Info
@@ -41,7 +37,6 @@ import androidx.compose.ui.unit.dp
 import com.mizani.money.core.model.AppInfo
 import com.mizani.money.ui.AppUiState
 import com.mizani.money.ui.AppViewModel
-import com.mizani.money.ui.components.MizaniCard
 import com.mizani.money.ui.components.MizaniInfoRow
 import com.mizani.money.ui.components.MizaniMark
 import com.mizani.money.ui.components.MizaniSectionCard
@@ -88,10 +83,9 @@ fun MoreScreen(
                     Column(Modifier.weight(1f)) {
                         Text("Local-only mode", style = MaterialTheme.typography.titleMedium, color = Color.White)
                         Text(
-                            "No account, no cloud, no advertising. Your financial data stays in the encrypted " +
-                                "database on this phone.",
+                            "No account, no cloud. Your data stays encrypted on this phone.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.8f),
+                            color = Color.White,
                         )
                     }
                 }
@@ -157,29 +151,6 @@ fun MoreScreen(
                     subtitle = "How Mizani protects your data",
                     onClick = { onNavigate("about") },
                 )
-            }
-
-            MizaniCard {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(Icons.Rounded.CloudOff, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Spacer(Modifier.width(Spacing.md))
-                    Column(Modifier.weight(1f)) {
-                        Text("No cloud sync", style = MaterialTheme.typography.titleSmall)
-                        Text(
-                            "Mizani has no online accounts. Use an encrypted backup to move your data to another device.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {

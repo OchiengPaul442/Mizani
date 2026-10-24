@@ -18,7 +18,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -39,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.mizani.money.R
 import com.mizani.money.core.model.RecurringType
 import com.mizani.money.core.model.TransactionType
 import com.mizani.money.core.money.Currency
@@ -57,6 +57,7 @@ import com.mizani.money.ui.AppViewModel
 import com.mizani.money.ui.components.CategoryAvatar
 import com.mizani.money.ui.components.EmptyState
 import com.mizani.money.ui.components.MizaniCard
+import com.mizani.money.ui.components.MizaniCelebration
 import com.mizani.money.ui.components.MizaniTopBar
 import com.mizani.money.ui.components.ProgressBar
 import com.mizani.money.ui.components.SectionHeader
@@ -71,7 +72,7 @@ import java.time.LocalDate
 import kotlin.math.roundToInt
 
 private enum class PlanTab(val label: String) {
-    BUDGET("Budget"),
+    BUDGET("This month"),
     INCOME("Income"),
     BILLS("Bills"),
     GOALS("Goals"),
@@ -109,6 +110,7 @@ fun PlanScreen(
     var showSourceDialog by remember { mutableStateOf(false) }
     var fundingLine by remember { mutableStateOf<BudgetLineProgress?>(null) }
     var contributingGoal by remember { mutableStateOf<GoalProgress?>(null) }
+    var showCelebration by remember { mutableStateOf(false) }
 
     val recurringDialogInitial = editingRule
     if (showRecurringDialog) {
@@ -183,7 +185,10 @@ fun PlanScreen(
                             end = LocalDate.ofEpochDay(budget.endEpochDay),
                             lines = inputs,
                         )
-                    }.onSuccess { fundingLine = null }
+                    }.onSuccess {
+                            fundingLine = null
+                            showCelebration = true
+                        }
                         .onFailure { error = it.message ?: "Could not update the funded amount. Try again." }
                 }
             },
@@ -209,6 +214,7 @@ fun PlanScreen(
         )
     }
 
+    Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize()) {
         MizaniTopBar(title = "Plan", subtitle = "What this money must cover")
         // PrimaryTabRow (Material3 stable) draws the brand emerald pill indicator on the screen background.
@@ -310,6 +316,10 @@ fun PlanScreen(
             }
         }
     }
+    if (showCelebration) {
+        MizaniCelebration(onFinished = { showCelebration = false })
+    }
+    }
 }
 
 @Composable
@@ -332,10 +342,11 @@ private fun BudgetTab(
     ) {
         if (budget == null || progress == null) {
             EmptyState(
-                title = "No budget for this month",
+                title = "No plan for this month",
                 body = "Plan what this money must cover. Mizani keeps expected income separate from money actually received, " +
                     "and separates funded amounts from planned amounts.",
-                actionLabel = "Create a budget",
+                iconRes = R.drawable.ic_ph_chart_donut,
+                actionLabel = "Create a plan",
                 onAction = onCreate,
             )
             return@Column
@@ -415,7 +426,7 @@ private fun BudgetTab(
                 shape = MaterialTheme.shapes.medium,
             ) {
                 Text(
-                    "${MoneyFormat.format(progress.unbudgetedSpendMinor, currency)} of spending this period is outside the categories in this budget.",
+                    "${MoneyFormat.format(progress.unbudgetedSpendMinor, currency)} of spending this period is outside the categories in this plan.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                     modifier = Modifier.padding(Spacing.md),
@@ -426,7 +437,7 @@ private fun BudgetTab(
         SectionHeader(title = "Categories")
         if (progress.lines.isEmpty()) {
             Text(
-                "This budget has no categories yet. Edit it to add planned amounts.",
+                "This plan has no categories yet. Edit it to add planned amounts.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -438,7 +449,7 @@ private fun BudgetTab(
             }
         Text(
             "Available = planned + rollover. Remaining = available − eligible spending. " +
-                "Only spending in this budget's categories counts toward its lines.",
+                "Only spending in this plan's categories counts toward its lines.",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -533,7 +544,7 @@ private fun IncomeTab(
         verticalArrangement = Arrangement.spacedBy(Spacing.lg),
     ) {
         MizaniCard {
-            Text("THIS MONTH", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("This month", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Row {
                 Column(Modifier.weight(1f)) {
                     Text("Expected", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -725,7 +736,7 @@ private fun GoalsTab(
                 title = "No goals yet",
                 body = "Set aside money for an emergency fund, school fees, rent, stock or a new phone. " +
                     "Transfers into savings are not counted as spending.",
-                icon = Icons.Rounded.Flag,
+                iconRes = R.drawable.ic_ph_check_circle,
                 actionLabel = "Create a goal",
                 onAction = onAdd,
             )

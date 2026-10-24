@@ -43,6 +43,7 @@ import com.mizani.money.core.money.MoneyFormat
 import com.mizani.money.core.time.DateRange
 import com.mizani.money.core.time.DateText
 import com.mizani.money.core.time.Periods
+import com.mizani.money.R
 import com.mizani.money.data.local.TransactionEntity
 import com.mizani.money.ui.AppUiState
 import com.mizani.money.ui.AppViewModel
@@ -260,8 +261,10 @@ fun TransactionsScreen(
                         } else {
                             "Try a different search, date range or filter."
                         },
+                        iconRes = R.drawable.ic_ph_chart_donut,
                         actionLabel = if (snapshot.transactions.isEmpty()) "Add transaction" else null,
                         onAction = if (snapshot.transactions.isEmpty()) onAdd else null,
+                        compact = true,
                     )
                 }
             } else {
@@ -336,11 +339,11 @@ private fun SummaryRow(
     MizaniCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(Spacing.md)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("INCOME", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Income", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(MoneyFormat.format(incomeMinor, currency), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
             }
             Column(Modifier.weight(1f)) {
-                Text("NET EXPENSES", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Net spending", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(MoneyFormat.format(expenseMinor, currency), style = MaterialTheme.typography.titleSmall)
             }
             Text(

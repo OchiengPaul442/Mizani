@@ -58,6 +58,7 @@ import com.mizani.money.domain.analytics.IncomeVariability
 import com.mizani.money.ui.AppUiState
 import com.mizani.money.ui.AppViewModel
 import com.mizani.money.ui.components.DateRangePickerDialog
+import com.mizani.money.ui.components.EmptyState
 import com.mizani.money.ui.components.InsightCard
 import com.mizani.money.ui.components.MizaniCard
 import com.mizani.money.ui.components.MizaniCashFlowBars
@@ -70,7 +71,6 @@ import com.mizani.money.ui.components.Spacing
 import com.mizani.money.ui.components.parseHexColor
 import com.mizani.money.ui.theme.DeepTeal
 import com.mizani.money.ui.theme.Emerald
-import com.mizani.money.ui.theme.EmeraldBright
 import java.time.YearMonth
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -179,10 +179,10 @@ fun InsightsScreen(
             )
 
             if (snapshot.transactions.isEmpty()) {
-                Text(
-                    "Insights appear after you record real transactions. Mizani never estimates your spending to fill a chart.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                EmptyState(
+                    title = "No transactions yet",
+                    body = "Record income or spending to fill these charts.",
+                    iconRes = R.drawable.ic_ph_chart_donut,
                 )
             }
 
@@ -297,9 +297,9 @@ fun InsightsScreen(
             val budgetNow = current.budget
             if (budgetNow != null) {
                 MetricCard(
-                    title = "Budget pace",
+                    title = "Plan pace",
                     subtitle = budgetNow.budget.name,
-                    info = "Planned spend to date = available category budget × elapsed share of the budget period. " +
+                    info = "Planned spend to date = available category plan × elapsed share of the plan period. " +
                         "Pace variance = actual spending − planned spend to date. A positive variance means spending is ahead of plan.",
                 ) {
                     val lines = budgetNow.lines.filter { it.line.plannedMinor > 0 }.sortedByDescending { it.paceVarianceMinor }.take(5)
@@ -341,7 +341,7 @@ fun InsightsScreen(
                     title = "Wallets",
                     subtitle = "${current.walletBalances.size} active wallets",
                     info = "Wallet balance = opening balance + income − expenses and fees + transfers in − transfers out " +
-                        "+ refunds + adjustments. Debt wallets are excluded from the liquid total; no exchange rates are invented.",
+                        "+ refunds + adjustments. Debt wallets are excluded from the liquid total.",
                 ) {
                     Row {
                         MetricValue("Total tracked", MoneyFormat.format(current.walletTotalMinor, currency), MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
@@ -374,12 +374,12 @@ fun InsightsScreen(
                     title = "Income history",
                     subtitle = current.incomeVariability?.let { "${it.monthsWithIncome} months with income" } ?: "Not enough history",
                     info = "Median, lowest and highest are calculated from the last six calendar months with recorded income. " +
-                        "Income variability is descriptive; Mizani does not assign a stability score.",
+                        "Income variability is descriptive only.",
                 ) {
                     val variability = current.incomeVariability
                     if (variability == null) {
                         Text(
-                            "Record income to see your typical range. No score is invented from too little data.",
+                            "Record income to see your typical range.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -491,7 +491,7 @@ fun InsightsScreen(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Text(
-                        "Safe-to-spend uses the funded flexible budget remaining minus bills due before the period ends, divided by days left.",
+                        "Safe-to-spend uses the funded flexible plan remaining minus bills due before the period ends, divided by days left.",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -532,13 +532,13 @@ fun InsightsScreen(
                 MetricCard(
                     title = "Essential coverage",
                     subtitle = "Received income versus essential plans",
-                    info = "Essential coverage = income actually received in this period ÷ essential planned amounts in the budget × 100. " +
+                    info = "Essential coverage = income actually received in this period ÷ essential planned amounts in the plan × 100. " +
                         "Expected income is not included. Below 100% is a planning signal, not a prediction.",
                 ) {
                     val coverage = current.essentialCoveragePercent
                     if (coverage == null) {
                         Text(
-                            "Add a budget with essential categories to see how far received income covers them.",
+                            "Add a plan with essential categories to see how far received income covers them.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -557,8 +557,7 @@ fun InsightsScreen(
 
                 if (current.incomeVariability == null && current.transactionCount == 0) {
                     Text(
-                        "Mizani does not manufacture conclusions from missing data. Record a few transactions and the metrics " +
-                            "will become available without any cloud service.",
+                        "Mizani never invents numbers from missing data — record a few transactions to see these metrics.",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -658,14 +657,14 @@ private fun CashFlowHero(
         modifier = Modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.extraLarge)
-            .background(Brush.linearGradient(listOf(DeepTeal, Emerald, EmeraldBright)))
+            .background(Brush.linearGradient(listOf(DeepTeal, Emerald)))
             .padding(20.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "CASH FLOW",
+                "Cash flow",
                 style = MaterialTheme.typography.labelMedium,
-                color = Color.White.copy(alpha = 0.7f),
+                color = Color.White,
                 modifier = Modifier.weight(1f),
             )
             IconButton(
@@ -678,7 +677,7 @@ private fun CashFlowHero(
                     contentDescription = stringResource(
                         if (showInfo) R.string.how_calculated_hide else R.string.how_calculated_show,
                     ),
-                    tint = Color.White.copy(alpha = 0.7f),
+                    tint = Color.White.copy(alpha = 0.92f),
                     modifier = Modifier.size(18.dp),
                 )
             }
@@ -686,7 +685,7 @@ private fun CashFlowHero(
         Text(
             periodLabel,
             style = MaterialTheme.typography.labelLarge,
-            color = Color.White.copy(alpha = 0.65f),
+            color = Color.White,
         )
         Spacer(Modifier.height(Spacing.sm))
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -746,14 +745,14 @@ private fun CashFlowHero(
             Text(
                 "Previous period $previousLabel (${metrics.previousPeriod.days} days)",
                 style = MaterialTheme.typography.labelMedium,
-                color = Color.White.copy(alpha = 0.65f),
+                color = Color.White,
             )
             ComparisonLine(
                 label = "Income",
                 current = metrics.incomeMinor,
                 previous = metrics.previousIncomeMinor,
                 currency = currency,
-                color = Color.White.copy(alpha = 0.65f),
+                color = Color.White,
                 showPercent = showPercentChange,
             )
             ComparisonLine(
@@ -761,7 +760,7 @@ private fun CashFlowHero(
                 current = metrics.expenseMinor,
                 previous = metrics.previousExpenseMinor,
                 currency = currency,
-                color = Color.White.copy(alpha = 0.65f),
+                color = Color.White,
                 showPercent = showPercentChange,
             )
             Text(
@@ -774,14 +773,14 @@ private fun CashFlowHero(
                         "Net spending has a recorded prior value; income has no recorded prior value."
                 },
                 style = MaterialTheme.typography.labelSmall,
-                color = Color.White.copy(alpha = 0.65f),
+                color = Color.White,
                 modifier = Modifier.padding(top = 2.dp),
             )
         } else {
             Text(
                 "No prior period with recorded activity.",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.65f),
+                color = Color.White,
                 modifier = Modifier.padding(top = 2.dp),
             )
         }
@@ -790,7 +789,7 @@ private fun CashFlowHero(
                 "Income = posted income transactions in this period. Net spending = expenses plus fees, minus refunds. " +
                     "Transfers between your own wallets are excluded. Net = income − net spending.",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.7f),
+                color = Color.White,
                 modifier = Modifier.padding(top = Spacing.sm),
             )
         }
@@ -803,12 +802,12 @@ private fun HeroStat(label: String, value: String, modifier: Modifier) {
         Text(
             label,
             style = MaterialTheme.typography.labelSmall,
-            color = Color.White.copy(alpha = 0.65f),
+            color = Color.White,
         )
         Text(
             value,
             style = MaterialTheme.typography.titleMedium,
-            color = Color.White.copy(alpha = 0.9f),
+            color = Color.White,
             maxLines = 2,
         )
     }
