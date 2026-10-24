@@ -255,9 +255,9 @@ fun TransactionsScreen(
             if (grouped.isEmpty()) {
                 item {
                     EmptyState(
-                        title = "No matching transactions",
+                        title = if (snapshot.transactions.isEmpty()) "No transactions yet" else "No matching transactions",
                         body = if (snapshot.transactions.isEmpty()) {
-                            "Record your first income or expense. Transfers, refunds and adjustments are supported too."
+                            "Add income or expenses to start tracking."
                         } else {
                             "Try a different search, date range or filter."
                         },

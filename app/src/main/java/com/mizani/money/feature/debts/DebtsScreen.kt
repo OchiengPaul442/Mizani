@@ -190,7 +190,7 @@ fun DebtsScreen(
             if (active.isEmpty()) {
                 EmptyState(
                     title = "No debts tracked",
-                    body = "Add a balance, required payment and next due date to see payment burden alongside your plan.",
+                    body = "Add a balance, payment and due date to include debt in your plan.",
                     iconRes = R.drawable.ic_ph_bank,
                     actionLabel = "Add debt",
                     onAction = { editing = null; showDialog = true },

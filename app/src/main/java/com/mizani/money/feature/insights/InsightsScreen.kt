@@ -1,6 +1,5 @@
 package com.mizani.money.feature.insights
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,11 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ExpandLess
-import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
@@ -181,7 +175,7 @@ fun InsightsScreen(
             if (snapshot.transactions.isEmpty()) {
                 EmptyState(
                     title = "No transactions yet",
-                    body = "Record income or spending to fill these charts.",
+                    body = "Add income or expenses to see your insights.",
                     iconRes = R.drawable.ic_ph_chart_donut,
                 )
             }
@@ -192,7 +186,6 @@ fun InsightsScreen(
                     InsightCard(
                         title = insight.title,
                         body = insight.body,
-                        explanation = insight.explanation,
                         tone = insight.tone,
                         actionLabel = insight.actionLabel,
                         onAction = {
@@ -218,11 +211,10 @@ fun InsightsScreen(
             MetricCard(
                 title = "Six-month cash flow",
                 subtitle = "Income versus expenses",
-                info = "Shows recorded income and spending for each month. Refunds reduce spending, transfers are excluded, and months without records are not estimated.",
             ) {
                 if (monthsWithData < 2) {
                     Text(
-                        "Cash-flow trends appear after your second month with records.",
+                        "Add another month of records to see cash-flow trends.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.fillMaxWidth(),
@@ -244,8 +236,7 @@ fun InsightsScreen(
 
             MetricCard(
                 title = "Where it went",
-                subtitle = "Category share, refund-adjusted",
-                info = "Shows how recorded spending is distributed across categories for this period. Refunds are reflected in their category, and transfers are excluded.",
+                subtitle = "Spending by category",
             ) {
                 // Refund-heavy periods can leave negative category totals; only positive
                 // net spending is charted so shares stay comparable and never negative.
@@ -297,7 +288,6 @@ fun InsightsScreen(
                 MetricCard(
                     title = "Plan pace",
                     subtitle = budgetNow.budget.name,
-                    info = "Shows whether recorded spending is ahead of or behind the plan for this point in the period.",
                 ) {
                     val lines = budgetNow.lines.filter { it.line.plannedMinor > 0 }.sortedByDescending { it.paceVarianceMinor }.take(5)
                     if (lines.isEmpty()) {
@@ -337,7 +327,6 @@ fun InsightsScreen(
                 MetricCard(
                     title = "Wallets",
                     subtitle = "${current.walletBalances.size} active wallets",
-                    info = "Balances reflect the activity you record. The liquid total leaves out debt wallets.",
                 ) {
                     Row {
                         MetricValue("Total tracked", MoneyFormat.format(current.walletTotalMinor, currency), MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
@@ -369,12 +358,11 @@ fun InsightsScreen(
                 MetricCard(
                     title = "Income history",
                     subtitle = current.incomeVariability?.let { "${it.monthsWithIncome} months with income" } ?: "Not enough history",
-                    info = "Summarizes recorded income over recent months. It describes past activity and does not predict future income.",
                 ) {
                     val variability = current.incomeVariability
                     if (variability == null) {
                         Text(
-                            "Record income to see your typical range.",
+                            "Record income to see your history.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -404,7 +392,6 @@ fun InsightsScreen(
                 MetricCard(
                     title = "Fees",
                     subtitle = "Fees on transactions and transfers",
-                    info = "Includes fees you record on transactions and transfers. Fees are tracked separately so they are not counted twice.",
                 ) {
                     Row {
                         MetricValue("This month", MoneyFormat.format(feeNow, currency), MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
@@ -455,13 +442,12 @@ fun InsightsScreen(
 
                 MetricCard(
                     title = "Forecast",
-                    subtitle = "A simple, explainable estimate",
-                    info = "A rough estimate based on recent recorded spending and the time remaining in this period. It can change and is not a promise.",
+                    subtitle = "Estimate for this period",
                 ) {
                     val forecast = current.forecastMinor
                     if (forecast == null) {
                         Text(
-                            "Not enough recent spending to forecast this period. The estimate appears after spending is recorded.",
+                            "Record more expenses to see your estimate.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -471,7 +457,7 @@ fun InsightsScreen(
                             style = MaterialTheme.typography.headlineMedium,
                         )
                         Text(
-                            "At your recent daily spending pace, you may finish around this amount. Basis: last 14 days of recorded spending.",
+                            "Your spending may finish around this amount.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -491,7 +477,6 @@ fun InsightsScreen(
                 MetricCard(
                     title = "Savings",
                     subtitle = "Contributions and rate",
-                    info = "Shows goal contributions relative to income received. Moving money between your own wallets is not spending.",
                 ) {
                     Row {
                         MetricValue("Set aside", MoneyFormat.format(current.savingsContributionsMinor, currency), MaterialTheme.colorScheme.primary, Modifier.weight(1f))
@@ -522,7 +507,6 @@ fun InsightsScreen(
                 MetricCard(
                     title = "Essential coverage",
                     subtitle = "Received income versus essential plans",
-                    info = "Compares income received with essential amounts in your current plan. Expected income is not included; this is a planning signal, not a prediction.",
                 ) {
                     val coverage = current.essentialCoveragePercent
                     if (coverage == null) {
@@ -546,7 +530,7 @@ fun InsightsScreen(
 
                 if (current.incomeVariability == null && current.transactionCount == 0) {
                     Text(
-                        "Mizani never invents numbers from missing data — record a few transactions to see these metrics.",
+                        "Record more transactions to see your insights.",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -571,41 +555,15 @@ private data class MonthFlow(val month: YearMonth, val incomeMinor: Long, val ex
 private fun MetricCard(
     title: String,
     subtitle: String,
-    info: String,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
     MizaniCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleMedium)
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            IconButton(
-                onClick = { expanded = !expanded },
-                // 48dp touch target per the design system (was 44dp).
-                modifier = Modifier.size(48.dp),
-            ) {
-                Icon(
-                    if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.Info,
-                    contentDescription = stringResource(
-                        if (expanded) R.string.how_calculated_hide else R.string.how_calculated_show,
-                    ),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(18.dp),
-                )
-            }
+        Column {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Spacer(Modifier.height(Spacing.md))
         content()
-        AnimatedVisibility(visible = expanded) {
-            Text(
-                info,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = Spacing.md),
-            )
-        }
     }
 }
 
@@ -636,7 +594,6 @@ private fun CashFlowHero(
     previousLabel: String,
     currency: Currency,
 ) {
-    var showInfo by remember { mutableStateOf(false) }
     val hasIncomePrevious = metrics.previousIncomeMinor > 0
     val hasExpensePrevious = metrics.previousExpenseMinor > 0
     // Percent change is only an apples-to-apples claim when both periods cover the same
@@ -649,28 +606,11 @@ private fun CashFlowHero(
             .background(Brush.linearGradient(listOf(DeepTeal, Emerald)))
             .padding(20.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "Cash flow",
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.White,
-                modifier = Modifier.weight(1f),
-            )
-            IconButton(
-                onClick = { showInfo = !showInfo },
-                // 48dp touch target per the design system (was 44dp).
-                modifier = Modifier.size(48.dp),
-            ) {
-                Icon(
-                    if (showInfo) Icons.Rounded.ExpandLess else Icons.Rounded.Info,
-                    contentDescription = stringResource(
-                        if (showInfo) R.string.how_calculated_hide else R.string.how_calculated_show,
-                    ),
-                    tint = Color.White.copy(alpha = 0.92f),
-                    modifier = Modifier.size(18.dp),
-                )
-            }
-        }
+        Text(
+            "Cash flow",
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.White,
+        )
         Text(
             periodLabel,
             style = MaterialTheme.typography.labelLarge,
@@ -771,14 +711,6 @@ private fun CashFlowHero(
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.White,
                 modifier = Modifier.padding(top = 2.dp),
-            )
-        }
-        AnimatedVisibility(visible = showInfo) {
-            Text(
-                "Income and spending come from transactions recorded for this period. Fees and refunds affect spending totals; transfers between your own wallets are excluded.",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White,
-                modifier = Modifier.padding(top = Spacing.sm),
             )
         }
     }

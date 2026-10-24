@@ -421,12 +421,6 @@ fun BudgetScreen(
             ) {
                 Text(if (saving) "Saving…" else "Save plan")
             }
-            Text(
-                "Rollover is off by default. Repairs and refunds reduce the original category's eligible " +
-                    "spending; transfers never count.",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 
@@ -479,7 +473,7 @@ private fun LineOptionsDialog(
                     Column(Modifier.weight(1f)) {
                         Text("Essential", style = MaterialTheme.typography.bodyMedium)
                         Text(
-                            "Essential amounts are excluded from the discretionary safe-to-spend pool.",
+                            "Plan essential costs separately from flexible spending.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

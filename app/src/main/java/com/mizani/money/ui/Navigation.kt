@@ -240,7 +240,6 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popExitTransition = ::navPopExit,
             ) {
                 MoreScreen(
-                    vm = vm,
                     state = state,
                     onNavigate = { route -> navController.navigate(route) },
                 )
@@ -390,7 +389,10 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popEnterTransition = ::navPopEnter,
                 popExitTransition = ::navPopExit,
             ) {
-                AccountScreen(onBack = { navController.popBackStack() })
+                AccountScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenBackupSettings = { navController.navigate("settings") },
+                )
             }
         }
     }

@@ -1,5 +1,6 @@
 package com.mizani.money.core.model
 
+import com.mizani.money.BuildConfig
 import java.util.UUID
 
 enum class WalletType(val label: String) {
@@ -248,5 +249,5 @@ object Ids {
 object AppInfo {
     const val NAME = "Mizani"
     const val TAGLINE = "Your money, in balance."
-    const val VERSION = "1.0.0"
+    val VERSION: String = BuildConfig.VERSION_NAME
 }

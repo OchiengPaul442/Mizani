@@ -367,8 +367,7 @@ private fun BudgetTab(
         if (budget == null || progress == null) {
             EmptyState(
                 title = "No plan for this month",
-                body = "Plan what this money must cover. Mizani keeps scheduled income separate from recorded receipts, " +
-                    "and separates funded amounts from planned amounts.",
+                body = "Build a monthly plan for essential and flexible spending.",
                 iconRes = R.drawable.ic_ph_chart_donut,
                 actionLabel = "Create a plan",
                 onAction = onCreate,
@@ -472,8 +471,7 @@ private fun BudgetTab(
                 BudgetLineCard(line = line, currency = currency, onFund = { onFund(line) })
             }
         Text(
-            "Available = planned + rollover. Remaining = available − eligible spending. " +
-                "Only spending in this plan's categories counts toward its lines.",
+            "See planned, funded, spent and remaining amounts for each category.",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -581,7 +579,7 @@ private fun IncomeTab(
             }
             Spacer(Modifier.height(Spacing.sm))
             Text(
-                "Scheduled amounts are estimates. Record each receipt when it arrives to update your balance and reports.",
+                "Scheduled income is a forecast. Record it when received to update your balance.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -590,7 +588,7 @@ private fun IncomeTab(
         SectionHeader(title = "Income sources", actionLabel = "Add", onAction = onAddSource)
         if (sources.isEmpty()) {
             Text(
-                "Add salary, business, freelance, remittance or casual-work sources to see how concentrated your income is.",
+                "Add income sources to see how much you rely on each one.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -613,7 +611,7 @@ private fun IncomeTab(
         SectionHeader(title = "Recurring income", actionLabel = "Add", onAction = onAddRule)
         if (rules.isEmpty()) {
             Text(
-                "Add salary or other income you receive on a schedule. It appears in your forecast until you record a receipt.",
+                "Scheduled income appears in your forecast until you record it as received.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -668,7 +666,7 @@ private fun BillsTab(
         SectionHeader(title = "Recurring bills & commitments", actionLabel = "Add", onAction = onAdd)
         if (bills.isEmpty()) {
             Text(
-                "Add recurring bills and loan payments. Upcoming amounts are included in your plan; record each payment when it leaves a wallet.",
+                "Upcoming bills appear in your plan. Record each payment when it leaves a wallet.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -770,8 +768,7 @@ private fun GoalsTab(
             }
         }
         Text(
-            "Savings contributions are tracked separately from ordinary spending. A transfer between your own wallets " +
-                "does not reduce your income or count as an expense.",
+            "Moving money between your own wallets is not spending.",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

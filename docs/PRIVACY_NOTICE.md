@@ -1,58 +1,60 @@
 # Mizani Privacy Notice
 
-**Version:** 2026-10-25  
-**Effective:** 25 October 2026  
-**Provider/controller:** Mizani app publisher (legal name required before public release)  
+**Version:** 2026-10-25-2
+**Effective:** 25 October 2026
+**Provider:** Mizani app publisher (legal name to be added before public release)
 **Contact:** paul.ochieng.dev@gmail.com
 
-This Notice describes what Mizani processes, where it is stored, and the choices available to you. Mizani is designed to keep your financial ledger on your device.
+This Notice explains how Mizani stores and shares your information and the choices you have.
 
 ## 1. Who is responsible
 
-Provider/controller: Mizani app publisher (legal name required before public release). Contact: paul.ochieng.dev@gmail.com. The provider’s full legal identity and any required local representative must be completed before public release.
+Provider: Mizani app publisher (legal name to be added before public release). Contact: paul.ochieng.dev@gmail.com.
 
 ## 2. Information stored on your device
 
 The information you enter can include wallet names and balances; transaction types, dates, amounts, fees, currencies, payees and notes; budgets and categories; income sources; goals and contributions; recurring items; and debt records. Free-text names and notes may contain personal information if you choose to put it there.
 
-Mizani also stores settings such as your selected country, primary currency, theme and app-lock preferences. If you set an app PIN, the app stores a salted PIN hash, not the PIN itself. The app stores the versions of these documents you accepted and the acceptance time.
+Mizani also stores settings such as your selected country, primary currency, theme and app-lock preferences. App-lock details stay on this device. The app records which versions of these documents you accepted and when.
 
 ## 3. Why the app uses this information
 
-The app uses the information locally to create and update your ledger, show the features you request, calculate your on-device summaries, apply your settings, protect app access, and create an export or backup when you request one. The acceptance record documents which Terms and Notice were shown to you. Applicable law may also require certain records to be kept or disclosed.
+Mizani uses your information to provide the budgeting features you choose, protect your records, and create exports or backups when you request them. Applicable law may also require certain records to be kept or disclosed.
 
-Mizani does not require a name, email address, phone number, bank login, or account. It does not include advertising, analytics, crash-reporting, or generative-AI services in this build.
+Mizani does not require a name, email address, phone number, bank login, or account. Your ledger is not used for advertising or usage tracking.
 
-## 4. Currency-rate request
+## 4. Optional requests
 
-When you use conversion for a foreign-currency transaction, the app sends the source and workspace currency codes to the public Frankfurter API over HTTPS. It does not send the transaction amount, date, payee, note, wallet name, or ledger. The app receives the reference rate and published rate date, then stores them with that transaction on your device.
+When you convert a foreign-currency transaction, Mizani sends the two currency codes to Frankfurter to get the latest available reference rate. It does not send the amount, date, payee, note, wallet name, or other ledger details. The rate and date are saved with the transaction on your phone.
 
-Frankfurter states that its public API does not collect or log personal data, IP addresses, or request URLs, and that its public service uses Cloudflare for caching and denial-of-service protection with aggregate traffic statistics. The request still travels over your internet connection, which is operated by your network provider. See Frankfurter’s current information at <https://frankfurter.dev/>.
+Frankfurter says it neither collects nor logs personal data, IP addresses, or request details. Your network provider still handles the connection. Read more at <https://frankfurter.dev/>.
+
+If you installed Mizani outside Google Play, you can choose to check for updates. The check sends an app identifier to GitHub, not your ledger. GitHub may receive your IP address and request details under its [Privacy Statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement). You can skip the check.
 
 ## 5. Storage, security and retention
 
-The financial ledger is held in a SQLCipher-encrypted database. Its database key is protected with a non-exportable Android Keystore key. Some app settings are stored separately in Android DataStore; the ledger’s database encryption does not mean every app setting is stored in that database. No security measure can guarantee that a device or data is safe in every circumstance.
+Your financial records are encrypted and stored on this phone. Device security helps protect access to them. No security measure can guarantee that a device or data is safe in every circumstance.
 
-Mizani has no server-side copy of your ledger. Local records remain in the app until you delete all local data, clear the app’s storage, or uninstall it. Android automatic backup and device-transfer backup are disabled for the app. Uninstalling or losing access to the device-bound key may make local data unrecoverable.
+Mizani keeps no online copy of your ledger. Local records remain in the app until you delete all local data, clear the app’s storage, or uninstall it. Automatic device backups are disabled. Uninstalling the app or losing access to this phone may make local data unrecoverable.
 
 ## 6. Exports and other services
 
 CSV exports and Excel workbooks are unencrypted and may expose your financial details to anyone who can access the file. The workbook includes multiple sheets such as transactions, wallets, budgets, recurring schedules, goals and debts. A Mizani backup is encrypted with the passphrase you choose. When you save, share, or restore a file, Android’s file picker and any destination service you select may process or store it under their own terms and privacy notice. Mizani cannot delete those external copies for you.
 
-## 7. Sharing, sale and tracking
+## 7. Sharing and other services
 
-The app does not upload your ledger to a Mizani account or backend. It does not sell ledger information, use it for advertising, or send it to analytics or AI services. Apart from the currency-code request described above and a file destination you select, the app has no configured service that receives your ledger. The operating system, app marketplace, and network providers may process technical information under their own terms.
+Mizani does not receive or sell your ledger, or use it for advertising. External services receive only the information described above or a file you choose to save or share. The operating system, app marketplace, and network providers may process technical information under their own terms.
 
 ## 8. Your choices and privacy rights
 
-You can view and correct entries in the app, export your ledger from Settings, and delete local data from Settings. Deletion does not remove exports or backups already saved elsewhere. You can stop the currency-rate request by not using foreign-currency conversion; the rest of the ledger remains local.
+You can view and correct entries in the app, export your ledger from Settings, and delete local data from Settings. Deletion does not remove exports or backups already saved elsewhere. Currency-rate requests happen only when you convert a foreign-currency transaction. Update checks are optional and available when you install outside Google Play. Neither sends ledger entries.
 
-Depending on the law where you live, you may also have rights to request access, correction, deletion, restriction, objection, or portability, and to complain to a data-protection authority. To contact the provider, email paul.ochieng.dev@gmail.com. The provider has no online ledger account to search; please do not email financial details unless needed to handle your request.
+Depending on where you live, you may have rights to access, correct, delete, restrict, object to, or receive your information, and to complain to a data-protection authority. Email paul.ochieng.dev@gmail.com with a request. Mizani keeps no online ledger; do not email financial details unless needed to handle your request.
 
 ## 9. Children
 
 Mizani is not designed to collect information from children. Anyone below the age of legal capacity should use it only with permission from a parent or legal guardian.
 
-## 10. Updates
+## 10. Changes
 
-If this Notice changes materially, the app will show the revised Notice and ask you to accept the updated documents before you continue. You can read the current Terms and Notice from Settings at any time. Contact paul.ochieng.dev@gmail.com with a privacy question.
+If this Notice changes materially, the app will show it and ask you to accept the new documents before you continue. You can read the Terms and Notice from Settings at any time. Contact paul.ochieng.dev@gmail.com with a privacy question.

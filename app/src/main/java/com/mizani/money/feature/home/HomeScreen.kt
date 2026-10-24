@@ -20,7 +20,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.TipsAndUpdates
 import androidx.compose.ui.res.painterResource
@@ -99,7 +98,6 @@ fun HomeScreen(
     val currency = state.currency
     val today = vm.today
     var showRangePicker by remember { mutableStateOf(false) }
-    var showSafeExplanation by remember { mutableStateOf(false) }
 
     if (showRangePicker) {
         DateRangePickerDialog(
@@ -197,8 +195,6 @@ fun HomeScreen(
             SafeToSpendCard(
                 metrics = current,
                 currency = currency,
-                expanded = showSafeExplanation,
-                onToggleExplanation = { showSafeExplanation = !showSafeExplanation },
                 onOpenBudget = { onOpenBudget(current.budget?.budget?.id) },
             )
         }
@@ -242,7 +238,7 @@ fun HomeScreen(
             if (positiveSlices.isEmpty()) {
                 EmptyState(
                     title = "No spending yet",
-                    body = "Your category chart appears after the first expense.",
+                    body = "Add an expense to see spending by category.",
                     iconRes = R.drawable.ic_ph_chart_donut,
                     compact = true,
                 )
@@ -302,7 +298,6 @@ fun HomeScreen(
                 InsightCard(
                     title = insight.title,
                     body = insight.body,
-                    explanation = insight.explanation,
                     tone = insight.tone,
                     actionLabel = insight.actionLabel,
                     onAction = {
@@ -569,8 +564,6 @@ private fun EmptyBudgetHero(onCreateBudget: () -> Unit) {
 private fun SafeToSpendCard(
     metrics: DashboardMetrics,
     currency: Currency,
-    expanded: Boolean,
-    onToggleExplanation: () -> Unit,
     onOpenBudget: () -> Unit,
 ) {
     val daily = metrics.safeToSpendDailyMinor
@@ -592,28 +585,11 @@ private fun SafeToSpendCard(
             }
             Spacer(Modifier.width(Spacing.md))
             Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "Safe to spend / day",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.weight(1f),
-                    )
-                    IconButton(
-                        onClick = onToggleExplanation,
-                        // 48dp touch target; the description states the current state.
-                        modifier = Modifier.size(48.dp),
-                    ) {
-                        Icon(
-                            Icons.Rounded.Info,
-                            contentDescription = stringResource(
-                                if (expanded) R.string.home_safe_info_hide else R.string.home_safe_info_show,
-                            ),
-                            modifier = Modifier.size(17.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
+                Text(
+                    "Safe to spend / day",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 if (daily != null) {
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text(
@@ -630,7 +606,7 @@ private fun SafeToSpendCard(
                         )
                     }
                     Text(
-                        "through ${DateText.short(metrics.period.end)} · from your funded flexible plan",
+                        "Through ${DateText.short(metrics.period.end)}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -646,14 +622,6 @@ private fun SafeToSpendCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     TextButton(onClick = onOpenBudget) { Text(stringResource(R.string.home_open_budget)) }
-                }
-                if (expanded) {
-                    Spacer(Modifier.height(Spacing.xs))
-                    Text(
-                        "A planning guide based on your funded plan and upcoming bills. It can change when your plan or due dates change.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
             }
         }

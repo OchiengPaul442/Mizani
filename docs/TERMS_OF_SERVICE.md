@@ -1,15 +1,15 @@
 # Mizani Terms of Service
 
-**Version:** 2026-10-25  
-**Effective:** 25 October 2026  
-**Provider:** Mizani app publisher (legal name required before public release)  
+**Version:** 2026-10-25-2
+**Effective:** 25 October 2026
+**Provider:** Mizani app publisher (legal name to be added before public release)
 **Contact:** paul.ochieng.dev@gmail.com
 
-These Terms apply when you install or use Mizani. By tapping **Agree and continue** during setup, or after a terms update, you agree to these Terms. Read them before proceeding.
+These Terms apply when you install or use Mizani. By tapping **Agree and continue** during setup, or after accepting a new version in the app, you agree to these Terms. Read them before proceeding.
 
 ## 1. Provider and contact
 
-Provider: Mizani app publisher (legal name required before public release). Privacy and legal contact: paul.ochieng.dev@gmail.com. The provider’s full legal identity must be completed before public release.
+Provider: Mizani app publisher (legal name to be added before public release). Contact: paul.ochieng.dev@gmail.com.
 
 ## 2. Who may use Mizani
 
@@ -23,7 +23,7 @@ The app does not provide financial, investment, legal, accounting, or tax advice
 
 ## 4. Your information and device
 
-Mizani currently works without an account or a Mizani server. Your ledger is stored in an encrypted database on your device. You are responsible for securing the device and for keeping any exports or backups safe. The [Privacy Notice](PRIVACY_NOTICE.md) explains the app’s local storage and the limited network request used for currency conversion.
+Mizani does not keep an online copy of your financial records. They are encrypted and stored on your device. You are responsible for securing the device and keeping exports and backups safe. The [Privacy Notice](PRIVACY_NOTICE.md) explains optional exchange-rate and update checks.
 
 Enter information you are entitled to use. Avoid putting another person’s sensitive details in a payee or note unless you have a valid reason and permission to do so.
 
@@ -41,11 +41,11 @@ You are responsible for the accuracy and lawful use of information you enter, fo
 
 A CSV export and an Excel workbook are human-readable and are not encrypted. The workbook contains multiple sheets of your financial records for analysis. A Mizani backup is encrypted with the passphrase you choose; if you lose that passphrase, the backup cannot be restored. Files you save or share may be copied, backed up, or processed by the storage or sharing service you choose. The app cannot remove copies outside its private storage.
 
-Automatic Android backup is disabled for the app. Deleting all local data cannot be undone without a backup. Uninstalling the app can permanently remove your ledger and its device-bound database key. Export a backup first if you want to keep a copy.
+Automatic device backup is disabled. Deleting all local data cannot be undone without a backup. Uninstalling Mizani can permanently remove your records. Export a backup first if you want to keep a copy.
 
 ## 8. App rights and changes
 
-The app and its branding are protected by applicable intellectual-property laws. These Terms give you a personal, non-exclusive, non-transferable right to use the app for lawful personal budgeting while you comply with these Terms. Third-party components remain under their own licenses.
+The app and its branding are protected by applicable intellectual-property laws. These Terms give you a personal, non-exclusive, non-transferable right to use the app for lawful personal budgeting while you comply with these Terms.
 
 We may update, change, or discontinue app features. If a change materially revises these Terms, the app will show the revised Terms and ask you to accept them before continuing to use the app. You can stop using Mizani and delete your local data at any time.
 

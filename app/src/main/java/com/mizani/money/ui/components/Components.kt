@@ -510,13 +510,11 @@ fun DateField(
 fun InsightCard(
     title: String,
     body: String,
-    explanation: String,
     tone: InsightTone,
     modifier: Modifier = Modifier,
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
 ) {
-    var showExplanation by remember { mutableStateOf(false) }
     val container = when (tone) {
         InsightTone.ATTENTION -> MaterialTheme.colorScheme.secondaryContainer
         InsightTone.POSITIVE -> MaterialTheme.colorScheme.primaryContainer
@@ -537,41 +535,6 @@ fun InsightCard(
             Text(title, style = MaterialTheme.typography.titleMedium, color = onContainer)
             Spacer(Modifier.height(Spacing.xs))
             Text(body, style = MaterialTheme.typography.bodyMedium, color = onContainer.copy(alpha = 0.88f))
-            Spacer(Modifier.height(Spacing.sm))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(MaterialTheme.shapes.small)
-                    .clickable(role = Role.Button) { showExplanation = !showExplanation }
-                    // 48dp minimum touch target (was ~26dp), so the expander is
-                    // actually tappable without shrinking anything else.
-                    .heightIn(min = 48.dp)
-                    .padding(horizontal = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    stringResource(R.string.how_calculated_show),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = onContainer,
-                )
-                Icon(
-                    if (showExplanation) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
-                    // State is spelled out for screen readers, same pattern as MetricCard.
-                    contentDescription = stringResource(
-                        if (showExplanation) R.string.how_calculated_hide else R.string.how_calculated_show,
-                    ),
-                    modifier = Modifier.size(18.dp),
-                    tint = onContainer,
-                )
-            }
-            AnimatedVisibility(visible = showExplanation) {
-                Text(
-                    explanation,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = onContainer.copy(alpha = 0.78f),
-                    modifier = Modifier.padding(top = Spacing.xs),
-                )
-            }
             if (actionLabel != null && onAction != null) {
                 Spacer(Modifier.height(Spacing.sm))
                 TextButton(onClick = onAction) { Text(actionLabel) }

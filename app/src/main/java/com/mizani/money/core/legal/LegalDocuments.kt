@@ -23,11 +23,11 @@ data class LegalDocument(
  */
 object LegalDocuments {
     const val EFFECTIVE_DATE = "25 October 2026"
-    const val TERMS_VERSION = "2026-10-25"
-    const val PRIVACY_VERSION = "2026-10-25"
+    const val TERMS_VERSION = "2026-10-25-2"
+    const val PRIVACY_VERSION = "2026-10-25-2"
     const val PRIVACY_CONTACT = "paul.ochieng.dev@gmail.com"
     const val PROVIDER_NAME_RELEASE_PLACEHOLDER =
-        "Mizani app publisher (legal name required before public release)"
+        "Mizani app publisher (legal name to be added before public release)"
 
     val terms = LegalDocument(
         id = LegalDocumentId.TERMS,
@@ -36,12 +36,11 @@ object LegalDocuments {
         effectiveDate = EFFECTIVE_DATE,
         introduction =
             "These Terms apply when you install or use Mizani. By tapping “Agree and continue” " +
-                "during setup, or “Agree and continue” after a terms update, you agree to these Terms. " +
+                "during setup, or after accepting a new version in the app, you agree to these Terms. " +
                 "Read them before proceeding.",
         sections = listOf(
             LegalSection("1. Provider and contact", listOf(
-                "Provider: $PROVIDER_NAME_RELEASE_PLACEHOLDER. Privacy and legal contact: $PRIVACY_CONTACT. " +
-                    "The provider’s full legal identity must be completed before public release.",
+                "Provider: $PROVIDER_NAME_RELEASE_PLACEHOLDER. Contact: $PRIVACY_CONTACT.",
             )),
             LegalSection("2. Who may use Mizani", listOf(
                 "You must be able to enter a binding agreement under the law where you live. If you are " +
@@ -57,10 +56,9 @@ object LegalDocuments {
                     "decisions against your own records and appropriate professional advice.",
             )),
             LegalSection("4. Your information and device", listOf(
-                "Mizani currently works without an account or a Mizani server. Your ledger is stored in an " +
-                    "encrypted database on your device. You are responsible for securing the device and for " +
-                    "keeping any exports or backups safe. The Privacy Notice explains the app’s local storage " +
-                    "and the limited network request used for currency conversion.",
+                "Mizani does not keep an online copy of your financial records. They are encrypted and stored " +
+                    "on your device. You are responsible for securing the device and keeping exports and backups " +
+                    "safe. The Privacy Notice explains optional exchange-rate and update checks.",
                 "Enter information you are entitled to use. Avoid putting another person’s sensitive details " +
                     "in a payee or note unless you have a valid reason and permission to do so.",
             )),
@@ -85,15 +83,14 @@ object LegalDocuments {
                     "with the passphrase you choose; if you lose that passphrase, the backup cannot be restored. " +
                     "Files you save or share may be copied, backed up, or processed by the storage or sharing " +
                     "service you choose. The app cannot remove copies outside its private storage.",
-                "Automatic Android backup is disabled for the app. Deleting all local data cannot be undone " +
-                    "without a backup. Uninstalling the app can permanently remove your ledger and its " +
-                    "device-bound database key. Export a backup first if you want to keep a copy.",
+                "Automatic device backup is disabled. Deleting all local data cannot be undone without a " +
+                    "backup. Uninstalling Mizani can permanently remove your records. Export a backup first " +
+                    "if you want to keep a copy.",
             )),
             LegalSection("8. App rights and changes", listOf(
                 "The app and its branding are protected by applicable intellectual-property laws. These Terms " +
                     "give you a personal, non-exclusive, non-transferable right to use the app for lawful personal " +
-                    "budgeting while you comply with these Terms. Third-party components remain under their own " +
-                    "licenses.",
+                    "budgeting while you comply with these Terms.",
                 "We may update, change, or discontinue app features. If a change materially revises these Terms, " +
                     "the app will show the revised Terms and ask you to accept them before continuing to use " +
                     "the app. You can stop using Mizani and delete your local data at any time.",
@@ -118,13 +115,10 @@ object LegalDocuments {
         version = PRIVACY_VERSION,
         effectiveDate = EFFECTIVE_DATE,
         introduction =
-            "This Notice describes what Mizani processes, where it is stored, and the choices available to " +
-                "you. Mizani is designed to keep your financial ledger on your device.",
+            "This Notice explains how Mizani stores and shares your information and the choices you have.",
         sections = listOf(
             LegalSection("1. Who is responsible", listOf(
-                "Provider/controller: $PROVIDER_NAME_RELEASE_PLACEHOLDER. Contact: $PRIVACY_CONTACT. " +
-                    "The provider’s full legal identity and any required local representative must be completed " +
-                    "before public release.",
+                "Provider: $PROVIDER_NAME_RELEASE_PLACEHOLDER. Contact: $PRIVACY_CONTACT.",
             )),
             LegalSection("2. Information stored on your device", listOf(
                 "The information you enter can include wallet names and balances; transaction types, dates, " +
@@ -132,39 +126,34 @@ object LegalDocuments {
                     "and contributions; recurring items; and debt records. Free-text names and notes may contain " +
                     "personal information if you choose to put it there.",
                 "Mizani also stores settings such as your selected country, primary currency, theme and app-lock " +
-                    "preferences. If you set an app PIN, the app stores a salted PIN hash, not the PIN itself. " +
-                    "The app stores the versions of these documents you accepted and the acceptance time.",
+                    "preferences. App-lock details stay on this device. The app records which versions of these " +
+                    "documents you accepted and when.",
             )),
             LegalSection("3. Why the app uses this information", listOf(
-                "The app uses the information locally to create and update your ledger, show the features you " +
-                    "request, calculate your on-device summaries, apply your settings, protect app access, and " +
-                    "create an export or backup when you request one. The acceptance record documents which " +
-                    "Terms and Notice were shown to you. Applicable law may also require certain records to be " +
-                    "kept or disclosed.",
-                "Mizani does not require a name, email address, phone number, bank login, or account. It does not " +
-                    "include advertising, analytics, crash-reporting, or generative-AI services in this build.",
+                "Mizani uses your information to provide the budgeting features you choose, protect your records, " +
+                    "and create exports or backups when you request them. Applicable law may also require certain " +
+                    "records to be kept or disclosed.",
+                "Mizani does not require a name, email address, phone number, bank login, or account. Your " +
+                    "ledger is not used for advertising or usage tracking.",
             )),
-            LegalSection("4. Currency-rate request", listOf(
-                "When you use conversion for a foreign-currency transaction, the app sends the source and " +
-                    "workspace currency codes to the public Frankfurter API over HTTPS. It does not send the " +
-                    "transaction amount, date, payee, note, wallet name, or ledger. The app receives the " +
-                    "reference rate and published rate date, then stores them with that transaction on your device.",
-                "Frankfurter states that its public API does not collect or log personal data, IP addresses, or " +
-                    "request URLs, and that its public service uses Cloudflare for caching and denial-of-service " +
-                    "protection with aggregate traffic statistics. The request still travels over your internet " +
-                    "connection, which is operated by your network provider. See Frankfurter’s current " +
-                    "information at https://frankfurter.dev/.",
+            LegalSection("4. Optional requests", listOf(
+                "When you convert a foreign-currency transaction, Mizani sends the two currency codes to " +
+                    "Frankfurter to get the latest available reference rate. It does not send the amount, date, " +
+                    "payee, note, wallet name, or other ledger details. The rate and date are saved with the " +
+                    "transaction on your phone.",
+                "Frankfurter says it neither collects nor logs personal data, IP addresses, or request details. Your network " +
+                    "provider still handles the connection. Read more at https://frankfurter.dev/.",
+                "If you installed Mizani outside Google Play, you can choose to check for updates. The check " +
+                    "sends an app identifier to GitHub, not your ledger. GitHub may receive your IP address and " +
+                    "request details under its Privacy Statement. You can skip the check.",
             )),
             LegalSection("5. Storage, security and retention", listOf(
-                "The financial ledger is held in a SQLCipher-encrypted database. Its database key is protected " +
-                    "with a non-exportable Android Keystore key. Some app settings are stored separately in " +
-                    "Android DataStore; the ledger’s database encryption does not mean every app setting is " +
-                    "stored in that database. No security measure can guarantee that a device or data is safe " +
-                    "in every circumstance.",
-                "Mizani has no server-side copy of your ledger. Local records remain in the app until you delete " +
-                    "all local data, clear the app’s storage, or uninstall it. Android automatic backup and " +
-                    "device-transfer backup are disabled for the app. Uninstalling or losing access to the " +
-                    "device-bound key may make local data unrecoverable.",
+                "Your financial records are encrypted and stored on this phone. Device security helps protect " +
+                    "access to them. No security measure can guarantee that a device or data is safe in every " +
+                    "circumstance.",
+                "Mizani keeps no online copy of your ledger. Local records remain in the app until you delete all " +
+                    "local data, clear the app’s storage, or uninstall it. Automatic device backups are disabled. " +
+                    "Uninstalling the app or losing access to this phone may make local data unrecoverable.",
             )),
             LegalSection("6. Exports and other services", listOf(
                 "CSV exports and Excel workbooks are unencrypted and may expose your financial details to anyone " +
@@ -174,31 +163,30 @@ object LegalDocuments {
                     "destination service you select may process or store it under their own terms and privacy " +
                     "notice. Mizani cannot delete those external copies for you.",
             )),
-            LegalSection("7. Sharing, sale and tracking", listOf(
-                "The app does not upload your ledger to a Mizani account or backend. It does not sell ledger " +
-                    "information, use it for advertising, or send it to analytics or AI services. Apart from the " +
-                    "currency-code request described above and a file destination you select, the app has no " +
-                    "configured service that receives your ledger. The operating system, app marketplace, and " +
-                    "network providers may process technical information under their own terms.",
+            LegalSection("7. Sharing and other services", listOf(
+                "Mizani does not receive or sell your ledger, or use it for advertising. " +
+                    "External services receive only the information described above or a file you choose to " +
+                    "save or share. The operating system, app marketplace, and network providers may process " +
+                    "technical information under their own terms.",
             )),
             LegalSection("8. Your choices and privacy rights", listOf(
                 "You can view and correct entries in the app, export your ledger from Settings, and delete local " +
-                "data from Settings. Deletion does not remove exports or backups already saved elsewhere. You " +
-                    "can stop the currency-rate request by not using foreign-currency conversion; the rest of " +
-                    "the ledger remains local.",
-                "Depending on the law where you live, you may also have rights to request access, correction, " +
-                    "deletion, restriction, objection, or portability, and to complain to a data-protection " +
-                    "authority. To contact the provider, email $PRIVACY_CONTACT. The provider has no online " +
-                    "ledger account to search; please do not email financial details unless needed to handle " +
-                    "your request.",
+                    "data from Settings. Deletion does not remove exports or backups already saved elsewhere. " +
+                    "Currency-rate requests happen only when you convert a foreign-currency transaction. Update " +
+                    "checks are optional and available when you install outside Google Play. Neither sends ledger " +
+                    "entries.",
+                "Depending on where you live, you may have rights to access, correct, delete, restrict, object to, " +
+                    "or receive your information, and to complain to a data-protection authority. Email " +
+                    "$PRIVACY_CONTACT with a request. Mizani keeps no online ledger; do not email financial " +
+                    "details unless needed to handle your request.",
             )),
             LegalSection("9. Children", listOf(
                 "Mizani is not designed to collect information from children. Anyone below the age of legal " +
                     "capacity should use it only with permission from a parent or legal guardian.",
             )),
-            LegalSection("10. Updates", listOf(
-                "If this Notice changes materially, the app will show the revised Notice and ask you to accept " +
-                    "the updated documents before you continue. You can read the current Terms and Notice from " +
+            LegalSection("10. Changes", listOf(
+                "If this Notice changes materially, the app will show it and ask you to accept " +
+                    "the new documents before you continue. You can read the Terms and Notice from " +
                     "Settings at any time. Contact $PRIVACY_CONTACT with a privacy question.",
             )),
         ),

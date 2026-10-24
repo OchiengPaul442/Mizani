@@ -262,9 +262,9 @@ fun AddTransactionScreen(
                     throw cancelled
                 } catch (_: Exception) {
                     rateError = if (exchangeRate != null) {
-                        "Using the saved rate. Couldn't check for a newer rate."
+                        "Saved rate in use. Refresh failed."
                     } else {
-                        "No saved rate is available. Connect to get a rate; other app features work offline."
+                        "No rate available. Check your connection."
                     }
                 }
             }
@@ -272,9 +272,9 @@ fun AddTransactionScreen(
             throw cancelled
         } catch (_: Exception) {
             rateError = if (exchangeRate != null) {
-                "Using the saved rate. Couldn't check for a newer rate."
+                "Saved rate in use. Refresh failed."
             } else {
-                "No saved rate is available. Connect to get a rate; other app features work offline."
+                "No rate available. Check your connection."
             }
         } finally {
             isRateLoading = false
@@ -331,7 +331,7 @@ fun AddTransactionScreen(
             return
         }
         if (isForeignCurrency && conversionRate == null) {
-            error = rateError ?: if (isRateLoading) "Getting the latest available exchange rate" else "Exchange rate is unavailable"
+            error = rateError ?: if (isRateLoading) "Getting rate…" else "Rate unavailable."
             return
         }
         if (amountMinor <= 0) {
@@ -397,8 +397,7 @@ fun AddTransactionScreen(
     if (showDelete && existing != null) {
         MizaniConfirmDialog(
             title = "Delete this transaction?",
-            body = "It will be removed from balances and insights. The record is retained as a tombstone so it " +
-                "cannot reappear in future.",
+            body = "This transaction will be removed from balances and insights.",
             confirmLabel = "Delete",
             dismissLabel = "Keep",
             destructive = true,
@@ -420,7 +419,7 @@ fun AddTransactionScreen(
     Column(Modifier.fillMaxSize().imePadding()) {
         MizaniTopBar(
             title = if (existing == null) "New transaction" else "Edit transaction",
-            subtitle = if (existing == null) "Recorded locally, instantly" else DateText.medium(date),
+            subtitle = if (existing == null) null else DateText.medium(date),
             onBack = onBack,
             actions = {
                 if (existing != null) {
@@ -505,14 +504,21 @@ fun AddTransactionScreen(
                         )
                     }
                 }
-                TextButton(onClick = { showAdvancedTypes = !showAdvancedTypes }) {
-                    Text("Refund or adjustment")
+                if (type != TransactionType.REFUND && type != TransactionType.ADJUSTMENT) {
+                    TextButton(onClick = { showAdvancedTypes = !showAdvancedTypes }) {
+                        Text(if (showAdvancedTypes) "Fewer types" else "More types")
+                        Icon(
+                            imageVector = if (showAdvancedTypes) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
                 }
             }
 
             if (canEnterForeignCurrency) {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                    Text("Currency you’ll use", style = MaterialTheme.typography.labelLarge)
+                    Text("Transaction currency", style = MaterialTheme.typography.labelLarge)
                     MizaniPicker(
                         selectedText = "${entryCurrency.code} · ${entryCurrency.name}",
                         options = Currencies.all.map { item -> PickerOption(item.code, "${item.code} · ${item.name}") },
@@ -574,11 +580,22 @@ fun AddTransactionScreen(
                         Spacer(Modifier.width(Spacing.sm))
                         Box(modifier = Modifier.weight(1f)) {
                             if (amountText.isEmpty()) {
-                                Text(
-                                    "0",
-                                    style = MaterialTheme.typography.displayMedium,
-                                    color = Color.White.copy(alpha = 0.3f),
-                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        "0",
+                                        style = MaterialTheme.typography.displayMedium,
+                                        color = Color.White.copy(alpha = 0.3f),
+                                    )
+                                    Spacer(Modifier.weight(1f))
+                                    Text(
+                                        "Tap to enter",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = Mint,
+                                    )
+                                }
                             }
                             BasicTextField(
                                 value = amountText,
@@ -592,7 +609,7 @@ fun AddTransactionScreen(
                                 singleLine = true,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .semantics { contentDescription = "Amount" },
+                                    .semantics { contentDescription = "Amount in ${entryCurrency.name}" },
                             )
                         }
                     }
@@ -693,7 +710,7 @@ fun AddTransactionScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Text(
-                                    "Daily reference rate from Frankfurter; your bank or card provider may use a different rate.",
+                                    "Reference rate. Your bank or card may use a different rate.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -706,25 +723,25 @@ fun AddTransactionScreen(
                                 }
                                 if (isRateRefreshing) {
                                     Text(
-                                        "Checking for a newer rate…",
+                                        "Checking for updates…",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                             }
                             isRateLoading -> Text(
-                                "Getting the latest available daily rate…",
+                                "Getting rate…",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             else -> {
                                 Text(
-                                    rateError ?: "Exchange rate unavailable. Connect to the internet to convert this amount.",
+                                    rateError ?: "Rate unavailable. Check your connection.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.error,
                                 )
                                 TextButton(onClick = { rateRefreshToken++ }) {
-                                    Text("Retry exchange rate")
+                                    Text("Retry")
                                 }
                             }
                         }
@@ -864,7 +881,7 @@ fun AddTransactionScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    "More details",
+                    if (showMore) "Hide details" else "Optional details",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f),

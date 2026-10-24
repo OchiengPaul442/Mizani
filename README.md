@@ -85,6 +85,23 @@ and Gradle 9.6 via the wrapper.
 
 The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
+### Release versions and app updates
+
+Set `mizaniVersionName` in `gradle.properties` for each release (for example, `1.0.1`). Gradle
+derives Android's increasing `versionCode` from the numeric `MAJOR.MINOR.PATCH` parts, and the
+About and More screens read the generated version name. Keep release versions moving forward; do
+not reuse a version or lower any part after publishing.
+
+For direct APK installs, About offers a user-initiated check against the public GitHub Releases
+page for this repository. It opens a verified release page in the browser; the user downloads the
+APK and confirms installation in Android. It does not download or install in the background.
+Publish a stable `vMAJOR.MINOR.PATCH` release with an APK signed using the same production key as
+previous releases for this check to find it. Do not publish debug or unsigned APKs.
+
+Google Play will manage updates for Play-installed copies once Mizani is published there. This
+repository has no production signing configuration or Play publishing workflow yet; keep the
+production signing key secure and configure it before distributing release APKs.
+
 ### Verified gates (this build)
 
 ```powershell

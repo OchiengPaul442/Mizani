@@ -4,6 +4,16 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+val mizaniVersionName = providers.gradleProperty("mizaniVersionName").get()
+val mizaniVersionParts = Regex("^(0|[1-9]\\d{0,2})\\.(0|[1-9]\\d{0,2})\\.(0|[1-9]\\d{0,2})$")
+    .matchEntire(mizaniVersionName)
+    ?: throw GradleException("mizaniVersionName must use MAJOR.MINOR.PATCH, with each part from 0 to 999")
+val (mizaniMajor, mizaniMinor, mizaniPatch) = mizaniVersionParts.groupValues.drop(1).map(String::toInt)
+val mizaniVersionCode = mizaniMajor * 1_000_000 + mizaniMinor * 1_000 + mizaniPatch
+if (mizaniVersionCode == 0) {
+    throw GradleException("mizaniVersionName must be greater than 0.0.0")
+}
+
 android {
     namespace = "com.mizani.money"
     compileSdk {
@@ -14,8 +24,8 @@ android {
         applicationId = "com.mizani.money"
         minSdk = 24
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = mizaniVersionCode
+        versionName = mizaniVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

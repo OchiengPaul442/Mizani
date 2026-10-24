@@ -112,7 +112,7 @@ private fun DocumentBody(document: LegalDocument, modifier: Modifier = Modifier)
             Text(document.title, style = MaterialTheme.typography.headlineSmall)
             Spacer(Modifier.height(4.dp))
             Text(
-                "Version ${document.version} · Effective ${document.effectiveDate}",
+                "Effective ${document.effectiveDate}",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -1,15 +1,10 @@
 package com.mizani.money.feature.more
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -21,36 +16,22 @@ import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Payments
+import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import com.mizani.money.core.model.AppInfo
 import com.mizani.money.ui.AppUiState
-import com.mizani.money.ui.AppViewModel
 import com.mizani.money.ui.components.MizaniInfoRow
-import com.mizani.money.ui.components.MizaniMark
 import com.mizani.money.ui.components.MizaniSectionCard
 import com.mizani.money.ui.components.MizaniSectionDivider
 import com.mizani.money.ui.components.MizaniStatCard
 import com.mizani.money.ui.components.MizaniTopBar
 import com.mizani.money.ui.components.Spacing
-import com.mizani.money.ui.theme.DeepTeal
-import com.mizani.money.ui.theme.Emerald
-import com.mizani.money.ui.theme.Mint
 
 @Composable
 fun MoreScreen(
-    vm: AppViewModel,
     state: AppUiState,
     onNavigate: (String) -> Unit,
 ) {
@@ -60,7 +41,7 @@ fun MoreScreen(
     val debts = snapshot.debts.count { !it.archived && it.deletedAt == null }
 
     Column(Modifier.fillMaxSize()) {
-        MizaniTopBar(title = "More", subtitle = "Stored on this phone")
+        MizaniTopBar(title = "More")
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -69,35 +50,6 @@ fun MoreScreen(
                 .padding(bottom = Spacing.bottom),
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
-            // Brand gradient banner: DeepTeal -> Emerald, 22dp radius, 20dp padding, white copy.
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(MaterialTheme.shapes.extraLarge)
-                    .background(Brush.linearGradient(listOf(DeepTeal, Emerald)))
-                    .padding(20.dp),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    MizaniMark(size = 48)
-                    Spacer(Modifier.width(Spacing.md))
-                    Column(Modifier.weight(1f)) {
-                        Text("Local-only mode", style = MaterialTheme.typography.titleMedium, color = Color.White)
-                        Text(
-                            "No account, no cloud. Your data stays encrypted on this phone.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White,
-                        )
-                    }
-                }
-                Spacer(Modifier.height(Spacing.md))
-                TextButton(
-                    onClick = { onNavigate("account") },
-                    colors = ButtonDefaults.textButtonColors(contentColor = Mint),
-                ) {
-                    Text("How accounts and sync work")
-                }
-            }
-
             Text("Money", style = MaterialTheme.typography.titleMedium)
             MizaniSectionCard {
                 MizaniInfoRow(
@@ -139,6 +91,13 @@ fun MoreScreen(
                 )
                 MizaniSectionDivider()
                 MizaniInfoRow(
+                    icon = Icons.Rounded.PhoneAndroid,
+                    title = "Move data",
+                    subtitle = "Use a backup on another phone",
+                    onClick = { onNavigate("account") },
+                )
+                MizaniSectionDivider()
+                MizaniInfoRow(
                     icon = Icons.Rounded.Description,
                     title = "Export & backup",
                     subtitle = "Excel, CSV and encrypted backup",
@@ -168,13 +127,6 @@ fun MoreScreen(
                 )
             }
 
-            Text(
-                "${AppInfo.NAME} ${AppInfo.VERSION} · Personal money management that works offline\n" +
-                    "No ads. No tracking. No generative AI.",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.fillMaxWidth(),
-            )
         }
     }
 }

@@ -162,7 +162,7 @@ fun SettingsScreen(
                     val bytes = vm.exporter.buildBackup(passphrase)
                     writeBytes(context, uri, bytes)
                 }.onSuccess {
-                    message = "Encrypted backup created. Keep the passphrase safe — it cannot be recovered."
+                    message = "Encrypted backup created. Keep your passphrase safe; it cannot be recovered."
                     error = null
                     backupPassphrase = ""
                     backupPassphraseConfirm = ""
@@ -273,7 +273,7 @@ fun SettingsScreen(
                     runCatching { vm.setCountry(countryCode, state.snapshot.currencyCode) }
                         .onSuccess {
                             showCountryDialog = false
-                            message = "Region updated. Country affects suggestions and labels; amounts were not converted."
+                            message = "Country changed. Your amounts were not converted."
                             error = null
                         }
                         .onFailure { error = it.message ?: "Could not update your region. Try again." }
@@ -288,7 +288,7 @@ fun SettingsScreen(
             shape = MaterialTheme.shapes.large,
             title = { Text("CSV export is not encrypted") },
             text = {
-                Text("This CSV contains transaction dates, amounts, wallets, categories, payees and notes. Save it somewhere private.")
+                Text("This CSV contains financial details and is not encrypted. Save it somewhere private.")
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -306,7 +306,7 @@ fun SettingsScreen(
             shape = MaterialTheme.shapes.large,
             title = { Text("Excel workbook is not encrypted") },
             text = {
-                Text("The workbook includes transactions, wallets, budgets, goals, debts and notes. Anyone with the file may be able to read your financial data, so save it somewhere private.")
+                Text("This workbook contains your financial records and is not encrypted. Save it somewhere private.")
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -379,7 +379,7 @@ fun SettingsScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     Text(
-                        "Enter the passphrase used when this .mizani backup was created.",
+                        "Enter the passphrase used to create this backup.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -414,7 +414,7 @@ fun SettingsScreen(
                                 .onFailure { error = it.message ?: "Could not read this backup" }
                         }
                     }
-                }) { Text("Inspect") }
+                }) { Text("Check backup") }
             },
             dismissButton = { TextButton(onClick = { showRestorePassphrase = false }) { Text("Cancel") } },
         )
@@ -443,7 +443,7 @@ fun SettingsScreen(
                     Spacer(Modifier.height(Spacing.sm))
                     Text(
                         "This replaces every wallet, transaction, plan, goal, bill and debt on this phone. " +
-                            "Validation runs first, so a failed import does not partially overwrite your ledger.",
+                            "Your current data will be replaced. Create a backup first if you want to keep it.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                     )
@@ -470,7 +470,7 @@ fun SettingsScreen(
                                 showRestoreConfirm = false
                             }
                     }
-                }) { Text("Replace and restore") }
+                }) { Text("Restore backup") }
             },
             dismissButton = { TextButton(onClick = { showRestoreConfirm = false }) { Text("Cancel") } },
         )
@@ -479,8 +479,7 @@ fun SettingsScreen(
     if (showDeleteConfirm) {
         MizaniConfirmDialog(
             title = "Delete all local data?",
-            body = "Every wallet, transaction, plan, goal, bill and debt on this phone will be deleted. " +
-                "This cannot be undone without an encrypted backup; app lock and settings also reset.",
+            body = "This deletes all wallets, transactions, plans, goals, bills and debts. Without a backup, you cannot restore them. App lock and settings also reset.",
             confirmLabel = "Delete everything",
             destructive = true,
             onConfirm = {
@@ -538,8 +537,7 @@ fun SettingsScreen(
                     }
                 }
                 Text(
-                    "Mizani uses its own calm palette rather than wallpaper-based dynamic colour, so amounts and " +
-                        "statuses keep predictable contrast.",
+                    "Choose light or dark mode, or follow your device setting.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -592,8 +590,7 @@ fun SettingsScreen(
                     }
                 }
                 Text(
-                    "Your PIN is stored only as a salted hash and is never saved in plain text. The database key " +
-                        "is protected by Android Keystore.",
+                    "PIN lock protects access. Your ledger is encrypted on this phone.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -612,7 +609,7 @@ fun SettingsScreen(
                     onClick = { showCountryDialog = true },
                 )
                 Text(
-                    "The primary currency is fixed for this workspace. Country only affects suggestions and labels.",
+                    "Country changes suggestions and labels, not your primary currency.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -634,21 +631,21 @@ fun SettingsScreen(
                 MizaniInfoRow(
                     icon = Icons.Rounded.Download,
                     title = "Export Excel workbook",
-                    subtitle = "Multiple sheets for analysis · unencrypted",
+                    subtitle = "Multiple sheets · unencrypted",
                     onClick = { showExcelWarning = true },
                 )
                 MizaniSectionDivider()
                 MizaniInfoRow(
                     icon = Icons.Rounded.Backup,
                     title = "Create encrypted backup",
-                    subtitle = "Versioned .mizani file with passphrase",
+                    subtitle = "Encrypted file protected by a passphrase",
                     onClick = { showBackupPassphrase = true },
                 )
                 MizaniSectionDivider()
                 MizaniInfoRow(
                     icon = Icons.Rounded.Restore,
                     title = "Restore backup",
-                    subtitle = "Validated first, applied in one transaction",
+                    subtitle = "Check contents before replacing your data",
                     onClick = { openRestore.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) },
                 )
             }
@@ -662,14 +659,14 @@ fun SettingsScreen(
                 MizaniInfoRow(
                     icon = Icons.Rounded.Info,
                     title = "About & privacy",
-                    subtitle = "Where your data stays and its limits",
+                    subtitle = "Privacy, storage and backups",
                     onClick = onOpenAbout,
                 )
                 MizaniSectionDivider()
                 MizaniInfoRow(
                     icon = Icons.Rounded.Security,
                     title = "No tracking",
-                    subtitle = "No ads or financial analytics; currency-pair lookups power conversion",
+                    subtitle = "No ads or usage tracking. Rate checks send currency codes only.",
                 )
             }
 
@@ -688,11 +685,6 @@ fun SettingsScreen(
                 )
             }
 
-            Text(
-                "Your data is stored locally and encrypted on this device.",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }
@@ -732,8 +724,7 @@ private fun CountryCurrencyDialog(
                     )
                 }
                 Text(
-                    "The primary currency is fixed after setup. Export your data, then reset or restore " +
-                        "a backup to change it.",
+                        "Primary currency is fixed after setup. Export your data before resetting the app to change it.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
