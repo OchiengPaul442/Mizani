@@ -1,6 +1,6 @@
 package com.mizani.money.ui.components
 
-import androidx.compose.material3.AlertDialog
+
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -19,7 +19,7 @@ fun MizaniConfirmDialog(
     dismissLabel: String? = null,
     destructive: Boolean = false,
 ) {
-    AlertDialog(
+    MizaniAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = { Text(body) },

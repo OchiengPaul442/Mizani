@@ -17,7 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Tune
-import androidx.compose.material3.AlertDialog
+import com.mizani.money.ui.components.MizaniAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -455,7 +455,7 @@ private fun LineOptionsDialog(
     var error by remember { mutableStateOf<String?>(null) }
     val fundedMinor = MoneyFormat.parse(funded, currency) ?: 0L
 
-    AlertDialog(
+    MizaniAlertDialog(
         onDismissRequest = onDismiss,
         shape = MaterialTheme.shapes.large,
         title = { Text("$categoryName options") },

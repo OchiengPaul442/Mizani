@@ -8,7 +8,8 @@ This is an offline-first financial application.
   network (when it exists) would only feed it.
 - No account is required. Guest mode does not depend on any server response.
 - Before an account exists, financial data must not be synchronized to an application
-  backend. This build has no backend endpoint and does not declare the INTERNET permission.
+  backend. There is no backend endpoint; internet access is used only for optional public
+  exchange-rate lookups.
 - Creating an account would enable synchronization; it must never replace the local
   database. Local export and deletion remain available.
 
@@ -25,6 +26,11 @@ This is an offline-first financial application.
 ## Money and ledger rules
 
 - Money is `Long` minor units + currency code. Never persist money as Float or Double.
+- Wallets and ledger amounts use the workspace currency. A foreign-currency transaction also
+  stores the original amount, currency, decimal rate and provider date; conversion uses decimal
+  arithmetic and rounds to the workspace currency's minor unit.
+- The exchange-rate request contains only the currency pair. Transaction amounts, payees and notes
+  stay on device. Rates are daily reference rates, not bank/card settlement quotes.
 - Transfers between a user's wallets are not expenditure or income. Fees are expenditure.
 - Expected income is not received income. Recurring income rules never create cash until
   the user marks them received.
@@ -49,15 +55,16 @@ This is an offline-first financial application.
 - Any future AI is an optional layer: local-only, opt-in, fact-constrained and verifier-gated. A
   response is discarded unless every claim is traceable to a Kotlin-supplied fact and no new number
   appears. Deterministic copy is shown whenever the model is absent or verification fails.
-- No AI model or inference runtime is shipped in the APK, and no model download or network
-  permission is added for it.
+- No AI model or inference runtime is shipped in the APK, and no AI model download or network
+  access is added.
 - No financial payload in prompts: only sanitized facts with stable IDs and category labels may be
   sent to a local model, and nothing leaves the device.
 
 ## Security and privacy
 
 - No advertising SDK; no financial telemetry; no financial values in logs.
-- Guest financial data never leaves the device.
+- Guest financial data never leaves the device. The optional rate request sends only currency
+  codes over HTTPS to Frankfurter.
 - Android backup is disabled and all data domains are excluded from backup/transfer rules.
 - Database bytes without the device Keystore key must not be sufficient to read data.
 - The app lock PIN is a salted PBKDF2-HMAC-SHA256 hash; verification is constant-time.
@@ -68,5 +75,6 @@ This is an offline-first financial application.
 - SMS import is policy-gated and absent; core budgeting never depends on it.
 - No bank APIs, payment processing, lending, credit scoring, investments or tax advice.
 - No cloud sync implementation in this build; the UI states this and offers encrypted backup.
-- Single base currency per workspace; no live exchange rates.
+- Single base currency per workspace; expense and income entry may be converted from another
+  supported currency using the latest available daily Frankfurter reference rate.
 - No split transactions yet.

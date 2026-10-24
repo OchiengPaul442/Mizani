@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
@@ -62,10 +63,12 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import com.mizani.money.R
 import com.mizani.money.core.model.InsightTone
 import com.mizani.money.core.model.TransactionType
 import com.mizani.money.core.money.Currency
+import com.mizani.money.core.money.Currencies
 import com.mizani.money.core.money.MoneyFormat
 import com.mizani.money.core.time.DateText
 import com.mizani.money.data.local.TransactionEntity
@@ -482,6 +485,8 @@ fun DateField(
         )
         DatePickerDialog(
             onDismissRequest = { showPicker = false },
+            modifier = Modifier.fillMaxWidth(0.94f).widthIn(max = 560.dp),
+            properties = DialogProperties(usePlatformDefaultWidth = false),
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -617,6 +622,12 @@ fun TransactionRow(
         append(", ")
         append(amountPrefix)
         append(MoneyFormat.format(kotlin.math.abs(transaction.amountMinor), currency))
+        if (transaction.sourceAmountMinor != null && transaction.sourceCurrencyCode != null) {
+            val sourceCurrency = Currencies.byCode(transaction.sourceCurrencyCode)
+            append(", entered as ")
+            append(MoneyFormat.format(transaction.sourceAmountMinor, sourceCurrency))
+            transaction.exchangeRateDate?.let { append(", rate dated $it") }
+        }
         append(", ")
         append(subtitle)
         if (transaction.feeMinor > 0) {
@@ -678,6 +689,18 @@ fun TransactionRow(
                 color = amountColor,
                 maxLines = 1,
             )
+            if (transaction.sourceAmountMinor != null && transaction.sourceCurrencyCode != null) {
+                Text(
+                    MoneyFormat.format(
+                        transaction.sourceAmountMinor,
+                        Currencies.byCode(transaction.sourceCurrencyCode),
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             if (transaction.feeMinor > 0) {
                 Text(
                     "fee ${MoneyFormat.format(transaction.feeMinor, currency)}",

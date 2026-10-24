@@ -257,44 +257,50 @@ class AnalyticsEngine(private val data: LedgerSnapshot) {
 
     fun reservedCommitments(range: DateRange, today: LocalDate = LocalDate.now()): Long {
         if (today.isAfter(range.end)) return 0L
-        val fromEpoch = range.start.toEpochDay()
-        val toEpoch = range.end.toEpochDay()
         val bills = data.recurring
             .filter {
                 it.deletedAt == null && !it.archived && it.type == RecurringType.BILL &&
-                    it.nextDueEpochDay in fromEpoch..toEpoch
+                    LocalDate.ofEpochDay(it.nextDueEpochDay) <= range.end
             }
-            .sumOf { it.amountMinor }
+            .sumOf { rule ->
+                rule.amountMinor * occurrencesInRange(rule, range).toLong()
+            }
         val debtPayments = data.debts
             .filter { it.deletedAt == null && !it.archived && it.nextDueEpochDay != null }
-            .filter { it.nextDueEpochDay != null && it.nextDueEpochDay in fromEpoch..toEpoch }
+            .filter {
+                val due = it.nextDueEpochDay?.let(LocalDate::ofEpochDay)
+                due != null && range.contains(due)
+            }
             .sumOf { it.periodicPaymentMinor }
         return bills + debtPayments
     }
 
     fun upcoming(range: DateRange, today: LocalDate = LocalDate.now()): List<UpcomingCommitment> {
         val end = minOf(range.end, today.plusDays(45))
-        val fromEpoch = today.toEpochDay()
-        val toEpoch = end.toEpochDay()
         val recurring = data.recurring
-            .filter { it.deletedAt == null && !it.archived && it.nextDueEpochDay in fromEpoch..toEpoch }
-            .map { rule ->
+            .filter { it.deletedAt == null && !it.archived && it.nextDueEpochDay <= end.toEpochDay() }
+            .flatMap { rule ->
                 val category = data.category(rule.categoryId)
-                UpcomingCommitment(
-                    id = rule.id,
-                    name = rule.name,
-                    amountMinor = rule.amountMinor,
-                    dueDate = LocalDate.ofEpochDay(rule.nextDueEpochDay),
-                    isIncome = rule.type == RecurringType.INCOME,
-                    essential = rule.essential,
-                    categoryName = category?.name ?: if (rule.type == RecurringType.INCOME) "Income" else "Commitment",
-                    colorHex = category?.colorHex ?: "#8A6D3B",
-                    walletName = data.walletName(rule.walletId),
-                )
+                val dates = occurrenceDatesNearToday(rule, today, end)
+                dates.map { dueDate ->
+                    UpcomingCommitment(
+                        id = "${rule.id}:${dueDate.toEpochDay()}",
+                        name = rule.name,
+                        amountMinor = rule.amountMinor,
+                        dueDate = dueDate,
+                        isIncome = rule.type == RecurringType.INCOME,
+                        essential = rule.essential,
+                        categoryName = category?.name ?: if (rule.type == RecurringType.INCOME) "Income" else "Commitment",
+                        colorHex = category?.colorHex ?: "#8A6D3B",
+                        walletName = data.walletName(rule.walletId),
+                    )
+                }
             }
         val debts = data.debts
             .filter { it.deletedAt == null && !it.archived && it.nextDueEpochDay != null }
-            .filter { it.nextDueEpochDay != null && it.nextDueEpochDay in fromEpoch..toEpoch }
+            .filter {
+                it.nextDueEpochDay?.let { day -> day in today.toEpochDay()..end.toEpochDay() } == true
+            }
             .map { debt ->
                 UpcomingCommitment(
                     id = debt.id,
@@ -347,28 +353,37 @@ class AnalyticsEngine(private val data: LedgerSnapshot) {
         .sumOf { rule -> occurrencesInRange(rule, range) * rule.amountMinor }
 
     fun occurrencesInRange(rule: RecurringRuleEntity, range: DateRange): Int {
-        var due = LocalDate.ofEpochDay(rule.nextDueEpochDay)
-        var guard = 0
-        while (due.isAfter(range.start) && guard < 128) {
-            due = previousOccurrence(due, rule)
-            guard++
-        }
+        var due = firstOccurrenceOnOrAfter(rule, range.start)
         var count = 0
-        guard = 0
-        while (!due.isAfter(range.end) && guard < 256) {
-            if (!due.isBefore(range.start)) count++
+        while (!due.isAfter(range.end)) {
+            count++
             due = Periods.nextOccurrence(due, rule.frequency)
-            guard++
         }
         return count
     }
 
-    private fun previousOccurrence(date: LocalDate, rule: RecurringRuleEntity): LocalDate = when (rule.frequency) {
-        com.mizani.money.core.model.Frequency.WEEKLY -> date.minusWeeks(1)
-        com.mizani.money.core.model.Frequency.BIWEEKLY -> date.minusWeeks(2)
-        com.mizani.money.core.model.Frequency.MONTHLY -> Periods.addMonthsClamped(date, -1)
-        com.mizani.money.core.model.Frequency.QUARTERLY -> Periods.addMonthsClamped(date, -3)
-        com.mizani.money.core.model.Frequency.YEARLY -> Periods.addMonthsClamped(date, -12)
+    private fun firstOccurrenceOnOrAfter(rule: RecurringRuleEntity, start: LocalDate): LocalDate {
+        var due = LocalDate.ofEpochDay(rule.nextDueEpochDay)
+        while (due.isBefore(start)) due = Periods.nextOccurrence(due, rule.frequency)
+        return due
+    }
+
+    private fun occurrenceDatesNearToday(
+        rule: RecurringRuleEntity,
+        today: LocalDate,
+        end: LocalDate,
+    ): List<LocalDate> {
+        val nextDue = LocalDate.ofEpochDay(rule.nextDueEpochDay)
+        val dates = mutableListOf<LocalDate>()
+        // Keep one overdue occurrence visible so it can be recorded. Later missed cycles are
+        // not posted automatically; the rule remains a forecast until the user records it.
+        if (nextDue.isBefore(today)) dates += nextDue
+        var due = firstOccurrenceOnOrAfter(rule, today)
+        while (!due.isAfter(end)) {
+            dates += due
+            due = Periods.nextOccurrence(due, rule.frequency)
+        }
+        return dates
     }
 
     fun incomeVariability(today: LocalDate = LocalDate.now()): IncomeVariability? {

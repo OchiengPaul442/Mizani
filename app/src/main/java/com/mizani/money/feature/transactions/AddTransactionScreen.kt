@@ -46,6 +46,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,9 +70,12 @@ import com.mizani.money.R
 import com.mizani.money.core.model.CategoryType
 import com.mizani.money.core.model.Ids
 import com.mizani.money.core.model.TransactionType
+import com.mizani.money.core.money.CurrencyConversion
+import com.mizani.money.core.money.Currencies
 import com.mizani.money.core.money.MoneyFormat
 import com.mizani.money.core.time.DateText
 import com.mizani.money.data.local.CategoryEntity
+import com.mizani.money.data.repo.ExchangeRate
 import com.mizani.money.data.repo.TransactionDraft
 import com.mizani.money.ui.AppUiState
 import com.mizani.money.ui.AppViewModel
@@ -92,6 +96,7 @@ import com.mizani.money.ui.theme.DeepTeal
 import com.mizani.money.ui.theme.Emerald
 import com.mizani.money.ui.theme.Mint
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
@@ -115,11 +120,48 @@ fun AddTransactionScreen(
     val wallets = snapshot.activeWallets.ifEmpty { snapshot.wallets }
 
     var type by rememberSaveable(existing?.id) { mutableStateOf(existing?.type ?: TransactionType.EXPENSE) }
+    var entryCurrencyCode by rememberSaveable(existing?.id, currency.code) {
+        mutableStateOf(
+            existing?.takeIf { it.type == TransactionType.EXPENSE || it.type == TransactionType.INCOME }
+                ?.sourceCurrencyCode ?: currency.code,
+        )
+    }
+    var rateRefreshToken by remember(existing?.id) { mutableStateOf(0) }
+    var exchangeRate by remember(existing?.id) {
+        mutableStateOf(
+            existing?.let { transaction ->
+                val savedDate = transaction.exchangeRateDate?.let { value ->
+                    runCatching { LocalDate.parse(value) }.getOrNull()
+                }
+                val savedRate = transaction.exchangeRate
+                val sourceCode = transaction.sourceCurrencyCode
+                if (savedDate != null && savedRate != null && sourceCode != null) {
+                    ExchangeRate(sourceCode, currency.code, savedRate, savedDate)
+                } else null
+            },
+        )
+    }
+    var isRateLoading by remember(existing?.id) { mutableStateOf(false) }
+    var isRateRefreshing by remember(existing?.id) { mutableStateOf(false) }
+    var rateError by remember(existing?.id) { mutableStateOf<String?>(null) }
     var amountText by rememberSaveable(existing?.id) {
-        mutableStateOf(existing?.let { MoneyFormat.toInput(kotlin.math.abs(it.amountMinor), currency) } ?: "")
+        mutableStateOf(existing?.let {
+            val hasForeignAmount = (it.type == TransactionType.EXPENSE || it.type == TransactionType.INCOME) &&
+                it.sourceAmountMinor != null && it.sourceCurrencyCode != null
+            MoneyFormat.toInput(
+                kotlin.math.abs(if (hasForeignAmount) it.sourceAmountMinor!! else it.amountMinor),
+                Currencies.byCode(if (hasForeignAmount) it.sourceCurrencyCode!! else currency.code),
+            )
+        } ?: "")
     }
     var feeText by rememberSaveable(existing?.id) {
-        mutableStateOf(existing?.let { if (it.feeMinor > 0) MoneyFormat.toInput(it.feeMinor, currency) else "" } ?: "")
+        mutableStateOf(existing?.let {
+            val hasForeignAmount = (it.type == TransactionType.EXPENSE || it.type == TransactionType.INCOME) &&
+                it.sourceAmountMinor != null && it.sourceCurrencyCode != null
+            val sourceCurrency = Currencies.byCode(if (hasForeignAmount) it.sourceCurrencyCode!! else currency.code)
+            val sourceFee = if (hasForeignAmount) it.sourceFeeMinor ?: 0L else it.feeMinor
+            if (sourceFee > 0) MoneyFormat.toInput(sourceFee, sourceCurrency) else ""
+        } ?: "")
     }
     var walletId by rememberSaveable(existing?.id) {
         mutableStateOf(existing?.walletId ?: wallets.firstOrNull()?.id)
@@ -167,6 +209,79 @@ fun AddTransactionScreen(
         )
     }
 
+    val canEnterForeignCurrency = type == TransactionType.EXPENSE || type == TransactionType.INCOME
+    val entryCurrency = if (canEnterForeignCurrency) Currencies.byCode(entryCurrencyCode) else currency
+    val isForeignCurrency = canEnterForeignCurrency && entryCurrency.code != currency.code
+
+    LaunchedEffect(entryCurrency.code, currency.code, canEnterForeignCurrency, existing?.id, rateRefreshToken) {
+        if (!isForeignCurrency) {
+            exchangeRate = null
+            rateError = null
+            isRateLoading = false
+            isRateRefreshing = false
+            return@LaunchedEffect
+        }
+
+        val savedRate = existing?.takeIf {
+            rateRefreshToken == 0 && it.sourceCurrencyCode == entryCurrency.code &&
+                it.exchangeRate != null && it.exchangeRateDate != null
+        }?.let { transaction ->
+            runCatching {
+                ExchangeRate(
+                    transaction.sourceCurrencyCode!!,
+                    currency.code,
+                    transaction.exchangeRate!!,
+                    LocalDate.parse(transaction.exchangeRateDate!!),
+                )
+            }.getOrNull()
+        }
+        if (savedRate != null) {
+            exchangeRate = savedRate
+            rateError = null
+            isRateLoading = false
+            return@LaunchedEffect
+        }
+
+        exchangeRate = null
+        rateError = null
+        isRateLoading = true
+        isRateRefreshing = false
+        try {
+            // Show a saved observation immediately. Refresh in the background so weak or
+            // unavailable connectivity does not make a cached conversion unusable.
+            exchangeRate = vm.exchangeRates.cachedRate(entryCurrency.code, currency.code)
+            isRateLoading = exchangeRate == null
+            val shouldRefresh = rateRefreshToken > 0 ||
+                vm.exchangeRates.shouldRefresh(entryCurrency.code, currency.code)
+            if (shouldRefresh) {
+                isRateRefreshing = true
+                try {
+                    exchangeRate = vm.exchangeRates.refreshRate(entryCurrency.code, currency.code)
+                    rateError = null
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    rateError = if (exchangeRate != null) {
+                        "Using the saved rate. Couldn't check for a newer rate."
+                    } else {
+                        "No saved rate is available. Connect to get a rate; other app features work offline."
+                    }
+                }
+            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            rateError = if (exchangeRate != null) {
+                "Using the saved rate. Couldn't check for a newer rate."
+            } else {
+                "No saved rate is available. Connect to get a rate; other app features work offline."
+            }
+        } finally {
+            isRateLoading = false
+            isRateRefreshing = false
+        }
+    }
+
     val categoryType = if (type == TransactionType.INCOME) CategoryType.INCOME else CategoryType.EXPENSE
     val categories = remember(snapshot.categories, type) {
         snapshot.activeCategories.filter { it.type == categoryType }
@@ -191,14 +306,36 @@ fun AddTransactionScreen(
     }
 
     val selectedCategory = categories.firstOrNull { it.id == categoryId }
-    val amountMinor = MoneyFormat.parse(amountText, currency) ?: 0L
-    val feeMinor = if (feeText.isBlank()) 0L else (MoneyFormat.parse(feeText, currency) ?: 0L)
+    val enteredAmountMinor = MoneyFormat.parse(amountText, entryCurrency) ?: 0L
+    val enteredFeeMinor = if (feeText.isBlank()) 0L else (MoneyFormat.parse(feeText, entryCurrency) ?: 0L)
+    val validFee = feeText.isBlank() || MoneyFormat.parse(feeText, entryCurrency) != null
+    val conversionRate = exchangeRate?.takeIf {
+        it.baseCurrencyCode == entryCurrency.code && it.quoteCurrencyCode == currency.code
+    }
+    fun toWorkspaceMinor(amount: Long): Long? {
+        if (!isForeignCurrency) return amount
+        val rate = conversionRate?.rate?.toBigDecimalOrNull() ?: return null
+        return runCatching { CurrencyConversion.convertMinorUnits(amount, entryCurrency, currency, rate) }
+            .getOrNull()
+    }
+    val convertedAmountMinor = toWorkspaceMinor(enteredAmountMinor)
+    val convertedFeeMinor = toWorkspaceMinor(enteredFeeMinor)
+    val amountMinor = convertedAmountMinor ?: 0L
+    val feeMinor = convertedFeeMinor ?: 0L
 
     fun save() {
         if (saving) return
         error = null
-        if (amountMinor <= 0) {
+        if (enteredAmountMinor <= 0) {
             error = "Enter an amount greater than zero"
+            return
+        }
+        if (isForeignCurrency && conversionRate == null) {
+            error = rateError ?: if (isRateLoading) "Getting the latest available exchange rate" else "Exchange rate is unavailable"
+            return
+        }
+        if (amountMinor <= 0) {
+            error = "This amount is too small to record in ${currency.code}"
             return
         }
         if (walletId == null) {
@@ -215,7 +352,7 @@ fun AddTransactionScreen(
             error = "Choose a category"
             return
         }
-        if (feeText.isNotBlank() && MoneyFormat.parse(feeText, currency) == null) {
+        if (!validFee) {
             error = "Enter a valid fee, or leave it blank"
             return
         }
@@ -233,6 +370,11 @@ fun AddTransactionScreen(
             note = note,
             payee = payee,
             date = date,
+            sourceAmountMinor = enteredAmountMinor.takeIf { isForeignCurrency },
+            sourceFeeMinor = enteredFeeMinor.takeIf { isForeignCurrency },
+            sourceCurrencyCode = entryCurrency.code.takeIf { isForeignCurrency },
+            exchangeRate = conversionRate?.rate.takeIf { isForeignCurrency },
+            exchangeRateDate = conversionRate?.date?.toString().takeIf { isForeignCurrency },
         )
         saving = true
         scope.launch {
@@ -336,6 +478,15 @@ fun AddTransactionScreen(
                             selected = type == option,
                             onClick = {
                                 type = option
+                                if (option != TransactionType.EXPENSE && option != TransactionType.INCOME) {
+                                    if (entryCurrency.code != currency.code) {
+                                        amountText = amountMinor.takeIf { it > 0L }
+                                            ?.let { MoneyFormat.toInput(it, currency) } ?: ""
+                                        feeText = feeMinor.takeIf { it > 0L }
+                                            ?.let { MoneyFormat.toInput(it, currency) } ?: ""
+                                    }
+                                    entryCurrencyCode = currency.code
+                                }
                                 val desiredCategoryType =
                                     if (option == TransactionType.INCOME) CategoryType.INCOME else CategoryType.EXPENSE
                                 categoryId = if (option == TransactionType.TRANSFER || option == TransactionType.ADJUSTMENT) {
@@ -359,10 +510,25 @@ fun AddTransactionScreen(
                 }
             }
 
-            val quickAddSteps = if (currency.minorUnits == 0) {
+            if (canEnterForeignCurrency) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    Text("Currency you’ll use", style = MaterialTheme.typography.labelLarge)
+                    MizaniPicker(
+                        selectedText = "${entryCurrency.code} · ${entryCurrency.name}",
+                        options = Currencies.all.map { item -> PickerOption(item.code, "${item.code} · ${item.name}") },
+                        onSelect = {
+                            entryCurrencyCode = it
+                            error = null
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+
+            val quickAddSteps = if (entryCurrency.minorUnits == 0) {
                 listOf(1_000L, 5_000L, 10_000L)
             } else {
-                listOf(10L, 50L, 100L).map { it * currency.scaleFactor }
+                listOf(10L, 50L, 100L).map { it * entryCurrency.scaleFactor }
             }
             val amountWallet = wallets.firstOrNull { it.id == walletId }
 
@@ -401,7 +567,7 @@ fun AddTransactionScreen(
                     Spacer(Modifier.height(Spacing.sm))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            currency.symbol,
+                            entryCurrency.symbol,
                             style = MaterialTheme.typography.titleMedium,
                             color = Color.White,
                         )
@@ -430,9 +596,9 @@ fun AddTransactionScreen(
                             )
                         }
                     }
-                    if (amountMinor > 0) {
+                    if (enteredAmountMinor > 0) {
                         Text(
-                            MoneyFormat.format(amountMinor, currency),
+                            MoneyFormat.format(enteredAmountMinor, entryCurrency),
                             style = MaterialTheme.typography.labelMedium,
                             color = Color.White,
                         )
@@ -479,18 +645,103 @@ fun AddTransactionScreen(
                                 modifier = Modifier
                                     .clip(MaterialTheme.shapes.medium)
                                     .clickable {
-                                        val current = MoneyFormat.parse(amountText, currency) ?: 0L
-                                        amountText = MoneyFormat.toInput(current + step, currency)
+                                        val current = MoneyFormat.parse(amountText, entryCurrency) ?: 0L
+                                        amountText = MoneyFormat.toInput(current + step, entryCurrency)
                                         error = null
                                     },
                             ) {
                                 Text(
-                                    "+${MoneyFormat.formatBare(step, currency)}",
+                                    "+${MoneyFormat.formatBare(step, entryCurrency)}",
                                     style = MaterialTheme.typography.labelLarge,
                                     color = Color.White,
                                     modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
                                 )
                             }
+                        }
+                    }
+                }
+            }
+
+            if (isForeignCurrency) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    shape = MaterialTheme.shapes.medium,
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(Spacing.md),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    ) {
+                        Text("Recorded in ${currency.code}", style = MaterialTheme.typography.labelLarge)
+                        when {
+                            conversionRate != null -> {
+                                if (enteredAmountMinor > 0L && amountMinor > 0L) {
+                                    Text(
+                                        MoneyFormat.format(amountMinor, currency),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                } else if (enteredAmountMinor > 0L) {
+                                    Text(
+                                        "This amount cannot be recorded in ${currency.code}; try a smaller amount.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                }
+                                Text(
+                                    "1 ${entryCurrency.code} = ${conversionRate.rate} ${currency.code} · ${DateText.medium(conversionRate.date)}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Text(
+                                    "Daily reference rate from Frankfurter; your bank or card provider may use a different rate.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                rateError?.let {
+                                    Text(
+                                        it,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                if (isRateRefreshing) {
+                                    Text(
+                                        "Checking for a newer rate…",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                            isRateLoading -> Text(
+                                "Getting the latest available daily rate…",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            else -> {
+                                Text(
+                                    rateError ?: "Exchange rate unavailable. Connect to the internet to convert this amount.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                                TextButton(onClick = { rateRefreshToken++ }) {
+                                    Text("Retry exchange rate")
+                                }
+                            }
+                        }
+                        if (conversionRate != null) {
+                            TextButton(
+                                onClick = { rateRefreshToken++ },
+                                enabled = !isRateLoading && !isRateRefreshing,
+                            ) {
+                                Text("Refresh rate")
+                            }
+                        }
+                        if (isForeignCurrency && conversionRate != null && feeText.isNotBlank() && validFee && convertedFeeMinor == null) {
+                            Text(
+                                "This fee exceeds the supported ${currency.code} amount range.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
                         }
                     }
                 }
@@ -647,8 +898,12 @@ fun AddTransactionScreen(
                     value = feeText,
                     onValueChange = { input -> feeText = input },
                     label = "Fee charged (optional)",
-                    currency = currency,
-                    supportingText = "Fees are counted as spending and tracked separately. A transfer itself is not spending.",
+                    currency = entryCurrency,
+                    supportingText = if (isForeignCurrency) {
+                        "Fee is converted using the same daily rate and included in spending."
+                    } else {
+                        "Fees are counted as spending and tracked separately. A transfer itself is not spending."
+                    },
                 )
                 if (type == TransactionType.INCOME) {
                     Text("Income source (optional)", style = MaterialTheme.typography.labelLarge)
@@ -720,7 +975,9 @@ fun AddTransactionScreen(
                     Spacer(Modifier.height(Spacing.sm))
                     Button(
                         onClick = ::save,
-                        enabled = !saving && amountMinor > 0,
+                        enabled = !saving && amountMinor > 0 && (!isForeignCurrency || (
+                            !isRateLoading && conversionRate != null && convertedFeeMinor != null
+                        )),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp),

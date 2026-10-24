@@ -78,6 +78,17 @@ internal object BackupValidator {
             }
             require(transaction.amountMinor != 0L) { "Transaction has a zero amount" }
             require(transaction.feeMinor >= 0) { "Transaction has a negative fee" }
+            TransactionCurrencyRules.validate(
+                workspaceCurrencyCode = workspaceCurrency,
+                type = transaction.type,
+                amountMinor = transaction.amountMinor,
+                feeMinor = transaction.feeMinor,
+                sourceAmountMinor = transaction.sourceAmountMinor,
+                sourceFeeMinor = transaction.sourceFeeMinor,
+                sourceCurrencyCode = transaction.sourceCurrencyCode,
+                exchangeRate = transaction.exchangeRate,
+                exchangeRateDate = transaction.exchangeRateDate,
+            )
             if (transaction.categoryId != null) {
                 require(transaction.categoryId in categoryIds) { "Transaction references a missing category" }
                 // A category's type must agree with the transaction's nature.

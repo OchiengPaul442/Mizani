@@ -4,14 +4,21 @@ import android.app.Application
 import com.mizani.money.data.local.DatabaseKeyManager
 import com.mizani.money.data.local.MizaniDatabase
 import com.mizani.money.data.repo.FinanceRepository
+import com.mizani.money.data.repo.ExchangeRateRepository
 import com.mizani.money.data.repo.SettingsRepository
 import com.mizani.money.domain.export.ExportManager
+import kotlinx.coroutines.Deferred
 
 /**
  * Explicit, constructor-injected dependency container. Keeping DI manual for V1 removes
  * annotation-processing risk and makes the wiring auditable.
  */
-class AppContainer(private val application: Application) {
+class AppContainer(
+    private val application: Application,
+    private val sqlCipherReady: Deferred<Unit>,
+) {
+
+    suspend fun awaitSqlCipherReady() = sqlCipherReady.await()
 
     val settingsRepository: SettingsRepository by lazy { SettingsRepository(application) }
 
@@ -20,6 +27,8 @@ class AppContainer(private val application: Application) {
     }
 
     val financeRepository: FinanceRepository by lazy { FinanceRepository(database) }
+
+    val exchangeRateRepository: ExchangeRateRepository by lazy { ExchangeRateRepository(application) }
 
     val exportManager: ExportManager by lazy { ExportManager(application, financeRepository) }
 }

@@ -5,6 +5,8 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 
 @Database(
@@ -21,7 +23,7 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         RecurringRuleEntity::class,
         DebtEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -41,10 +43,21 @@ abstract class MizaniDatabase : RoomDatabase() {
     companion object {
         const val NAME = "mizani.db"
 
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE transactions ADD COLUMN sourceAmountMinor INTEGER")
+                database.execSQL("ALTER TABLE transactions ADD COLUMN sourceFeeMinor INTEGER")
+                database.execSQL("ALTER TABLE transactions ADD COLUMN sourceCurrencyCode TEXT")
+                database.execSQL("ALTER TABLE transactions ADD COLUMN exchangeRate TEXT")
+                database.execSQL("ALTER TABLE transactions ADD COLUMN exchangeRateDate TEXT")
+            }
+        }
+
         fun build(context: Context, passphrase: ByteArray): MizaniDatabase {
             val factory = SupportOpenHelperFactory(passphrase)
             return Room.databaseBuilder(context, MizaniDatabase::class.java, NAME)
                 .openHelperFactory(factory)
+                .addMigrations(MIGRATION_1_2)
                 .build()
         }
     }

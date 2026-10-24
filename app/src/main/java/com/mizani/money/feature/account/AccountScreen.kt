@@ -59,7 +59,7 @@ fun AccountScreen(onBack: () -> Unit) {
                 icon = Icons.Rounded.PersonOff,
                 title = "On this phone",
                 body = "Everything lives in the encrypted database on this device, with no background " +
-                    "network traffic.",
+                    "network traffic except when you request a currency-pair rate lookup.",
                 active = true,
             )
             ModeCard(
@@ -72,7 +72,7 @@ fun AccountScreen(onBack: () -> Unit) {
             ModeCard(
                 icon = Icons.Rounded.CloudOff,
                 title = "No cloud sync",
-                body = "Mizani has no servers or online accounts, so nothing is ever uploaded. An encrypted " +
+                body = "Mizani has no servers or online accounts, so transaction details are never uploaded. An encrypted " +
                     "backup file is the only way to move your data between devices.",
                 active = false,
             )
@@ -93,7 +93,7 @@ fun AccountScreen(onBack: () -> Unit) {
             }
 
             Text(
-                "Mizani has no internet permission, so your records cannot leave this phone unless you " +
+                "Mizani has internet access only for currency-pair lookups, which never include transaction details. Your records leave only if you " +
                     "export them.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

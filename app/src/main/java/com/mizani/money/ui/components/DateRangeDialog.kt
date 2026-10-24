@@ -1,6 +1,8 @@
 package com.mizani.money.ui.components
 
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -8,6 +10,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import com.mizani.money.core.time.DateRange
 import java.time.Instant
 import java.time.LocalDate
@@ -26,6 +31,8 @@ fun DateRangePickerDialog(
     )
     DatePickerDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier.fillMaxWidth(0.94f).widthIn(max = 560.dp),
+        properties = DialogProperties(usePlatformDefaultWidth = false),
         confirmButton = {
             TextButton(
                 enabled = state.selectedStartDateMillis != null && state.selectedEndDateMillis != null,

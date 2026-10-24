@@ -77,7 +77,7 @@ fun UpcomingList(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        "${DateText.relative(item.dueDate, today)} · ${item.categoryName}",
+                        "${if (item.dueDate.isBefore(today)) "Overdue · " else ""}${DateText.relative(item.dueDate, today)} · ${item.categoryName}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -95,10 +95,11 @@ fun UpcomingList(
         }
         val next = upcoming.firstOrNull()
         if (next != null) {
-            val days = ChronoUnit.DAYS.between(today, next.dueDate).coerceAtLeast(0)
+            val days = ChronoUnit.DAYS.between(today, next.dueDate)
             val total = upcoming.filter { !it.isIncome }.sumOf { it.amountMinor }
             Text(
-                "Next: ${next.name} in $days ${if (days == 1L) "day" else "days"}. " +
+                (if (days < 0) "Overdue: ${next.name} by ${-days} ${if (days == -1L) "day" else "days"}. "
+                else "Next: ${next.name} in $days ${if (days == 1L) "day" else "days"}. ") +
                     "Commitments listed here total ${MoneyFormat.format(total, currency)}.",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

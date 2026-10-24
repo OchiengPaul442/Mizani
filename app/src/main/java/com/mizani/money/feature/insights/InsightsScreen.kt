@@ -218,8 +218,7 @@ fun InsightsScreen(
             MetricCard(
                 title = "Six-month cash flow",
                 subtitle = "Income versus expenses",
-                info = "Each bar is the total of posted transactions whose local date falls in that month. " +
-                    "Refunds reduce expenses; transfers are excluded. Months with no records show zero, not an estimate.",
+                info = "Shows recorded income and spending for each month. Refunds reduce spending, transfers are excluded, and months without records are not estimated.",
             ) {
                 if (monthsWithData < 2) {
                     Text(
@@ -246,8 +245,7 @@ fun InsightsScreen(
             MetricCard(
                 title = "Where it went",
                 subtitle = "Category share, refund-adjusted",
-                info = "Each category's net expense = expenses in that category + attributed fees − refunds linked to that category. " +
-                    "Share = category net expense ÷ total eligible spending. Transfers are excluded.",
+                info = "Shows how recorded spending is distributed across categories for this period. Refunds are reflected in their category, and transfers are excluded.",
             ) {
                 // Refund-heavy periods can leave negative category totals; only positive
                 // net spending is charted so shares stay comparable and never negative.
@@ -299,8 +297,7 @@ fun InsightsScreen(
                 MetricCard(
                     title = "Plan pace",
                     subtitle = budgetNow.budget.name,
-                    info = "Planned spend to date = available category plan × elapsed share of the plan period. " +
-                        "Pace variance = actual spending − planned spend to date. A positive variance means spending is ahead of plan.",
+                    info = "Shows whether recorded spending is ahead of or behind the plan for this point in the period.",
                 ) {
                     val lines = budgetNow.lines.filter { it.line.plannedMinor > 0 }.sortedByDescending { it.paceVarianceMinor }.take(5)
                     if (lines.isEmpty()) {
@@ -340,8 +337,7 @@ fun InsightsScreen(
                 MetricCard(
                     title = "Wallets",
                     subtitle = "${current.walletBalances.size} active wallets",
-                    info = "Wallet balance = opening balance + income − expenses and fees + transfers in − transfers out " +
-                        "+ refunds + adjustments. Debt wallets are excluded from the liquid total.",
+                    info = "Balances reflect the activity you record. The liquid total leaves out debt wallets.",
                 ) {
                     Row {
                         MetricValue("Total tracked", MoneyFormat.format(current.walletTotalMinor, currency), MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
@@ -373,8 +369,7 @@ fun InsightsScreen(
                 MetricCard(
                     title = "Income history",
                     subtitle = current.incomeVariability?.let { "${it.monthsWithIncome} months with income" } ?: "Not enough history",
-                    info = "Median, lowest and highest are calculated from the last six calendar months with recorded income. " +
-                        "Income variability is descriptive only.",
+                    info = "Summarizes recorded income over recent months. It describes past activity and does not predict future income.",
                 ) {
                     val variability = current.incomeVariability
                     if (variability == null) {
@@ -409,9 +404,7 @@ fun InsightsScreen(
                 MetricCard(
                     title = "Fees",
                     subtitle = "Fees on transactions and transfers",
-                    info = "Fees = the fee amounts recorded on transactions in the month. A fee is counted as spending; " +
-                        "the transfer or expense amount it belongs to is not double-counted. The denominator here is recorded fees, " +
-                        "not a fee percentage.",
+                    info = "Includes fees you record on transactions and transfers. Fees are tracked separately so they are not counted twice.",
                 ) {
                     Row {
                         MetricValue("This month", MoneyFormat.format(feeNow, currency), MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
@@ -463,9 +456,7 @@ fun InsightsScreen(
                 MetricCard(
                     title = "Forecast",
                     subtitle = "A simple, explainable estimate",
-                    info = "Projected period spend = spending to date + average daily spending from recorded spending " +
-                        "in the last 14 days × days remaining. The estimate appears once that window covers at least " +
-                        "7 days of recorded spending, uses recorded spending only and is not a promise or an AI prediction.",
+                    info = "A rough estimate based on recent recorded spending and the time remaining in this period. It can change and is not a promise.",
                 ) {
                     val forecast = current.forecastMinor
                     if (forecast == null) {
@@ -491,7 +482,7 @@ fun InsightsScreen(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Text(
-                        "Safe-to-spend uses the funded flexible plan remaining minus bills due before the period ends, divided by days left.",
+                        "A planning guide based on your funded plan and upcoming bills. It can change when your plan or due dates change.",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -500,8 +491,7 @@ fun InsightsScreen(
                 MetricCard(
                     title = "Savings",
                     subtitle = "Contributions and rate",
-                    info = "Savings rate = goal contributions in this period ÷ income received × 100. " +
-                        "It is unavailable when income received is zero. Transfers between owned wallets are not expenses.",
+                    info = "Shows goal contributions relative to income received. Moving money between your own wallets is not spending.",
                 ) {
                     Row {
                         MetricValue("Set aside", MoneyFormat.format(current.savingsContributionsMinor, currency), MaterialTheme.colorScheme.primary, Modifier.weight(1f))
@@ -532,8 +522,7 @@ fun InsightsScreen(
                 MetricCard(
                     title = "Essential coverage",
                     subtitle = "Received income versus essential plans",
-                    info = "Essential coverage = income actually received in this period ÷ essential planned amounts in the plan × 100. " +
-                        "Expected income is not included. Below 100% is a planning signal, not a prediction.",
+                    info = "Compares income received with essential amounts in your current plan. Expected income is not included; this is a planning signal, not a prediction.",
                 ) {
                     val coverage = current.essentialCoveragePercent
                     if (coverage == null) {
@@ -786,8 +775,7 @@ private fun CashFlowHero(
         }
         AnimatedVisibility(visible = showInfo) {
             Text(
-                "Income = posted income transactions in this period. Net spending = expenses plus fees, minus refunds. " +
-                    "Transfers between your own wallets are excluded. Net = income − net spending.",
+                "Income and spending come from transactions recorded for this period. Fees and refunds affect spending totals; transfers between your own wallets are excluded.",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.White,
                 modifier = Modifier.padding(top = Spacing.sm),

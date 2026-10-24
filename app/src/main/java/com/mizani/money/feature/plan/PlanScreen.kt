@@ -104,6 +104,7 @@ fun PlanScreen(
 
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var error by remember { mutableStateOf<String?>(null) }
+    var message by remember { mutableStateOf<String?>(null) }
     var editingRule by remember { mutableStateOf<RecurringRuleEntity?>(null) }
     var recurringType by remember { mutableStateOf(RecurringType.BILL) }
     var showRecurringDialog by remember { mutableStateOf(false) }
@@ -129,7 +130,13 @@ fun PlanScreen(
                             editingRule = null
                             error = null
                         }
-                        .onFailure { error = it.message ?: "Could not save this commitment" }
+                        .onFailure {
+                            error = it.message ?: if (recurringType == RecurringType.INCOME) {
+                                "Could not save this income schedule. Try again."
+                            } else {
+                                "Could not save this bill. Try again."
+                            }
+                        }
                 }
             },
             onArchive = { id ->
@@ -216,7 +223,7 @@ fun PlanScreen(
 
     Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize()) {
-        MizaniTopBar(title = "Plan", subtitle = "What this money must cover")
+        MizaniTopBar(title = "Plan", subtitle = "Plan income, spending and savings")
         // PrimaryTabRow (Material3 stable) draws the brand emerald pill indicator on the screen background.
         PrimaryTabRow(
             selectedTabIndex = tab,
@@ -236,6 +243,15 @@ fun PlanScreen(
                 text = error!!,
                 isError = true,
                 onDismiss = { error = null },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+            )
+        }
+        if (message != null) {
+            StatusBanner(
+                text = message!!,
+                onDismiss = { message = null },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
@@ -278,7 +294,11 @@ fun PlanScreen(
                     onMarkReceived = { rule ->
                         scope.launch {
                             runCatching { vm.finance.markRecurringPaid(rule.id, today) }
-                                .onFailure { error = it.message ?: "Could not update this commitment. Try again." }
+                                .onSuccess {
+                                    error = null
+                                    message = "Receipt recorded. Your balance and reports are updated."
+                                }
+                                .onFailure { error = it.message ?: "Could not record this receipt. Try again." }
                         }
                     },
                 )
@@ -301,7 +321,11 @@ fun PlanScreen(
                     onMarkPaid = { rule ->
                         scope.launch {
                             runCatching { vm.finance.markRecurringPaid(rule.id, today) }
-                                .onFailure { error = it.message ?: "Could not update this commitment. Try again." }
+                                .onSuccess {
+                                    error = null
+                                    message = "Payment recorded. Your balance and reports are updated."
+                                }
+                                .onFailure { error = it.message ?: "Could not record this payment. Try again." }
                         }
                     },
                     onOpenDebts = onOpenDebts,
@@ -343,7 +367,7 @@ private fun BudgetTab(
         if (budget == null || progress == null) {
             EmptyState(
                 title = "No plan for this month",
-                body = "Plan what this money must cover. Mizani keeps expected income separate from money actually received, " +
+                body = "Plan what this money must cover. Mizani keeps scheduled income separate from recorded receipts, " +
                     "and separates funded amounts from planned amounts.",
                 iconRes = R.drawable.ic_ph_chart_donut,
                 actionLabel = "Create a plan",
@@ -547,7 +571,7 @@ private fun IncomeTab(
             Text("This month", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Row {
                 Column(Modifier.weight(1f)) {
-                    Text("Expected", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Still scheduled", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(MoneyFormat.format(expectedMinor, currency), style = MaterialTheme.typography.titleMedium)
                 }
                 Column(Modifier.weight(1f)) {
@@ -557,11 +581,7 @@ private fun IncomeTab(
             }
             Spacer(Modifier.height(Spacing.sm))
             Text(
-                if (expectedMinor > incomeMinor) {
-                    "Still expected: ${MoneyFormat.format(expectedMinor - incomeMinor, currency)}. Expected income is never counted as cash until you mark it received."
-                } else {
-                    "Expected income never counts as cash received. Record actual receipts to update balances and insights."
-                },
+                "Scheduled amounts are estimates. Record each receipt when it arrives to update your balance and reports.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -590,10 +610,10 @@ private fun IncomeTab(
             }
         }
 
-        SectionHeader(title = "Expected income", actionLabel = "Add", onAction = onAddRule)
+        SectionHeader(title = "Recurring income", actionLabel = "Add", onAction = onAddRule)
         if (rules.isEmpty()) {
             Text(
-                "Add income you expect to receive so you can plan around it before it arrives.",
+                "Add salary or other income you receive on a schedule. It appears in your forecast until you record a receipt.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -603,7 +623,7 @@ private fun IncomeTab(
                     rule = rule,
                     currency = currency,
                     walletName = snapshot.walletName(rule.walletId),
-                    actionLabel = "Mark received",
+                    actionLabel = "Record receipt",
                     onAction = { onMarkReceived(rule) },
                     onClick = { onEditRule(rule) },
                 )
@@ -648,8 +668,7 @@ private fun BillsTab(
         SectionHeader(title = "Recurring bills & commitments", actionLabel = "Add", onAction = onAdd)
         if (bills.isEmpty()) {
             Text(
-                "Add rent, school fees, utilities, subscriptions or loan payments. Mizani reserves money for them before " +
-                    "calling the rest safe to spend.",
+                "Add recurring bills and loan payments. Upcoming amounts are included in your plan; record each payment when it leaves a wallet.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -659,7 +678,7 @@ private fun BillsTab(
                     rule = bill,
                     currency = currency,
                     walletName = snapshot.walletName(bill.walletId),
-                    actionLabel = "Mark paid",
+                    actionLabel = "Record payment",
                     onAction = { onMarkPaid(bill) },
                     onClick = { onEdit(bill) },
                 )
@@ -832,7 +851,7 @@ private fun RecurringRow(
                     }
                 }
                 Text(
-                    "${DateText.relative(LocalDate.ofEpochDay(rule.nextDueEpochDay))} · $walletName",
+                    "${rule.frequency.label} · ${DateText.relative(LocalDate.ofEpochDay(rule.nextDueEpochDay))} · $walletName",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

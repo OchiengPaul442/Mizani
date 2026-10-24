@@ -116,6 +116,13 @@ data class TransactionEntity(
     val updatedAt: Long,
     val revision: Long = 1L,
     val deletedAt: Long? = null,
+    /** Original entered amount when a foreign currency was converted into the workspace currency. */
+    val sourceAmountMinor: Long? = null,
+    val sourceFeeMinor: Long? = null,
+    val sourceCurrencyCode: String? = null,
+    /** Decimal text, target major units per source major unit; retained exactly for auditability. */
+    val exchangeRate: String? = null,
+    val exchangeRateDate: String? = null,
 )
 
 @Entity(

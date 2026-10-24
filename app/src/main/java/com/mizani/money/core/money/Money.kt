@@ -43,6 +43,25 @@ object Currencies {
         all.firstOrNull { it.code.equals(code, ignoreCase = true) } ?: USD
 }
 
+/** Converts minor units using a decimal rate expressed as target major units per source major unit. */
+object CurrencyConversion {
+    fun convertMinorUnits(
+        amountMinor: Long,
+        source: Currency,
+        target: Currency,
+        rate: BigDecimal,
+    ): Long {
+        require(amountMinor >= 0L) { "Amount cannot be negative" }
+        require(rate.signum() > 0) { "Exchange rate must be positive" }
+
+        return BigDecimal.valueOf(amountMinor)
+            .multiply(rate)
+            .multiply(BigDecimal.valueOf(target.scaleFactor))
+            .divide(BigDecimal.valueOf(source.scaleFactor), 0, RoundingMode.HALF_UP)
+            .longValueExact()
+    }
+}
+
 /**
  * Immutable money value. Arithmetic requires matching currencies, and overflow is
  * handled explicitly rather than silently wrapping around.

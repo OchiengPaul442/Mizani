@@ -61,9 +61,7 @@ class InsightEngine(
                             tone = InsightTone.ATTENTION,
                             title = "$name is ahead of your planned pace",
                             body = "Spent ${money(line.spentMinor)} against a ${money(line.availableMinor)} budget — ${money(line.paceVarianceMinor)} more than the ${money(line.expectedToDateMinor)} planned pace at day $day of $days.",
-                            explanation = "Planned pace = available budget × elapsed share of this period " +
-                                "(${money(line.availableMinor)} × ${"%.0f".format(budget.elapsedFraction * 100)}% = ${money(line.expectedToDateMinor)}). " +
-                                "Actual spending minus planned pace is ${money(line.paceVarianceMinor)}.",
+                            explanation = "Compares your spending so far with the amount your plan expected you to use by this point in the period.",
                             actionLabel = "Review budget",
                         )
                     }
@@ -83,8 +81,7 @@ class InsightEngine(
                     tone = InsightTone.NEUTRAL,
                     title = "$name is not fully funded",
                     body = "$name still needs ${money(gap)} to be fully funded for this period.",
-                    explanation = "Planned ${money(unfunded.line.plannedMinor)}, marked as funded ${money(unfunded.line.fundedMinor)}. " +
-                        "The difference is ${money(gap)}. Funding is what you have set aside, not what has been spent.",
+                    explanation = "Shows what remains to set aside for this essential category. Funding is separate from money already spent.",
                     actionLabel = "Update funding",
                 )
             }
@@ -112,8 +109,7 @@ class InsightEngine(
                     } else {
                         "${money(upcoming.amountMinor)} is due ${DateText.short(upcoming.dueDate)}. You can mark it paid when it happens."
                     },
-                    explanation = "This comes from the recurring commitment or debt due date you entered. " +
-                        "Liquid balance is the sum of your non-debt wallet balances today.",
+                    explanation = "Based on the due date and amount you entered. Your tracked liquid balance includes active non-debt wallets.",
                 )
             }
 
@@ -129,8 +125,7 @@ class InsightEngine(
                 tone = InsightTone.ATTENTION,
                 title = "Fees are higher than last month",
                 body = "You paid ${money(feeNow)} in transaction and withdrawal fees this month, ${money(increase)} more than last month.",
-                explanation = "Fees are recorded separately from the transfer or expense amount. " +
-                    "This month ${money(feeNow)} compared with ${money(feeBefore)} last month.",
+                explanation = "Compares the fees you recorded this month with last month. Fees are tracked separately from transaction amounts.",
                 actionLabel = "See fee trend",
             )
         }
@@ -158,8 +153,7 @@ class InsightEngine(
                     tone = InsightTone.NEUTRAL,
                     title = "Most of this month's income came from one source",
                     body = "${"%.0f".format(share * 100)}% of your recorded income came from $label.",
-                    explanation = "$label: ${money(top.value)} of ${money(incomeTotal)} received this month. " +
-                        "This is descriptive, not a judgement about reliability.",
+                    explanation = "Compares this month's recorded income by source. This describes past activity and does not predict future income.",
                 )
             }
         }
@@ -186,8 +180,7 @@ class InsightEngine(
                 tone = InsightTone.NEUTRAL,
                 title = "No goal contributions yet this period",
                 body = "Your savings rate is ${metrics.savingsRatePercent}% of income received.",
-                explanation = "Savings rate = goal contributions ÷ income received × 100. " +
-                    "Contributions recorded this period: ${money(metrics.savingsContributionsMinor)}.",
+                explanation = "Compares goal contributions with income received this period. Only amounts you recorded are included.",
             )
         }
 
@@ -198,8 +191,7 @@ class InsightEngine(
                 tone = InsightTone.NEUTRAL,
                 title = "Income received so far does not cover all essentials",
                 body = "Income received covers ${metrics.essentialCoveragePercent}% of the essential expenses you planned for this period.",
-                explanation = "Essential coverage = income received in this period ÷ essential planned budget × 100. " +
-                    "Only income actually received is used; expected income is not counted.",
+                explanation = "Compares income received with essential amounts in your current plan. Expected income is not included.",
             )
         }
 
@@ -215,8 +207,7 @@ class InsightEngine(
                     tone = InsightTone.NEUTRAL,
                     title = "No records for $days days",
                     body = "Your analytics only reflect what you record. Add recent cash or mobile-money activity to keep the picture current.",
-                    explanation = "The most recent recorded transaction was on ${DateText.medium(LocalDate.ofEpochDay(lastTransaction.localDateEpochDay))}. " +
-                        "Mizani does not invent transactions or estimate missing spending.",
+                    explanation = "Based on the date of your most recent recorded transaction. Mizani does not estimate missing activity.",
                     actionLabel = "Add transaction",
                 )
             }
@@ -262,8 +253,7 @@ class InsightEngine(
             tone = InsightTone.NEUTRAL,
             title = "$name is above your usual monthly level",
             body = "You have spent ${money(found.second)} on $name this month, about ${money(delta)} more than your recent median of ${money(found.third)}.",
-            explanation = "Median of the previous three months with spending in this category: ${money(found.third)}. " +
-                "This month to date: ${money(found.second)}. Comparisons use only months with recorded spending.",
+            explanation = "Compares this month's spending with recent months that had recorded spending in this category.",
         )
     }
 }

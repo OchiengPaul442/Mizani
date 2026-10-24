@@ -6,8 +6,8 @@
     <string name="common_back">Back</string>
     <string name="common_cancel">Cancel</string>
     <string name="common_ok">OK</string>
-    <string name="how_calculated_show">How this is calculated</string>
-    <string name="how_calculated_hide">Hide calculation</string>
+    <string name="how_calculated_show">About this</string>
+    <string name="how_calculated_hide">Hide details</string>
     <string name="country">Country</string>
     <string name="primary_currency">Primary currency</string>
     <string name="suggestions">Suggestions</string>
@@ -23,7 +23,7 @@
     <string name="onboarding_continue_without_account">Continue without account</string>
     <string name="onboarding_about_accounts">About accounts</string>
     <string name="onboarding_accounts_title">Accounts are optional</string>
-    <string name="onboarding_accounts_body">Mizani works fully offline: no account is required and no financial data leaves your phone. Create an encrypted backup from More → Export &amp; backup anytime.</string>
+    <string name="onboarding_accounts_body">Mizani does not require an account or upload your ledger. Currency conversion needs an internet request with the currency pair only. Create an encrypted backup from Settings any time. By selecting Agree and continue, you agree to the Terms of Service and acknowledge the Privacy Notice.</string>
     <string name="onboarding_not_now">Not now</string>
     <string name="onboarding_welcome_title">Your money, in balance.</string>
     <string name="onboarding_welcome_subtitle">Track spending and plan ahead.</string>
@@ -51,13 +51,13 @@
     <!-- Home -->
     <string name="home_add_transaction">Add transaction</string>
     <string name="home_get_started_title">Add your first transaction</string>
-    <string name="home_get_started_body">Add your first income or expense — it takes a few seconds and works completely offline.</string>
+    <string name="home_get_started_body">Add income or expenses quickly. Entries stay on this phone; foreign-currency rates need internet.</string>
     <string name="home_upcoming_empty">Add recurring bills so Mizani can plan for them before they are due.</string>
     <string name="home_upcoming_tile">Due %1$s</string>
     <string name="home_open_budget">Open plan</string>
     <string name="home_loading">Loading your summary…</string>
-    <string name="home_safe_info_show">How safe-to-spend is calculated</string>
-    <string name="home_safe_info_hide">Hide how safe-to-spend is calculated</string>
+    <string name="home_safe_info_show">About safe-to-spend</string>
+    <string name="home_safe_info_hide">Hide details</string>
 
     <!-- Insights -->
     <string name="insights_subtitle">What your records show</string>

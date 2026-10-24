@@ -22,7 +22,7 @@ import androidx.compose.material.icons.rounded.AccountBalance
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Archive
 import androidx.compose.material.icons.rounded.Payments
-import androidx.compose.material3.AlertDialog
+import com.mizani.money.ui.components.MizaniAlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -346,7 +346,7 @@ private fun DebtDialog(
     val payment = MoneyFormat.parse(paymentText, currency) ?: 0L
     val interest = interestText.toDoubleOrNull()
 
-    AlertDialog(
+    MizaniAlertDialog(
         onDismissRequest = onDismiss,
         shape = MaterialTheme.shapes.large,
         title = { Text(if (initial == null) "Add debt" else "Edit debt") },
@@ -470,7 +470,7 @@ private fun PaymentDialog(
     var error by remember { mutableStateOf<String?>(null) }
     val amount = MoneyFormat.parse(amountText, currency) ?: 0L
 
-    AlertDialog(
+    MizaniAlertDialog(
         onDismissRequest = onDismiss,
         shape = MaterialTheme.shapes.large,
         title = { Text("Record payment") },

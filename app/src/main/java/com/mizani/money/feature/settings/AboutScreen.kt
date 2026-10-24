@@ -13,24 +13,35 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.mizani.money.core.model.AppInfo
+import com.mizani.money.core.legal.LegalDocumentId
+import com.mizani.money.feature.legal.LegalDocumentsDialog
 import com.mizani.money.ui.AppUiState
 import com.mizani.money.ui.components.MizaniCard
 import com.mizani.money.ui.components.MizaniMark
+import com.mizani.money.ui.components.MizaniInfoRow
+import com.mizani.money.ui.components.MizaniSectionCard
+import com.mizani.money.ui.components.MizaniSectionDivider
 import com.mizani.money.ui.components.MizaniTopBar
 import com.mizani.money.ui.components.Spacing
 
 @Composable
 fun AboutScreen(state: AppUiState, onBack: () -> Unit) {
+    var legalDocument by rememberSaveable { mutableStateOf<LegalDocumentId?>(null) }
     Column(Modifier.fillMaxSize()) {
         MizaniTopBar(title = "About & privacy", onBack = onBack)
         Column(
@@ -121,7 +132,7 @@ fun AboutScreen(state: AppUiState, onBack: () -> Unit) {
                 Text("Your controls", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(Spacing.sm))
                 Text(
-                    "Create an encrypted backup or a CSV any time from Settings, and delete all local data " +
+                    "Create an encrypted backup, an Excel workbook or a transaction CSV from Settings, and delete all local data " +
                         "with confirmation. App lock adds a 6-digit PIN with optional biometric unlock.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -132,6 +143,22 @@ fun AboutScreen(state: AppUiState, onBack: () -> Unit) {
                 }
             }
 
+            MizaniSectionCard {
+                MizaniInfoRow(
+                    icon = Icons.Rounded.Description,
+                    title = "Terms of Service",
+                    subtitle = "Read the current terms of use",
+                    onClick = { legalDocument = LegalDocumentId.TERMS },
+                )
+                MizaniSectionDivider()
+                MizaniInfoRow(
+                    icon = Icons.Rounded.Shield,
+                    title = "Privacy Notice",
+                    subtitle = "Read how information is stored and used",
+                    onClick = { legalDocument = LegalDocumentId.PRIVACY },
+                )
+            }
+
             Text(
                 "Built with Kotlin, Jetpack Compose, Room and SQLCipher.\n" +
                     "MPAndroidChart by Philipp Jahoda is used under the Apache License 2.0. Brand assets are original.\n" +
@@ -140,6 +167,9 @@ fun AboutScreen(state: AppUiState, onBack: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+    legalDocument?.let { document ->
+        LegalDocumentsDialog(initialDocument = document, onClose = { legalDocument = null })
     }
 }
 

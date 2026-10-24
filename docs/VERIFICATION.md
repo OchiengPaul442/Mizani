@@ -116,18 +116,22 @@ must be run (ideally together with a TalkBack accessibility pass) before any rel
 1. Fresh install in airplane mode. Complete onboarding without an account.
 2. Create a wallet, record income, expense, transfer and refund. Confirm transfers do not
    change income/expense totals but fees do.
+   Also enter an expense in a foreign currency, verify the rate date and converted workspace
+   amount, then confirm the original amount and rate remain in the transaction and exports.
 3. Create a budget with essential and flexible categories, fund a line, mark a bill paid.
 4. Add a goal, contribute, verify progress and that a transfer contribution is not spending.
 5. Use search and filters; change reporting period to this week, last month and custom.
 6. Enable app lock, close and reopen, unlock with PIN; verify wrong PIN is rejected.
-7. Export CSV and encrypted backup; restore the backup and compare totals.
+7. Export transactions as CSV and all records as an Excel workbook; confirm both files open and that the workbook separates recorded transactions from recurring forecasts.
+8. Export an encrypted backup; restore it and compare totals.
 8. Kill the process after saving; reopen and confirm the ledger is intact.
-9. Confirm no crash in logcat, no financial values in logcat, and no network traffic.
+9. Confirm no crash in logcat, no financial values in logcat, and that the only network request
+   is an explicitly requested currency-pair rate lookup with no transaction data.
 
 ## Known limitations of this build
 
-- No cloud account/sync backend is configured (no credentials; no INTERNET permission).
-- SMS import, split transactions and multi-currency conversion are not implemented.
+- No cloud account/sync backend is configured. INTERNET access is limited to public reference-rate lookups.
+- SMS import and split transactions are not implemented.
 - **Manual on-device acceptance not performed:** the five instrumented classes passed on the
   API 36.1 emulator, but the 9-step manual checklist below and a TalkBack pass were not run.
 - Current artifacts:

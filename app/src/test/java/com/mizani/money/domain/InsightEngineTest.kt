@@ -9,6 +9,7 @@ import com.mizani.money.core.time.DateRange
 import com.mizani.money.domain.analytics.AnalyticsEngine
 import com.mizani.money.domain.analytics.InsightEngine
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
@@ -54,7 +55,8 @@ class InsightEngineTest {
             ?: error("Expected a budget pace insight")
         assertEquals(InsightTone.ATTENTION, pace.tone)
         assertTrue(pace.body.contains("195,000"))
-        assertTrue(pace.explanation.contains("Planned pace"))
+        assertTrue(pace.explanation.contains("Compares your spending"))
+        assertFalse(pace.explanation.contains("="))
     }
 
     @Test

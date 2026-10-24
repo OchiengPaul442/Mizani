@@ -12,7 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Archive
-import androidx.compose.material3.AlertDialog
+import com.mizani.money.ui.components.MizaniAlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -79,8 +79,8 @@ fun RecurringDialog(
 
     if (showArchiveConfirm && initial != null) {
         MizaniConfirmDialog(
-            title = if (type == RecurringType.BILL) "Archive this bill?" else "Archive this expected income?",
-            body = "It stops appearing in ${if (type == RecurringType.BILL) "bills" else "expected income"} " +
+            title = if (type == RecurringType.BILL) "Archive this bill?" else "Archive this income schedule?",
+            body = "It stops appearing in ${if (type == RecurringType.BILL) "bills" else "recurring income"} " +
                 "and in planning. You can add it again later.",
             confirmLabel = "Archive",
             destructive = true,
@@ -92,10 +92,19 @@ fun RecurringDialog(
         )
     }
 
-    AlertDialog(
+    MizaniAlertDialog(
         onDismissRequest = onDismiss,
         shape = MaterialTheme.shapes.large,
-        title = { Text(if (initial == null) "Add ${if (type == RecurringType.BILL) "a bill" else "expected income"}" else "Edit ${if (type == RecurringType.BILL) "bill" else "expected income"}") },
+        title = {
+            Text(
+                when {
+                    type == RecurringType.BILL && initial == null -> "Add recurring bill"
+                    type == RecurringType.BILL -> "Edit recurring bill"
+                    initial == null -> "Add recurring income"
+                    else -> "Edit recurring income"
+                },
+            )
+        },
         text = {
             Column(
                 modifier = Modifier
@@ -141,6 +150,15 @@ fun RecurringDialog(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 DateField(label = "Next date", date = nextDue, onDateSelected = { nextDue = it })
+                Text(
+                    if (type == RecurringType.INCOME) {
+                        "This is a forecast. It will not change your balance until you record the money as received."
+                    } else {
+                        "This is a planned bill. It will not change your balance until you record it as paid."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text("Essential commitment", style = MaterialTheme.typography.bodyMedium)
@@ -214,7 +232,7 @@ fun IncomeSourceDialog(
     var kind by rememberSaveable { mutableStateOf(IncomeSourceKind.SALARY) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    AlertDialog(
+    MizaniAlertDialog(
         onDismissRequest = onDismiss,
         shape = MaterialTheme.shapes.large,
         title = { Text("Add an income source") },
@@ -261,7 +279,7 @@ fun FundLineDialog(
     var amountText by rememberSaveable { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     val addition = MoneyFormat.parse(amountText, currency) ?: 0L
-    AlertDialog(
+    MizaniAlertDialog(
         onDismissRequest = onDismiss,
         shape = MaterialTheme.shapes.large,
         title = { Text("Fund $title") },
@@ -311,7 +329,7 @@ fun ContributeGoalDialog(
     var walletId by rememberSaveable { mutableStateOf(wallets.firstOrNull { it.type == com.mizani.money.core.model.WalletType.SAVINGS }?.id) }
     var error by remember { mutableStateOf<String?>(null) }
     val amount = MoneyFormat.parse(amountText, currency) ?: 0L
-    AlertDialog(
+    MizaniAlertDialog(
         onDismissRequest = onDismiss,
         shape = MaterialTheme.shapes.large,
         title = { Text("Add to $goalName") },

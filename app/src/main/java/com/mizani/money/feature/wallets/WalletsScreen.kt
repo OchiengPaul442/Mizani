@@ -25,7 +25,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Archive
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Unarchive
-import androidx.compose.material3.AlertDialog
+import com.mizani.money.ui.components.MizaniAlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -162,8 +162,7 @@ fun WalletsScreen(
             }
 
             Text(
-                "Balances are calculated from opening balances plus every posted transaction. Transfers move value " +
-                    "between wallets without changing the total.",
+                "Balances reflect the activity you record. Transfers move money between your wallets without changing the overall total.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -278,7 +277,7 @@ private fun WalletDialog(
     val colors = BrandPalette.swatches
     val opening = MoneyFormat.parse(openingText, currency) ?: 0L
 
-    AlertDialog(
+    MizaniAlertDialog(
         onDismissRequest = onDismiss,
         shape = MaterialTheme.shapes.large,
         title = { Text(if (initial == null) "Add wallet" else "Edit wallet") },

@@ -113,6 +113,11 @@ data class TransactionDraft(
     val note: String = "",
     val payee: String = "",
     val date: LocalDate = LocalDate.now(),
+    val sourceAmountMinor: Long? = null,
+    val sourceFeeMinor: Long? = null,
+    val sourceCurrencyCode: String? = null,
+    val exchangeRate: String? = null,
+    val exchangeRateDate: String? = null,
 )
 
 data class BudgetLineInput(

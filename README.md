@@ -1,8 +1,9 @@
 # Mizani — offline-first personal money management
 
 Mizani is a native Android budgeting app built with Kotlin and Jetpack Compose. It is
-guest-first: the local encrypted database is the source of truth, and every core
-money-management feature works without internet or an account.
+guest-first: the local encrypted database is the source of truth, and core
+money-management works without an account. Entering an amount in another currency requires an
+internet connection to fetch its daily reference rate.
 
 **Tagline:** Your money, in balance.
 
@@ -12,7 +13,9 @@ money-management feature works without internet or an account.
 - Wallets: cash, mobile money, bank, card, savings, debt and other; create, edit, archive.
 - Categories: seeded defaults plus custom categories, icons, colours, rename, archive/restore.
 - Transactions: expense, income, transfer, refund and balance adjustment, with optional fees,
-  payee, note and date. Editing and soft deletion retain tombstones.
+  payee, note and date. Foreign-currency expenses and income use a dated public reference rate;
+  the original amount and rate are retained alongside the workspace-currency ledger amount.
+  Editing and soft deletion retain tombstones.
 - Budgets: weekly, monthly, four-week and custom periods; planned vs funded amounts,
   essential flags, priority, rollover rules and category-level funding.
 - Expected income via recurring income rules; received income never includes expectations.
@@ -26,10 +29,11 @@ money-management feature works without internet or an account.
   keep a textual equivalent.
 - Local search and filters: text, date range, type, wallet, category and amount range.
 - Optional 6-digit PIN app lock (PBKDF2-HMAC-SHA256) and AndroidX biometric unlock.
-- CSV export (with a warning) and versioned, passphrase-encrypted `.mizani` backup with
+- Multi-sheet Excel and transaction CSV exports (with an unencrypted-file warning), plus a versioned, passphrase-encrypted `.mizani` backup with
   validated, all-or-nothing restore.
 - SQLCipher database encrypted with a device-bound Android Keystore-wrapped key.
-- Platform backup explicitly disabled; no INTERNET permission; no ads or telemetry SDKs.
+- Platform backup explicitly disabled; no ads or telemetry SDKs. Internet access is used only
+  when a user requests foreign-currency conversion.
 
 ## Technology
 
@@ -41,8 +45,8 @@ money-management feature works without internet or an account.
   the donut and grouped cash-flow bars, wrapped by `ui/components/MizaniDonutChart.kt` and
   `ui/components/MizaniCashFlowBars.kt`. All chart text, legends and accessibility labels are
   rendered in Compose, so every chart keeps a textual equivalent.
-- Deliberately absent: any network stack, advertising or analytics SDK, and any AI model or
-  inference runtime.
+- No app backend, advertising or analytics SDK, or AI model/inference runtime. A small HTTPS
+  client fetches public currency-pair reference rates from Frankfurter when conversion is used.
 
 ## Brand
 
@@ -150,16 +154,18 @@ by a pure Kotlin layer with unit tests.
 - **SMS mobile-money import:** policy-gated in the PRD; not included here. The importer
   boundary is documented but no SMS permission is declared.
 - **Split transactions:** P1; not in this build.
-- **Multi-currency:** P2; the data model keeps currency codes, but reports use the workspace
-  currency and no exchange rates are invented.
+- **Currency conversion:** expenses and income may be entered in another supported currency.
+  Frankfurter supplies the latest available daily reference rate; the app records the converted
+  workspace-currency amount plus the original amount, rate and rate date. Reports and balances
+  remain in one workspace currency. This is not a live bank/card settlement rate.
 - **Manual DI** rather than Hilt, and a single module rather than a large module graph.
   These are documented architecture decisions for V1.
 
 ## Artificial intelligence
 
 AI is an **optional future layer**, not part of this build. **No AI model, inference runtime or
-model-download path ships in the APK** — there is no model file, no runtime dependency and no
-network permission to fetch one. Every amount, percentage and comparison shown to the user is
+model-download path ships in the APK** — there is no model file, no runtime dependency or
+AI network access. Every amount, percentage and comparison shown to the user is
 produced by the deterministic on-device analytics layer, and those deterministic insights are what
 the app ships with; adding AI later would not replace or override them. If AI is ever added it must
 be local, opt-in, fact-constrained and verifier-gated — it may explain numbers, never produce them,
@@ -168,8 +174,10 @@ binding boundary.
 
 ## Privacy summary
 
-Guest financial data never leaves the device. The app does not declare the internet
-permission, contains no advertising or analytics SDK, and does not log financial values.
+Guest financial data never leaves the device. For an optional currency conversion, the app sends
+only the source and workspace currency codes over HTTPS to Frankfurter; it does not send the amount,
+payee, note or other transaction details. The app contains no advertising or analytics SDK and does
+not log financial values.
 Android Auto Backup is disabled and the app's data domains are excluded from backup and
 device-transfer rules. The SQLCipher passphrase is random and wrapped by a non-exportable
 Keystore key; uninstalling without an exported backup loses the local data permanently.

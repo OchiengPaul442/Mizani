@@ -28,7 +28,7 @@ import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.Security
-import androidx.compose.material3.AlertDialog
+import com.mizani.money.ui.components.MizaniAlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -96,6 +96,7 @@ fun SettingsScreen(
     var showVerifyForChange by remember { mutableStateOf(false) }
     var showCountryDialog by remember { mutableStateOf(false) }
     var showCsvWarning by remember { mutableStateOf(false) }
+    var showExcelWarning by remember { mutableStateOf(false) }
     var showBackupPassphrase by remember { mutableStateOf(false) }
     var showRestorePassphrase by remember { mutableStateOf(false) }
     var showRestoreConfirm by remember { mutableStateOf(false) }
@@ -118,13 +119,34 @@ fun SettingsScreen(
         if (uri != null) {
             scope.launch {
                 runCatching {
-                    val csv = vm.exporter.buildCsv()
+                    val csv = withContext(Dispatchers.IO) { vm.exporter.buildCsv() }
                     writeBytes(context, uri, csv.toByteArray(Charsets.UTF_8))
                 }.onSuccess {
-                    message = "CSV exported. Remember that CSV is not encrypted."
+                    message = "Transactions exported as CSV. This file is not encrypted."
                     error = null
                 }.onFailure {
                     error = it.message ?: "Could not write the CSV"
+                }
+            }
+        }
+    }
+
+    val createExcel = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                runCatching {
+                    withContext(Dispatchers.IO) {
+                        context.contentResolver.openOutputStream(uri, "w")?.use { output ->
+                            vm.exporter.writeExcel(output)
+                        } ?: throw IOException("Could not open the selected file for writing")
+                    }
+                }.onSuccess {
+                    message = "Excel workbook saved. It contains financial data and is not encrypted."
+                    error = null
+                }.onFailure {
+                    error = it.message ?: "Could not create the Excel workbook"
                 }
             }
         }
@@ -261,28 +283,43 @@ fun SettingsScreen(
     }
 
     if (showCsvWarning) {
-        AlertDialog(
+        MizaniAlertDialog(
             onDismissRequest = { showCsvWarning = false },
             shape = MaterialTheme.shapes.large,
-            title = { Text("CSV is not encrypted") },
+            title = { Text("CSV export is not encrypted") },
             text = {
-                Text(
-                    "CSV is not encrypted and includes dates, amounts, wallets, categories, payees and notes. " +
-                        "Share it only with people you trust and delete it when done; an encrypted backup is safer.",
-                )
+                Text("This CSV contains transaction dates, amounts, wallets, categories, payees and notes. Save it somewhere private.")
             },
             confirmButton = {
                 TextButton(onClick = {
                     showCsvWarning = false
                     createCsv.launch(vm.exporter.suggestedCsvName())
-                }) { Text("Create CSV anyway") }
+                }) { Text("Choose file") }
             },
             dismissButton = { TextButton(onClick = { showCsvWarning = false }) { Text("Cancel") } },
         )
     }
 
+    if (showExcelWarning) {
+        MizaniAlertDialog(
+            onDismissRequest = { showExcelWarning = false },
+            shape = MaterialTheme.shapes.large,
+            title = { Text("Excel workbook is not encrypted") },
+            text = {
+                Text("The workbook includes transactions, wallets, budgets, goals, debts and notes. Anyone with the file may be able to read your financial data, so save it somewhere private.")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showExcelWarning = false
+                    createExcel.launch(vm.exporter.suggestedExcelName())
+                }) { Text("Choose file") }
+            },
+            dismissButton = { TextButton(onClick = { showExcelWarning = false }) { Text("Cancel") } },
+        )
+    }
+
     if (showBackupPassphrase) {
-        AlertDialog(
+        MizaniAlertDialog(
             onDismissRequest = { showBackupPassphrase = false },
             shape = MaterialTheme.shapes.large,
             title = { Text("Protect your backup") },
@@ -335,7 +372,7 @@ fun SettingsScreen(
     }
 
     if (showRestorePassphrase) {
-        AlertDialog(
+        MizaniAlertDialog(
             onDismissRequest = { showRestorePassphrase = false },
             shape = MaterialTheme.shapes.large,
             title = { Text("Open encrypted backup") },
@@ -385,7 +422,7 @@ fun SettingsScreen(
 
     val summary = pendingSummary
     if (showRestoreConfirm && summary != null) {
-        AlertDialog(
+        MizaniAlertDialog(
             onDismissRequest = { showRestoreConfirm = false },
             shape = MaterialTheme.shapes.large,
             title = { Text("Replace local data with this backup?") },
@@ -589,9 +626,16 @@ fun SettingsScreen(
             MizaniSectionCard {
                 MizaniInfoRow(
                     icon = Icons.Rounded.Download,
-                    title = "Export CSV",
-                    subtitle = "Human-readable, unencrypted",
+                    title = "Export transactions (CSV)",
+                    subtitle = "Transactions only · unencrypted",
                     onClick = { showCsvWarning = true },
+                )
+                MizaniSectionDivider()
+                MizaniInfoRow(
+                    icon = Icons.Rounded.Download,
+                    title = "Export Excel workbook",
+                    subtitle = "Multiple sheets for analysis · unencrypted",
+                    onClick = { showExcelWarning = true },
                 )
                 MizaniSectionDivider()
                 MizaniInfoRow(
@@ -625,7 +669,7 @@ fun SettingsScreen(
                 MizaniInfoRow(
                     icon = Icons.Rounded.Security,
                     title = "No tracking",
-                    subtitle = "No ads, and no financial data is ever sent anywhere",
+                    subtitle = "No ads or financial analytics; currency-pair lookups power conversion",
                 )
             }
 
@@ -661,7 +705,7 @@ private fun CountryCurrencyDialog(
     onSave: (String) -> Unit,
 ) {
     var countryCode by rememberSaveable { mutableStateOf(initialCountry) }
-    AlertDialog(
+    MizaniAlertDialog(
         onDismissRequest = onDismiss,
         shape = MaterialTheme.shapes.large,
         title = { Text("Country & primary currency") },

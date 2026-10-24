@@ -650,8 +650,7 @@ private fun SafeToSpendCard(
                 if (expanded) {
                     Spacer(Modifier.height(Spacing.xs))
                     Text(
-                        "Funded flexible plan remaining, minus bills due before the period ends, " +
-                            "divided by days left. Based on the information you entered.",
+                        "A planning guide based on your funded plan and upcoming bills. It can change when your plan or due dates change.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

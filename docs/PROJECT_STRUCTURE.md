@@ -63,9 +63,10 @@ Room (SQLCipher) --Flow--> FinanceRepository --Flow--> AppViewModel --StateFlow-
         └──────────── validated suspend mutations <───────────┘
 ```
 
-The local database is the canonical source of truth. There is no network path in this build. `LedgerSnapshot`
-combines the small set of Room flows once, so screens derive analytics from a consistent in-memory view and a
-write is reflected immediately.
+The local database is the canonical source of truth. The only network path is an explicit request for a
+currency-pair reference rate; it never sends a transaction amount or detail. `LedgerSnapshot` combines the
+small set of Room flows once, so screens derive analytics from a consistent in-memory view and a write is
+reflected immediately.
 
 ## Where things belong
 

@@ -29,6 +29,8 @@ import kotlinx.coroutines.flow.first
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDate
+import java.io.OutputStream
+import java.math.BigDecimal
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
@@ -48,8 +50,8 @@ data class BackupSummary(
 )
 
 /**
- * User-controlled portability: a human-readable CSV and a versioned, passphrase-encrypted
- * JSON backup. Restore is all-or-nothing (validated first, then applied in one Room
+ * User-controlled portability: human-readable CSV and Excel exports, plus a versioned,
+ * passphrase-encrypted JSON backup. Restore is all-or-nothing (validated first, then applied in one Room
  * transaction) so a failed import can never partially overwrite the existing ledger.
  */
 class ExportManager(
@@ -66,7 +68,8 @@ class ExportManager(
         val builder = StringBuilder()
         builder.append('\uFEFF')
         builder.append(
-            "date,type,amount,currency,fee,wallet,to_wallet,category,income_source,payee,note,linked_transaction\n",
+            "date,type,amount,currency,fee,wallet,to_wallet,category,income_source,payee,note,linked_transaction," +
+                "original_amount,original_currency,original_fee,exchange_rate,exchange_rate_date\n",
         )
         snapshot.transactions
             .sortedWith(compareBy<TransactionEntity> { it.localDateEpochDay }.thenBy { it.occurredAt })
@@ -84,10 +87,207 @@ class ExportManager(
                     csvEscape(transaction.payee),
                     csvEscape(transaction.note),
                     csvEscape(transaction.linkedTransactionId ?: ""),
+                    csvEscapeNumeric(
+                        transaction.sourceAmountMinor?.let {
+                            amountText(it, transaction.sourceCurrencyCode ?: transaction.currencyCode)
+                        } ?: "",
+                    ),
+                    csvEscape(transaction.sourceCurrencyCode ?: ""),
+                    csvEscapeNumeric(
+                        transaction.sourceFeeMinor?.let {
+                            amountText(it, transaction.sourceCurrencyCode ?: transaction.currencyCode)
+                        } ?: "",
+                    ),
+                    csvEscapeNumeric(transaction.exchangeRate ?: ""),
+                    csvEscape(transaction.exchangeRateDate ?: ""),
                 )
                 builder.append(escaped.joinToString(",")).append('\n')
             }
         return builder.toString()
+    }
+
+    /** Writes a multi-sheet, Excel-compatible workbook without formula evaluation or macros. */
+    suspend fun writeExcel(output: OutputStream) {
+        val snapshot = repository.snapshot.first()
+        val workspaceCurrency = snapshot.currencyCode
+        val wallets = snapshot.wallets.associateBy { it.id }
+        val categories = snapshot.categories.associateBy { it.id }
+        val sources = snapshot.incomeSources.associateBy { it.id }
+        val budgets = snapshot.budgets.associateBy { it.id }
+        val goals = snapshot.goals.associateBy { it.id }
+
+        val sheets = listOf(
+            ExcelSheet(
+                name = "Overview",
+                headers = listOf("Field", "Value"),
+                rows = listOf(
+                    listOf(ExcelCell.Text("Workspace"), ExcelCell.Text(snapshot.workspace?.name ?: "My money")),
+                    listOf(ExcelCell.Text("Primary currency"), ExcelCell.Text(workspaceCurrency)),
+                    listOf(ExcelCell.Text("Exported on"), ExcelCell.Date(LocalDate.now())),
+                    listOf(ExcelCell.Text("Transactions"), ExcelCell.Number(snapshot.transactions.size.toString())),
+                    listOf(ExcelCell.Text("Recurring schedules"), ExcelCell.Number(snapshot.recurring.size.toString())),
+                    listOf(ExcelCell.Text("Wallets"), ExcelCell.Number(snapshot.wallets.size.toString())),
+                    listOf(ExcelCell.Text("Budgets"), ExcelCell.Number(snapshot.budgets.size.toString())),
+                    listOf(
+                        ExcelCell.Text("How to read this workbook"),
+                        ExcelCell.Text("Transactions are entries recorded in Mizani. Recurring schedules are forecasts; they do not affect balances until recorded."),
+                    ),
+                    listOf(
+                        ExcelCell.Text("Records included"),
+                        ExcelCell.Text("Archived and soft-deleted records retained in this workspace are included and marked in their sheets."),
+                    ),
+                    listOf(
+                        ExcelCell.Text("File protection"),
+                        ExcelCell.Text("This workbook is not encrypted. Keep it in a private location."),
+                    ),
+                    listOf(
+                        ExcelCell.Text("Long text"),
+                        ExcelCell.Text("Excel limits a cell to 32,767 characters. Longer text is truncated to fit."),
+                    ),
+                ),
+            ),
+            ExcelSheet(
+                name = "Transactions",
+                headers = listOf(
+                    "ID", "Date", "Type", "Amount", "Currency", "Fee", "Wallet ID", "Wallet",
+                    "Transfer wallet ID", "Transfer wallet", "Category ID", "Category", "Fee category ID",
+                    "Fee category", "Income source ID", "Income source", "Payee", "Note", "Linked transaction ID",
+                    "Original amount", "Original currency", "Original fee", "Exchange rate", "Exchange rate date",
+                    "Created at", "Updated at", "Deleted at",
+                ),
+                rows = snapshot.transactions
+                    .sortedWith(compareBy<TransactionEntity> { it.localDateEpochDay }.thenBy { it.occurredAt })
+                    .map { transaction ->
+                        listOf(
+                            text(transaction.id), date(transaction.localDateEpochDay), text(transaction.type.name),
+                            money(transaction.amountMinor, transaction.currencyCode), text(transaction.currencyCode),
+                            money(transaction.feeMinor, transaction.currencyCode), text(transaction.walletId),
+                            text(wallets[transaction.walletId]?.name), text(transaction.toWalletId),
+                            text(transaction.toWalletId?.let { wallets[it]?.name }), text(transaction.categoryId),
+                            text(transaction.categoryId?.let { categories[it]?.name }), text(transaction.feeCategoryId),
+                            text(transaction.feeCategoryId?.let { categories[it]?.name }), text(transaction.incomeSourceId),
+                            text(transaction.incomeSourceId?.let { sources[it]?.name }), text(transaction.payee),
+                            text(transaction.note), text(transaction.linkedTransactionId),
+                            transaction.sourceAmountMinor?.let { money(it, transaction.sourceCurrencyCode ?: transaction.currencyCode) }
+                                ?: text(""),
+                            text(transaction.sourceCurrencyCode), transaction.sourceFeeMinor?.let {
+                                money(it, transaction.sourceCurrencyCode ?: transaction.currencyCode)
+                            } ?: text(""),
+                            decimal(transaction.exchangeRate), text(transaction.exchangeRateDate),
+                            timestamp(transaction.createdAt), timestamp(transaction.updatedAt),
+                            timestamp(transaction.deletedAt),
+                        )
+                    },
+            ),
+            ExcelSheet(
+                name = "Recurring",
+                headers = listOf(
+                    "ID", "Name", "Type", "Amount", "Currency", "Category ID", "Category", "Wallet ID",
+                    "Wallet", "Frequency", "Next date", "Essential", "Note", "Archived", "Deleted at",
+                ),
+                rows = snapshot.recurring.sortedBy { it.nextDueEpochDay }.map { rule ->
+                    listOf(
+                        text(rule.id), text(rule.name), text(rule.type.name), money(rule.amountMinor, workspaceCurrency),
+                        text(workspaceCurrency), text(rule.categoryId), text(rule.categoryId?.let { categories[it]?.name }),
+                        text(rule.walletId), text(rule.walletId?.let { wallets[it]?.name }), text(rule.frequency.label),
+                        date(rule.nextDueEpochDay), text(if (rule.essential) "Yes" else "No"), text(rule.note),
+                        text(if (rule.archived) "Yes" else "No"), timestamp(rule.deletedAt),
+                    )
+                },
+            ),
+            ExcelSheet(
+                name = "Wallets",
+                headers = listOf(
+                    "ID", "Name", "Type", "Opening balance", "Currency", "Color", "Icon", "Sort order", "Archived", "Deleted at",
+                ),
+                rows = snapshot.wallets.sortedBy { it.sortOrder }.map { wallet ->
+                    listOf(
+                        text(wallet.id), text(wallet.name), text(wallet.type.label),
+                        money(wallet.openingBalanceMinor, wallet.currencyCode), text(wallet.currencyCode),
+                        text(wallet.colorHex), text(wallet.icon), number(wallet.sortOrder),
+                        text(if (wallet.archived) "Yes" else "No"), timestamp(wallet.deletedAt),
+                    )
+                },
+            ),
+            ExcelSheet(
+                name = "Categories",
+                headers = listOf("ID", "Name", "Type", "Icon", "Color", "Default", "Archived", "Deleted at"),
+                rows = snapshot.categories.sortedBy { it.sortOrder }.map { category ->
+                    listOf(
+                        text(category.id), text(category.name), text(category.type.label), text(category.icon),
+                        text(category.colorHex), text(if (category.isDefault) "Yes" else "No"),
+                        text(if (category.archived) "Yes" else "No"), timestamp(category.deletedAt),
+                    )
+                },
+            ),
+            ExcelSheet(
+                name = "Income Sources",
+                headers = listOf("ID", "Name", "Kind", "Archived", "Deleted at"),
+                rows = snapshot.incomeSources.sortedBy { it.name }.map { source ->
+                    listOf(text(source.id), text(source.name), text(source.kind.label), text(if (source.archived) "Yes" else "No"), timestamp(source.deletedAt))
+                },
+            ),
+            ExcelSheet(
+                name = "Budgets",
+                headers = listOf("ID", "Name", "Period", "Start date", "End date", "Deleted at"),
+                rows = snapshot.budgets.sortedBy { it.startEpochDay }.map { budget ->
+                    listOf(
+                        text(budget.id), text(budget.name), text(budget.periodType.label),
+                        date(budget.startEpochDay), date(budget.endEpochDay), timestamp(budget.deletedAt),
+                    )
+                },
+            ),
+            ExcelSheet(
+                name = "Budget Lines",
+                headers = listOf("ID", "Budget ID", "Budget", "Category ID", "Category", "Planned", "Funded", "Rollover", "Essential", "Priority", "Note"),
+                rows = snapshot.budgetLines.map { line ->
+                    listOf(
+                        text(line.id), text(line.budgetId), text(budgets[line.budgetId]?.name), text(line.categoryId),
+                        text(categories[line.categoryId]?.name), money(line.plannedMinor, workspaceCurrency),
+                        money(line.fundedMinor, workspaceCurrency), text(line.rolloverRule.label),
+                        text(if (line.essential) "Yes" else "No"), number(line.priority), text(line.note),
+                    )
+                },
+            ),
+            ExcelSheet(
+                name = "Goals",
+                headers = listOf("ID", "Name", "Target", "Allocated", "Target date", "Linked wallet ID", "Linked wallet", "Priority", "Note", "Archived", "Deleted at"),
+                rows = snapshot.goals.sortedBy { it.priority }.map { goal ->
+                    listOf(
+                        text(goal.id), text(goal.name), money(goal.targetMinor, workspaceCurrency),
+                        money(goal.allocatedMinor, workspaceCurrency), date(goal.targetEpochDay), text(goal.linkedWalletId),
+                        text(goal.linkedWalletId?.let { wallets[it]?.name }), number(goal.priority), text(goal.note),
+                        text(if (goal.archived) "Yes" else "No"), timestamp(goal.deletedAt),
+                    )
+                },
+            ),
+            ExcelSheet(
+                name = "Contributions",
+                headers = listOf("ID", "Goal ID", "Goal", "Amount", "Date", "Wallet ID", "Wallet", "Transfer transaction ID", "Note"),
+                rows = snapshot.contributions.sortedBy { it.localDateEpochDay }.map { contribution ->
+                    listOf(
+                        text(contribution.id), text(contribution.goalId), text(goals[contribution.goalId]?.name),
+                        money(contribution.amountMinor, workspaceCurrency), date(contribution.localDateEpochDay),
+                        text(contribution.walletId), text(contribution.walletId?.let { wallets[it]?.name }),
+                        text(contribution.transferTransactionId), text(contribution.note),
+                    )
+                },
+            ),
+            ExcelSheet(
+                name = "Debts",
+                headers = listOf("ID", "Name", "Lender", "Current balance", "Original amount", "Periodic payment", "Next date", "Interest rate percent", "Note", "Archived", "Deleted at"),
+                rows = snapshot.debts.map { debt ->
+                    listOf(
+                        text(debt.id), text(debt.name), text(debt.lender), money(debt.currentBalanceMinor, workspaceCurrency),
+                        debt.originalMinor?.let { money(it, workspaceCurrency) } ?: text(""),
+                        money(debt.periodicPaymentMinor, workspaceCurrency), date(debt.nextDueEpochDay),
+                        debt.interestRatePercent?.let { ExcelCell.Number(BigDecimal.valueOf(it).toPlainString()) } ?: text(""),
+                        text(debt.note), text(if (debt.archived) "Yes" else "No"), timestamp(debt.deletedAt),
+                    )
+                },
+            ),
+        )
+        XlsxWorkbookWriter.write(output, sheets)
     }
 
     suspend fun buildBackup(passphrase: String): ByteArray {
@@ -110,6 +310,9 @@ class ExportManager(
 
     fun suggestedCsvName(today: LocalDate = LocalDate.now()): String =
         "mizani-transactions-${today}.csv"
+
+    fun suggestedExcelName(today: LocalDate = LocalDate.now()): String =
+        "mizani-finances-${today}.xlsx"
 
     fun suggestedBackupName(today: LocalDate = LocalDate.now()): String =
         "mizani-backup-${today}.mizani"
@@ -134,6 +337,24 @@ class ExportManager(
                 transactions.filter { it.type == TransactionType.REFUND }.sumOf { it.feeMinor },
         )
     }
+
+    private fun text(value: String?): ExcelCell = ExcelCell.Text(value.orEmpty())
+
+    private fun number(value: Int): ExcelCell.Number = ExcelCell.Number(value.toString())
+
+    private fun decimal(value: String?): ExcelCell = value?.toBigDecimalOrNull()?.let {
+        ExcelCell.Number(it.toPlainString())
+    } ?: ExcelCell.Text("")
+
+    private fun money(minor: Long, currencyCode: String): ExcelCell.Number =
+        ExcelCell.Number(BigDecimal.valueOf(minor, Currencies.byCode(currencyCode).minorUnits).toPlainString())
+
+    private fun date(epochDay: Long?): ExcelCell =
+        epochDay?.let { ExcelCell.Date(LocalDate.ofEpochDay(it)) } ?: ExcelCell.Text("")
+
+    private fun timestamp(epochMillis: Long?): ExcelCell = epochMillis?.let {
+        ExcelCell.Text(java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneOffset.UTC).toLocalDateTime().toString())
+    } ?: ExcelCell.Text("")
 
     // --------------------------------------------------------------- encryption
 
@@ -340,6 +561,11 @@ class ExportManager(
         put("updatedAt", transaction.updatedAt)
         put("revision", transaction.revision)
         putNullable("deletedAt", transaction.deletedAt)
+        putNullable("sourceAmountMinor", transaction.sourceAmountMinor)
+        putNullable("sourceFeeMinor", transaction.sourceFeeMinor)
+        putNullable("sourceCurrencyCode", transaction.sourceCurrencyCode)
+        putNullable("exchangeRate", transaction.exchangeRate)
+        putNullable("exchangeRateDate", transaction.exchangeRateDate)
     }
 
     private fun decodeTransaction(json: JSONObject) = TransactionEntity(
@@ -362,6 +588,11 @@ class ExportManager(
         updatedAt = json.optLong("updatedAt"),
         revision = json.optLong("revision", 1),
         deletedAt = json.optNullableLong("deletedAt"),
+        sourceAmountMinor = json.optNullableLong("sourceAmountMinor"),
+        sourceFeeMinor = json.optNullableLong("sourceFeeMinor"),
+        sourceCurrencyCode = json.optNullableString("sourceCurrencyCode"),
+        exchangeRate = json.optNullableString("exchangeRate"),
+        exchangeRateDate = json.optNullableString("exchangeRateDate"),
     )
 
     private fun encodeBudget(budget: BudgetEntity) = JSONObject().apply {

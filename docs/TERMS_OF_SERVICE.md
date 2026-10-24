@@ -1,0 +1,58 @@
+# Mizani Terms of Service
+
+**Version:** 2026-10-25  
+**Effective:** 25 October 2026  
+**Provider:** Mizani app publisher (legal name required before public release)  
+**Contact:** paul.ochieng.dev@gmail.com
+
+These Terms apply when you install or use Mizani. By tapping **Agree and continue** during setup, or after a terms update, you agree to these Terms. Read them before proceeding.
+
+## 1. Provider and contact
+
+Provider: Mizani app publisher (legal name required before public release). Privacy and legal contact: paul.ochieng.dev@gmail.com. The provider’s full legal identity must be completed before public release.
+
+## 2. Who may use Mizani
+
+You must be able to enter a binding agreement under the law where you live. If you are below the age of legal capacity, use Mizani only with permission from a parent or legal guardian.
+
+## 3. What the app provides
+
+Mizani is a personal budgeting and record-keeping tool. It helps you organize financial information that you choose to enter and view summaries on your device. It is not a bank, payment service, lender, investment adviser, credit-scoring service, accounting service, or tax service. It does not move, hold, or safeguard money for you.
+
+The app does not provide financial, investment, legal, accounting, or tax advice. Its displays are not a recommendation or a promise that funds will be available. Check important decisions against your own records and appropriate professional advice.
+
+## 4. Your information and device
+
+Mizani currently works without an account or a Mizani server. Your ledger is stored in an encrypted database on your device. You are responsible for securing the device and for keeping any exports or backups safe. The [Privacy Notice](PRIVACY_NOTICE.md) explains the app’s local storage and the limited network request used for currency conversion.
+
+Enter information you are entitled to use. Avoid putting another person’s sensitive details in a payee or note unless you have a valid reason and permission to do so.
+
+## 5. Currency conversion
+
+If you record a transaction in a currency different from your workspace currency, Mizani may request the latest available daily reference rate for that currency pair from Frankfurter. The request contains the currency codes, not the amount, payee, note, or transaction date. The app saves the rate and its published date with the converted transaction.
+
+Reference rates can be delayed, revised, unavailable, or different from the rate applied by a bank, card network, cash exchange, or payment provider. They do not include fees or margins. Review the displayed conversion and correct it if needed. Do not rely on it for settlement, trading, tax, or regulatory reporting.
+
+## 6. Your responsibilities
+
+You are responsible for the accuracy and lawful use of information you enter, for checking the app’s results, and for making any financial decisions. Do not misuse the app, interfere with its security, or use it in a way that breaks applicable law or another person’s rights.
+
+## 7. Exports and backups
+
+A CSV export and an Excel workbook are human-readable and are not encrypted. The workbook contains multiple sheets of your financial records for analysis. A Mizani backup is encrypted with the passphrase you choose; if you lose that passphrase, the backup cannot be restored. Files you save or share may be copied, backed up, or processed by the storage or sharing service you choose. The app cannot remove copies outside its private storage.
+
+Automatic Android backup is disabled for the app. Deleting all local data cannot be undone without a backup. Uninstalling the app can permanently remove your ledger and its device-bound database key. Export a backup first if you want to keep a copy.
+
+## 8. App rights and changes
+
+The app and its branding are protected by applicable intellectual-property laws. These Terms give you a personal, non-exclusive, non-transferable right to use the app for lawful personal budgeting while you comply with these Terms. Third-party components remain under their own licenses.
+
+We may update, change, or discontinue app features. If a change materially revises these Terms, the app will show the revised Terms and ask you to accept them before continuing to use the app. You can stop using Mizani and delete your local data at any time.
+
+## 9. Service limits and legal rights
+
+Mizani is provided without a promise that it will always be available, error-free, or suitable for every device or purpose. To the extent allowed by law, the provider is not responsible for indirect loss caused by relying on an entry, summary, conversion rate, lost device, or export. Nothing in these Terms limits a right or remedy that applicable law does not allow us to limit, including mandatory consumer protections.
+
+## 10. Applicable law and questions
+
+Mandatory laws that apply where you live continue to apply. No governing-law choice in this draft removes those protections. For questions about these Terms, contact paul.ochieng.dev@gmail.com.

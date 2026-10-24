@@ -13,6 +13,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.mizani.money.core.money.Currency
 import com.mizani.money.core.model.ThemeMode
+import com.mizani.money.core.legal.LegalDocuments
 import com.mizani.money.core.security.PinDefaults
 import com.mizani.money.core.security.PinHasher
 import kotlinx.coroutines.Dispatchers
@@ -33,9 +34,15 @@ data class AppSettings(
     val lockEnabled: Boolean = false,
     val biometricEnabled: Boolean = false,
     val hasPin: Boolean = false,
+    val acceptedTermsVersion: String? = null,
+    val acceptedPrivacyVersion: String? = null,
+    val legalAcceptedAtMillis: Long? = null,
 ) {
     val currency: Currency
         get() = com.mizani.money.core.money.Currencies.byCode(currencyCode)
+
+    val hasAcceptedCurrentLegalDocuments: Boolean
+        get() = LegalDocuments.isCurrentAcceptance(acceptedTermsVersion, acceptedPrivacyVersion)
 }
 
 class SettingsRepository(private val context: Context) {
@@ -52,6 +59,9 @@ class SettingsRepository(private val context: Context) {
         // Persisted failed-PIN backoff state (not schema; plain DataStore entries).
         val PIN_FAILED_ATTEMPTS = intPreferencesKey("pin_failed_attempts")
         val PIN_LAST_FAILURE_AT = longPreferencesKey("pin_last_failure_at")
+        val ACCEPTED_TERMS_VERSION = stringPreferencesKey("accepted_terms_version")
+        val ACCEPTED_PRIVACY_VERSION = stringPreferencesKey("accepted_privacy_version")
+        val LEGAL_ACCEPTED_AT = longPreferencesKey("legal_accepted_at")
     }
 
     val settings: Flow<AppSettings> = context.mizaniSettings.data
@@ -69,8 +79,19 @@ class SettingsRepository(private val context: Context) {
                 lockEnabled = preferences[Keys.LOCK_ENABLED] ?: false,
                 biometricEnabled = preferences[Keys.BIOMETRIC_ENABLED] ?: false,
                 hasPin = preferences[Keys.PIN_HASH] != null && preferences[Keys.PIN_SALT] != null,
+                acceptedTermsVersion = preferences[Keys.ACCEPTED_TERMS_VERSION],
+                acceptedPrivacyVersion = preferences[Keys.ACCEPTED_PRIVACY_VERSION],
+                legalAcceptedAtMillis = preferences[Keys.LEGAL_ACCEPTED_AT],
             )
         }
+
+    suspend fun recordLegalAcceptance(termsVersion: String, privacyVersion: String, acceptedAtMillis: Long) {
+        context.mizaniSettings.edit { preferences ->
+            preferences[Keys.ACCEPTED_TERMS_VERSION] = termsVersion
+            preferences[Keys.ACCEPTED_PRIVACY_VERSION] = privacyVersion
+            preferences[Keys.LEGAL_ACCEPTED_AT] = acceptedAtMillis
+        }
+    }
 
     suspend fun completeOnboarding(countryCode: String, currencyCode: String) {
         context.mizaniSettings.edit { preferences ->

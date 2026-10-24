@@ -23,9 +23,11 @@ import com.mizani.money.data.local.RecurringRuleEntity
 import com.mizani.money.data.local.TransactionEntity
 import com.mizani.money.data.local.WalletEntity
 import com.mizani.money.data.local.WorkspaceEntity
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -85,6 +87,7 @@ class FinanceRepository(private val database: MizaniDatabase) {
             debts = other.debts,
         )
     }.distinctUntilChanged()
+        .flowOn(Dispatchers.Default)
 
     suspend fun currentWorkspace(): WorkspaceEntity? = workspaceDao.get()
 
@@ -303,6 +306,17 @@ class FinanceRepository(private val database: MizaniDatabase) {
         require(!wallet.archived) { "Wallet is archived" }
         require(draft.feeMinor >= 0) { "Fee cannot be negative" }
         require(wallet.currencyCode == workspace.currencyCode) { "Currency mismatch" }
+        TransactionCurrencyRules.validate(
+            workspaceCurrencyCode = workspace.currencyCode,
+            type = draft.type,
+            amountMinor = draft.amountMinor,
+            feeMinor = draft.feeMinor,
+            sourceAmountMinor = draft.sourceAmountMinor,
+            sourceFeeMinor = draft.sourceFeeMinor,
+            sourceCurrencyCode = draft.sourceCurrencyCode,
+            exchangeRate = draft.exchangeRate,
+            exchangeRateDate = draft.exchangeRateDate,
+        )
 
         var categoryId = draft.categoryId
         var feeCategoryId = draft.feeCategoryId
@@ -393,6 +407,11 @@ class FinanceRepository(private val database: MizaniDatabase) {
             createdAt = existing?.createdAt ?: now,
             updatedAt = now,
             revision = (existing?.revision ?: 0L) + 1L,
+            sourceAmountMinor = draft.sourceAmountMinor,
+            sourceFeeMinor = draft.sourceFeeMinor,
+            sourceCurrencyCode = draft.sourceCurrencyCode,
+            exchangeRate = draft.exchangeRate,
+            exchangeRateDate = draft.exchangeRateDate,
         )
         transactionDao.upsert(entity)
         entity.id
@@ -531,12 +550,10 @@ class FinanceRepository(private val database: MizaniDatabase) {
                     updatedAt = now,
                 ),
             )
-            var next = LocalDate.ofEpochDay(rule.nextDueEpochDay)
-            var guard = 0
-            while (!next.isAfter(date) && guard < 64) {
-                next = Periods.nextOccurrence(next, rule.frequency)
-                guard++
-            }
+            // Every user-confirmed receipt/payment advances exactly one scheduled occurrence.
+            // This also handles early recording without leaving the same cycle scheduled again;
+            // overdue cycles remain visible for the user to reconcile one by one.
+            val next = Periods.nextOccurrence(LocalDate.ofEpochDay(rule.nextDueEpochDay), rule.frequency)
             recurringDao.upsert(
                 rule.copy(
                     nextDueEpochDay = next.toEpochDay(),

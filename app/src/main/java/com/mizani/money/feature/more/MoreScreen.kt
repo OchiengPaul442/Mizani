@@ -141,7 +141,7 @@ fun MoreScreen(
                 MizaniInfoRow(
                     icon = Icons.Rounded.Description,
                     title = "Export & backup",
-                    subtitle = "CSV and encrypted backup",
+                    subtitle = "Excel, CSV and encrypted backup",
                     onClick = { onNavigate("settings") },
                 )
                 MizaniSectionDivider()
