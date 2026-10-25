@@ -3,6 +3,7 @@ package com.mizani.money.core.money
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.NumberFormat
+import java.util.Currency as JavaCurrency
 import java.util.Locale
 
 /**
@@ -15,14 +16,12 @@ data class Currency(
     val name: String,
     val minorUnits: Int,
 ) {
+    init {
+        require(minorUnits in 0..6) { "Currency minor units must be between zero and six" }
+    }
+
     val scaleFactor: Long
-        get() = when (minorUnits) {
-            0 -> 1L
-            1 -> 10L
-            2 -> 100L
-            3 -> 1_000L
-            else -> 1L
-        }
+        get() = (0 until minorUnits).fold(1L) { factor, _ -> Math.multiplyExact(factor, 10L) }
 }
 
 object Currencies {
@@ -37,10 +36,35 @@ object Currencies {
     val EUR = Currency("EUR", "€", "Euro", 2)
     val GBP = Currency("GBP", "£", "British Pound", 2)
 
+    /** Currencies available as workspace currencies and during onboarding. */
     val all: List<Currency> = listOf(UGX, KES, TZS, RWF, NGN, GHS, ZAR, USD, EUR, GBP)
 
+    /**
+     * Foreign currencies supported for transaction entry. Keep this broader than [all]: a
+     * workspace still uses the app's verified country currencies, while users can record income
+     * and expenses in any ISO currency known to the runtime and convert it into the workspace
+     * currency using the existing reference-rate flow.
+     */
+    val transactionCurrencies: List<Currency> by lazy {
+        val curatedByCode = all.associateBy { it.code }
+        val runtimeCurrencies = JavaCurrency.getAvailableCurrencies().mapNotNull { javaCurrency ->
+            val code = javaCurrency.currencyCode
+            val minorUnits = javaCurrency.defaultFractionDigits
+            if (code == "XXX" || minorUnits !in 0..6) return@mapNotNull null
+            Currency(
+                code = code,
+                symbol = javaCurrency.getSymbol(Locale.US),
+                name = javaCurrency.getDisplayName(Locale.ENGLISH),
+                minorUnits = minorUnits,
+            )
+        }
+        val byCode = (all + runtimeCurrencies).associateBy { it.code }
+        val preferred = all.mapNotNull { byCode[it.code] }
+        preferred + byCode.values.filterNot { it.code in curatedByCode }.sortedBy { it.code }
+    }
+
     fun byCode(code: String): Currency =
-        all.firstOrNull { it.code.equals(code, ignoreCase = true) } ?: USD
+        transactionCurrencies.firstOrNull { it.code.equals(code, ignoreCase = true) } ?: USD
 }
 
 /** Converts minor units using a decimal rate expressed as target major units per source major unit. */

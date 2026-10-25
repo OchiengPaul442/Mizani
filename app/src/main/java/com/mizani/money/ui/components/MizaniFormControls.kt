@@ -51,11 +51,22 @@ fun MizaniPicker(
     enabled: Boolean = true,
     noneLabel: String? = null,
     onSelectNone: (() -> Unit)? = null,
+    searchable: Boolean = false,
+    searchHint: String = "Search",
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
+    val filteredOptions = if (searchable && query.isNotBlank()) {
+        options.filter { it.label.contains(query.trim(), ignoreCase = true) }
+    } else {
+        options
+    }
     Box(modifier = modifier) {
         OutlinedButton(
-            onClick = { expanded = true },
+            onClick = {
+                query = ""
+                expanded = true
+            },
             modifier = Modifier.fillMaxWidth(),
             enabled = enabled,
             shape = MaterialTheme.shapes.small,
@@ -70,23 +81,48 @@ fun MizaniPicker(
             Spacer(Modifier.width(4.dp))
             Icon(Icons.Rounded.ArrowDropDown, contentDescription = "Open options")
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = {
+                expanded = false
+                query = ""
+            },
+        ) {
+            if (searchable) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    label = { Text(searchHint) },
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier.width(280.dp).padding(horizontal = Spacing.sm, vertical = Spacing.xs),
+                )
+            }
             if (noneLabel != null && onSelectNone != null) {
                 DropdownMenuItem(
                     text = { Text(noneLabel) },
                     onClick = {
                         onSelectNone()
                         expanded = false
+                        query = ""
                     },
                 )
             }
-            options.forEach { option ->
+            filteredOptions.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(option.label) },
                     onClick = {
                         onSelect(option.id)
                         expanded = false
+                        query = ""
                     },
+                )
+            }
+            if (searchable && filteredOptions.isEmpty()) {
+                DropdownMenuItem(
+                    text = { Text("No matching currencies", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                    onClick = {},
+                    enabled = false,
                 )
             }
         }

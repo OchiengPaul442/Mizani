@@ -34,7 +34,7 @@ internal object TransactionCurrencyRules {
         require(exchangeRate != null && exchangeRate.length <= MAX_RATE_LENGTH) { "Exchange rate is missing or invalid" }
         require(exchangeRateDate != null) { "Exchange-rate date is missing" }
 
-        val sourceCurrency = Currencies.all.firstOrNull { it.code == sourceCurrencyCode }
+        val sourceCurrency = Currencies.transactionCurrencies.firstOrNull { it.code == sourceCurrencyCode }
             ?: throw IllegalArgumentException("Original currency is not supported")
         val workspaceCurrency = Currencies.all.firstOrNull { it.code == workspaceCurrencyCode }
             ?: throw IllegalArgumentException("Workspace currency is not supported")

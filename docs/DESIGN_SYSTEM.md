@@ -115,6 +115,7 @@ System sans with tabular figures enabled for money. No custom font is bundled (o
 - **Transaction row**: 42dp rounded-square category tile, title, wallet/date, signed amount;
   transfer icon + destination.
 - **Insight card**: tinted semantic surface, title, body, expandable "How this is calculated".
+- **Dialogs**: `surfaceContainerHighest` container, `onSurface` title/body, and `onSurfaceVariant` for secondary details.
 - **Inputs**: 12dp radius, 56dp height, currency prefix, inline supporting text.
 - **Buttons**: 12dp radius, 52dp primary height, filled primary; outlined secondary; text actions otherwise.
 - **Charts**: donut with 18dp stroke, horizontal budget bars, six-month bar chart; every chart has a text summary

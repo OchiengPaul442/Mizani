@@ -76,6 +76,7 @@ import com.mizani.money.core.money.MoneyFormat
 import com.mizani.money.core.time.DateText
 import com.mizani.money.data.local.CategoryEntity
 import com.mizani.money.data.repo.ExchangeRate
+import com.mizani.money.data.repo.ExchangeRateUnavailableException
 import com.mizani.money.data.repo.TransactionDraft
 import com.mizani.money.ui.AppUiState
 import com.mizani.money.ui.AppViewModel
@@ -260,22 +261,14 @@ fun AddTransactionScreen(
                     rateError = null
                 } catch (cancelled: CancellationException) {
                     throw cancelled
-                } catch (_: Exception) {
-                    rateError = if (exchangeRate != null) {
-                        "Saved rate in use. Refresh failed."
-                    } else {
-                        "No rate available. Check your connection."
-                    }
+                } catch (failure: Exception) {
+                    rateError = rateFailureMessage(failure, hasCachedRate = exchangeRate != null)
                 }
             }
         } catch (cancelled: CancellationException) {
             throw cancelled
-        } catch (_: Exception) {
-            rateError = if (exchangeRate != null) {
-                "Saved rate in use. Refresh failed."
-            } else {
-                "No rate available. Check your connection."
-            }
+        } catch (failure: Exception) {
+            rateError = rateFailureMessage(failure, hasCachedRate = exchangeRate != null)
         } finally {
             isRateLoading = false
             isRateRefreshing = false
@@ -521,11 +514,15 @@ fun AddTransactionScreen(
                     Text("Transaction currency", style = MaterialTheme.typography.labelLarge)
                     MizaniPicker(
                         selectedText = "${entryCurrency.code} · ${entryCurrency.name}",
-                        options = Currencies.all.map { item -> PickerOption(item.code, "${item.code} · ${item.name}") },
+                        options = Currencies.transactionCurrencies.map { item ->
+                            PickerOption(item.code, "${item.code} · ${item.name}")
+                        },
                         onSelect = {
                             entryCurrencyCode = it
                             error = null
                         },
+                        searchable = true,
+                        searchHint = "Search currencies",
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -1021,6 +1018,12 @@ fun AddTransactionScreen(
             MizaniCelebration(onFinished = { showCelebration = false; onDone() })
         }
     }
+}
+
+private fun rateFailureMessage(error: Exception, hasCachedRate: Boolean): String = when {
+    hasCachedRate -> "Saved rate in use. Refresh failed."
+    error is ExchangeRateUnavailableException -> "No reference rate is available for this currency pair."
+    else -> "No rate available. Check your connection."
 }
 
 @OptIn(ExperimentalLayoutApi::class)

@@ -10,11 +10,16 @@ local.properties
 .externalNativeBuild
 .cxx
 
+# Generated Android release outputs
+/app/release/
+*.apk
+*.aab
+**/mapping.txt
+**/output-metadata.json
+
+# Local signing credentials
+*.jks
+*.keystore
+
 # OpenCode runtime staging (not product artefacts)
-.opencode/runtime/scratch*
-.opencode/runtime/drop*
-.opencode/runtime/backup/
-.opencode/runtime/handoff-*.md
-.opencode/runtime/evidence/*.ps1
 .opencode/
-.opencode/runtime/

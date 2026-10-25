@@ -46,6 +46,12 @@ data class ExchangeRate(
     val date: LocalDate,
 )
 
+/** The provider confirmed that no reference rate exists for the requested pair. */
+class ExchangeRateUnavailableException(
+    val baseCurrencyCode: String,
+    val quoteCurrencyCode: String,
+) : IOException("No reference rate is available for $baseCurrencyCode/$quoteCurrencyCode")
+
 /**
  * Fetches public daily reference rates. It only sends currency codes and keeps a small,
  * app-private cache so a previously used pair remains available without a connection.
@@ -175,6 +181,9 @@ class ExchangeRateRepository(
     private fun readLatestRate(connection: HttpURLConnection, base: String, quote: String): ExchangeRate {
         try {
             val responseCode = connection.responseCode
+            if (responseCode == HttpURLConnection.HTTP_NOT_FOUND || responseCode == 422) {
+                throw ExchangeRateUnavailableException(base, quote)
+            }
             if (responseCode != HttpURLConnection.HTTP_OK) {
                 throw IOException("Exchange-rate service returned HTTP $responseCode")
             }

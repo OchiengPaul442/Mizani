@@ -1,6 +1,8 @@
 package com.mizani.money.core.money
 
+import java.math.BigDecimal
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Test
@@ -88,6 +90,33 @@ class MoneyTest {
     fun `two-decimal currency preserves fractional input exactly`() {
         assertEquals(1_234_500L, MoneyFormat.parse("12345.00", Currencies.USD))
         assertEquals(1_234_567L, MoneyFormat.parse("12345.67", Currencies.USD))
+    }
+
+    @Test
+    fun `foreign currency metadata uses ISO minor units`() {
+        assertEquals(0, Currencies.byCode("JPY").minorUnits)
+        assertEquals(3, Currencies.byCode("BHD").minorUnits)
+        assertEquals(1_000L, Currencies.byCode("BHD").scaleFactor)
+        assertTrue(Currencies.transactionCurrencies.any { it.code == "CAD" })
+    }
+
+    @Test
+    fun `conversion handles zero and three decimal currencies`() {
+        val yen = CurrencyConversion.convertMinorUnits(
+            amountMinor = 10_000L,
+            source = Currencies.byCode("JPY"),
+            target = Currencies.USD,
+            rate = BigDecimal("0.0067"),
+        )
+        val dinar = CurrencyConversion.convertMinorUnits(
+            amountMinor = 1_000L,
+            source = Currencies.byCode("BHD"),
+            target = Currencies.USD,
+            rate = BigDecimal("2.65"),
+        )
+
+        assertEquals(6_700L, yen)
+        assertEquals(265L, dinar)
     }
 
     @Test
