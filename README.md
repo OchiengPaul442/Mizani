@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/OchiengPaul442/budgeting-application/actions/workflows/android-ci.yml"><img src="https://github.com/OchiengPaul442/budgeting-application/actions/workflows/android-ci.yml/badge.svg?branch=main" alt="Android CI status"></a>
+  <a href="https://github.com/OchiengPaul442/budgeting-application/actions/workflows/android-ci.yml"><img src="https://github.com/OchiengPaul442/budgeting-application/actions/workflows/android-ci.yml/badge.svg?branch=main&amp;event=push" alt="Build and tests workflow status"></a>
   <img src="https://img.shields.io/badge/Android-API%2024%2B-087F72?logo=android&logoColor=white" alt="Android API 24 and newer">
   <img src="https://img.shields.io/badge/Kotlin-087F72?logo=kotlin&logoColor=white" alt="Built with Kotlin">
 </p>
@@ -101,8 +101,9 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ### Run checks
 
-GitHub Actions runs the debug build and JVM unit tests on pushes and pull requests. Instrumentation
-tests remain a local check because they need a disposable Android emulator and clear its app data.
+The **Build & Tests** badge reports one GitHub Actions run for the debug APK and JVM unit tests.
+It runs on pull requests and pushes to <code>main</code>. Instrumentation tests remain a local
+check because they need a disposable Android emulator and clear its app data.
 
 ~~~powershell
 .\gradlew.bat :app:testDebugUnitTest
