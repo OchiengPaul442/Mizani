@@ -1,194 +1,156 @@
-# Mizani — offline-first personal money management
+# Mizani
 
-Mizani is a native Android money-tracking app built with Kotlin and Jetpack Compose. Its four main
-areas are Home, Activity, Insights, and More, with one clear Add action for recording money in or
-out. It is guest-first: the encrypted on-device database is the source of truth, and the core app
-works without an account. Entering an amount in another currency requires an internet connection
-to fetch its latest available daily reference rate.
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/logo-lockup-on-dark.svg">
+    <img src="docs/brand/logo-lockup-on-light.svg" alt="Mizani — Your money, in balance." width="360">
+  </picture>
+</p>
 
-**Tagline:** Your money, in balance.
+<p align="center">
+  <strong>Clear money tracking for everyday life.</strong><br>
+  Track income, expenses and balances across cash, mobile money, bank wallets and currencies.
+</p>
 
-## What is implemented
+<p align="center">
+  <a href="https://github.com/OchiengPaul442/budgeting-application/actions/workflows/android-ci.yml"><img src="https://github.com/OchiengPaul442/budgeting-application/actions/workflows/android-ci.yml/badge.svg?branch=main" alt="Android CI status"></a>
+  <img src="https://img.shields.io/badge/Android-API%2024%2B-087F72?logo=android&logoColor=white" alt="Android API 24 and newer">
+  <img src="https://img.shields.io/badge/Kotlin-087F72?logo=kotlin&logoColor=white" alt="Built with Kotlin">
+</p>
 
-- Three-step guest onboarding with country, workspace currency, first wallet and optional opening balance.
-- Wallets: create and manage the cash, mobile money, bank and other places where money is kept.
-- Categories: seeded defaults plus custom categories, icons, colours, rename, archive/restore.
-- Transactions: expenses and income are the main actions; transfers, refunds and balance adjustments
-  support accurate balances. Records include optional fees, payee, note and date. Foreign-currency
-  expenses and income use a dated public reference rate;
-  the original amount and rate are retained alongside the workspace-currency ledger amount.
-  Editing and soft deletion retain tombstones.
-- Deterministic analytics focused on cash flow, expense categories, six-month history, income
-  trends, wallet balances, fees and a spending forecast. Amounts are shown in the workspace currency.
-  Charts (donut + grouped cash-flow bars) are rendered with **MPAndroidChart v3.1.0** and always
-  keep a textual equivalent.
-- Local search and filters: text, date range, type, wallet, category and amount range.
-- Optional 6-digit PIN app lock (PBKDF2-HMAC-SHA256) and AndroidX biometric unlock.
-- Multi-sheet Excel and transaction CSV exports (with an unencrypted-file warning), plus a versioned, passphrase-encrypted `.mizani` backup with
-  validated, all-or-nothing restore.
-- SQLCipher database encrypted with a device-bound Android Keystore-wrapped key.
-- Platform backup explicitly disabled; no ads or telemetry SDKs. Internet access is used only
-  when a user requests foreign-currency conversion.
+Mizani is an Android budgeting app designed to work offline. It needs no account: your ledger stays on your device, and the core tracking features work without a connection. Country setup includes presets for Uganda, Kenya, Tanzania, Rwanda, Nigeria, Ghana and South Africa.
 
-## Technology
+## What you can do
 
-- Kotlin 2.2.10 with Jetpack Compose (Compose BOM 2026.02.01), AGP 9.4.1, Gradle 9.6 wrapper,
-  single `:app` module with manual DI.
-- Room 2.8.5 (KSP) on SQLCipher 4.19.1 with an Android Keystore-wrapped key; DataStore 1.3.0 for
-  preferences; AndroidX Biometric 1.1.0; kotlinx-coroutines 1.10.2.
-- **MPAndroidChart v3.1.0 (Apache License 2.0)** — Philipp Jahoda's charting library, used only for
-  the donut and grouped cash-flow bars, wrapped by `ui/components/MizaniDonutChart.kt` and
-  `ui/components/MizaniCashFlowBars.kt`. All chart text, legends and accessibility labels are
-  rendered in Compose, so every chart keeps a textual equivalent.
-- No user account or sync backend, advertising or analytics SDK, or AI model/inference runtime. A small HTTPS
-  client fetches public currency-pair reference rates from Frankfurter when conversion is used.
+- **Track money in and out.** Record income and expenses, with transfers, refunds and balance
+  adjustments for a more accurate ledger.
+- **Organize your money.** Use wallets for cash, mobile money and bank accounts; group records by
+  category; search and filter activity.
+- **Understand your cash flow.** Review income, spending, category breakdowns, wallet balances and
+  trends in Insights. Charts include accessible text summaries.
+- **Record different currencies.** Enter income or expenses in another supported currency. When
+  online, Mizani fetches the latest available daily reference rate and saves the source amount,
+  converted amount, rate and rate date. Reference rates can differ from bank, card or mobile money
+  settlement rates.
+- **Keep and move your records.** Export transactions to CSV or Excel, or create and restore a
+  Mizani backup encrypted with a passphrase. CSV and Excel files are not encrypted.
+- **Get a gentle reminder.** An optional local reminder defaults to 8:00 p.m. and can be changed in
+  Settings. It reminds you if no income, expense or refund was recorded that day.
+- **Protect access.** Use an optional six digit app PIN or biometric unlock.
 
 ## Brand
 
-The interface follows the official Mizani brand kit (archived in `docs/brand/`): the balance
-mark with a warm-gold focal dot, the tagline *Your money, in balance.*, and the canonical
-palette — Deep Teal `#102A32`, Emerald `#087F72`, Mint `#76D7C2`, Warm Gold `#E8BF6A`,
-Soft White `#F7FAF8` and Ink `#17353D`. Emerald drives primary actions, gold is reserved for
-accents, muted deep teal marks transfers, and red is used only for errors. Shapes are cards
-16dp, buttons and fields 12dp, dialogs 20dp. See `docs/DESIGN_SYSTEM.md` for the full token
-table and `docs/brand/BRAND_GUIDE.md` for the source guidelines.
+The Mizani identity is built around balance, clarity and trust. The interface uses the official
+mark and restrained palette:
 
-## Documentation
+| Color | Hex | Use |
+| --- | --- | --- |
+| Deep Teal | <code>#102A32</code> | Brand mark and dark surfaces |
+| Emerald | <code>#087F72</code> | Primary actions and selected states |
+| Mint | <code>#76D7C2</code> | Dark-theme emphasis and positive accents |
+| Warm Gold | <code>#E8BF6A</code> | Small highlights |
+| Soft White | <code>#F7FAF8</code> | Light background |
+| Ink | <code>#17353D</code> | Primary text |
 
-- `docs/DESIGN_SYSTEM.md` — official palette, shape, spacing, typography and component rules.
-- `docs/PROJECT_STRUCTURE.md` — single-module package layout, dependency direction and where changes belong.
-- `docs/ARCHITECTURE_CONTRACT.md` — data, ledger, analytics, security and AI boundaries.
-- `docs/VERIFICATION.md` — build, unit, instrumented and manual verification gates.
-- `docs/brand/` — official brand kit (brand guide, colour/shape tokens and logo SVGs).
-- `MIZANI_PRODUCTION_QA_REVIEW.md` (repository root) — production QA review: findings, status
-  labels, copy changes, exact build/test results and the remaining production checklist.
+See the [brand guide](docs/brand/BRAND_GUIDE.md) and [design system](docs/DESIGN_SYSTEM.md) for logo use, color, typography, spacing and component guidance.
 
-Documentation cleanup: obsolete screenshot sets, AI-strategy/AI-redline notes, duplicate setup
-instructions and brand marketing packages were deleted. `docs/` now contains only `brand/`,
-`DESIGN_SYSTEM.md`, `PROJECT_STRUCTURE.md`, `ARCHITECTURE_CONTRACT.md` and `VERIFICATION.md`;
-no doc references the removed files.
+## Data and privacy
 
-## Build
+The ledger is stored locally in a database encrypted with SQLCipher. Its key is protected with
+Android Keystore. Mizani has no user account, cloud sync, advertising or analytics SDK.
 
-Prerequisites: JDK 21+ (the project daemon uses the Android Studio JBR), Android SDK 37,
-and Gradle 9.6 via the wrapper.
+Internet access is used when you request a currency rate or check for an app update. Rate requests
+send currency codes only, not transaction amounts or details. Update checks show the public release
+page; Mizani does not silently download or install updates.
 
-```powershell
+Encrypted backups are intended for recovery and moving to another device. CSV and Excel exports are
+readable files, so choose a trusted place to save or share them. See the [security and recovery
+guide](docs/SECURITY.md) and [privacy notice](docs/PRIVACY_NOTICE.md).
+
+## Build and run
+
+### Requirements
+
+- Android Studio with a full JDK/JBR supported by the project’s Gradle and Android Gradle Plugin versions.
+- Android SDK Platform 37 and Android SDK Platform-Tools.
+- Internet access for the first Gradle dependency and wrapper downloads.
+
+The repository’s root <code>gradle.properties</code> currently includes a Windows Android Studio
+JBR discovery path. If your JDK is installed elsewhere, update that setting locally to your full
+JDK/JBR path. Keep machine-specific paths out of commits. Android Studio can create
+<code>local.properties</code> for the SDK location; that file is intentionally ignored by Git.
+
+### Build a debug APK
+
+Clone the repository and build with the Gradle wrapper:
+
+~~~powershell
+git clone https://github.com/OchiengPaul442/budgeting-application.git
+cd budgeting-application
 .\gradlew.bat :app:assembleDebug
-.\gradlew.bat :app:testDebugUnitTest
-```
+~~~
 
-The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
+On macOS or Linux, use <code>./gradlew</code> in place of <code>.\gradlew.bat</code>.
 
-### Release versions and app updates
+The APK is written to <code>app/build/outputs/apk/debug/app-debug.apk</code>. Install it on a
+connected device or emulator with:
 
-Set `mizaniVersionName` in `gradle.properties` for each release (for example, `1.0.1`). Gradle
-derives Android's increasing `versionCode` from the numeric `MAJOR.MINOR.PATCH` parts, and the
-About and More screens read the generated version name. Keep release versions moving forward; do
-not reuse a version or lower any part after publishing.
-
-For direct APK installs, About offers a user-initiated check against the public GitHub Releases
-page for this repository. It opens a verified release page in the browser; the user downloads the
-APK and confirms installation in Android. It does not download or install in the background.
-Publish a stable `vMAJOR.MINOR.PATCH` release with an APK signed using the same production key as
-previous releases for this check to find it. Do not publish debug or unsigned APKs.
-
-Google Play will manage updates for Play-installed copies once Mizani is published there. This
-repository has no production signing configuration or Play publishing workflow yet; keep the
-production signing key secure and configure it before distributing release APKs.
-
-### Verified gates (this build)
-
-```powershell
-.\gradlew.bat :app:assembleDebug
-.\gradlew.bat :app:testDebugUnitTest --rerun
-```
-
-- **87 unit tests** green across **8 suites** with 0 failures, 0 errors and 0 skipped:
-  `MoneyTest` 12, `PinBackoffPolicyTest` 8, `PinHasherTest` 3, `PeriodsTest` 7,
-  `BackupValidatorTest` 29, `AnalyticsEngineTest` 19, `ExportManagerTest` 4, `InsightEngineTest` 5
-  (`AnalyticsEngineTest` alone accounts for 19).
-- `:app:compileDebugKotlin`, `:app:processDebugResources`, `:app:assembleDebug` and
-  `:app:compileDebugAndroidTestKotlin` all exit 0.
-- **All 5 instrumented classes passed on an emulator** — headless `Medium_Phone_API_36.1`
-  (API 36.1, `adb` serial `emulator-5554`, boot completed in ~75s), one class per Gradle
-  invocation: `GuestJourneyTest` (1 test, 0 failures, 84.2s — first attempt hit a transient
-  systemui ANR that stole input focus; it passed after the ANR was dismissed and the test
-  retried), `RepositoryIntegrationTest` (2 `@Test` methods, exit 0, 56s), `AppLockTest` (1 test,
-  88.7s), `BackupRestoreTest` (1 test, 63.8s), `DemoDataTest` (1 test, 17.8s). See
-  `docs/VERIFICATION.md` for the per-class table and run discipline. The 9-step manual acceptance
-  checklist and a TalkBack pass were not performed — instrumented execution is verified, manual
-  on-device acceptance is not.
-- **Final debug APK: 31,141,566 bytes ≈ 29.7 MiB** at
-  `app/build/outputs/apk/debug/app-debug.apk` (includes **MPAndroidChart v3.1.0**, used only for the
-  donut and grouped cash-flow bars — see "Technology").
-- **Release APK: 10,663,390 bytes ≈ 10.2 MiB** unsigned at
-  `app/build/outputs/apk/release/app-release-unsigned.apk`. R8 full-mode code shrinking plus
-  optimized resource shrinking enabled via `optimization { enable = true }` (AGP 9.3+ DSL); default
-  Android keep rules were sufficient (no custom ProGuard rules added). The retained artifact is
-  **unsigned** (no signing config, no keystore), so it cannot be installed as-is and no
-  production-signed release artifact exists. As a verification-only smoke test, a **temporary
-  copy** was signed with the existing **debug** keystore (`CN=Android Debug` — not a production
-  key), `apksigner`-verified, installed with app data cleared, and `MainActivity` launched to
-  resumed state with no `FATAL EXCEPTION` and no E-level `mizani` logcat lines; that test-signed
-  copy was deleted and the unsigned artifact retained. Sign with a real release keystore before
-  any Play distribution. Behavior, application ID and Room schema unchanged.
-
-Install the debug APK on a running emulator/device:
-
-```powershell
+~~~powershell
 adb install -r app/build/outputs/apk/debug/app-debug.apk
-```
+~~~
 
-## Architecture
+### Run checks
 
-Single `:app` module with enforced package boundaries (see `docs/ARCHITECTURE_CONTRACT.md`):
+GitHub Actions runs the debug build and JVM unit tests on pushes and pull requests. Instrumentation
+tests remain a local check because they need a disposable Android emulator and clear its app data.
 
-```
-core/money, core/model, core/time, core/security
-data/local (Room + SQLCipher + Keystore)
-data/repo   (single validated write boundary)
-domain/analytics, domain/export
-feature/*   (Compose screens)
-ui/theme, ui/components, ui/navigation
-```
+~~~powershell
+.\gradlew.bat :app:testDebugUnitTest
+.\gradlew.bat :app:assembleDebugAndroidTest
+~~~
 
-Money is stored as integer minor units plus a currency code, never as floating point.
-Transfers never count as income or spending; their fees do. Refunds reduce the original
-category. Expected income never counts as received. All analytics are computed on-device
-by a pure Kotlin layer with unit tests.
+To run the Android instrumentation suite, connect a disposable emulator and use:
 
-## Deliberate V1 deviations
+~~~powershell
+.\gradlew.bat :app:connectedDebugAndroidTest
+~~~
 
-- **Cloud sync / accounts:** no backend is provisioned in this build and no credentials may
-  ship in the APK. Encrypted backup is the available portability path.
-- **SMS mobile-money import:** policy-gated in the PRD; not included here. The importer
-  boundary is documented but no SMS permission is declared.
-- **Split transactions:** P1; not in this build.
-- **Currency conversion:** expenses and income may be entered in another supported currency.
-  Frankfurter supplies the latest available daily reference rate; the app records the converted
-  workspace-currency amount plus the original amount, rate and rate date. Reports and balances
-  remain in one workspace currency. This is not a live bank/card settlement rate.
-- **Manual DI** rather than Hilt, and a single module rather than a large module graph.
-  These are documented architecture decisions for V1.
+> **Test data warning:** Instrumentation tests clear the app’s local database and settings. Run
+> them only on a disposable emulator or test profile, never on a device containing a ledger you
+> need to keep.
 
-## Artificial intelligence
+### Release builds
 
-AI is an **optional future layer**, not part of this build. **No AI model, inference runtime or
-model-download path ships in the APK** — there is no model file, no runtime dependency or
-AI network access. Every amount, percentage and comparison shown to the user is
-produced by the deterministic on-device analytics layer, and those deterministic insights are what
-the app ships with; adding AI later would not replace or override them. If AI is ever added it must
-be local, opt-in, fact-constrained and verifier-gated — it may explain numbers, never produce them,
-and no financial payload is ever sent in a prompt. See `docs/ARCHITECTURE_CONTRACT.md` for the
-binding boundary.
+Set <code>mizaniVersionName</code> in <code>gradle.properties</code> using
+<code>MAJOR.MINOR.PATCH</code>; Gradle derives Android’s <code>versionCode</code> from it. A release
+build is unsigned unless all four <code>MIZANI_RELEASE_*</code> signing properties are configured.
+Keep signing credentials outside the repository. See [security guidance](docs/SECURITY.md) before
+preparing a release.
 
-## Privacy summary
+## Project structure
 
-Guest financial data never leaves the device. For an optional currency conversion, the app sends
-only the source and workspace currency codes over HTTPS to Frankfurter; it does not send the amount,
-payee, note or other transaction details. The app contains no advertising or analytics SDK and does
-not log financial values.
-Android Auto Backup is disabled and the app's data domains are excluded from backup and
-device-transfer rules. The SQLCipher passphrase is random and wrapped by a non-exportable
-Keystore key; uninstalling without an exported backup loses the local data permanently.
+Mizani is a single Android app module with package boundaries:
+
+| Package | Responsibility |
+| --- | --- |
+| <code>core</code> | Money, currencies, country defaults, dates and security policy |
+| <code>data/local</code> | Room entities and encrypted database |
+| <code>data/repo</code> | Validated data access, preferences and exchange-rate lookup |
+| <code>domain</code> | Analytics, CSV/Excel export and encrypted backup |
+| <code>feature</code> | Compose screens for onboarding, Home, Activity, Insights and More |
+| <code>ui</code> | Navigation, theme and reusable components |
+
+Start with the [project structure](docs/PROJECT_STRUCTURE.md) and [architecture
+contract](docs/ARCHITECTURE_CONTRACT.md) when changing the app.
+
+## Project documentation
+
+- [Terms of Service](docs/TERMS_OF_SERVICE.md)
+- [Privacy Notice](docs/PRIVACY_NOTICE.md)
+- [Security and data recovery](docs/SECURITY.md)
+- [Architecture contract](docs/ARCHITECTURE_CONTRACT.md)
+- [Design system](docs/DESIGN_SYSTEM.md)
+- [Project structure](docs/PROJECT_STRUCTURE.md)
+- [Third-party notices](docs/THIRD_PARTY_NOTICES.md)
+- [Brand guide](docs/brand/BRAND_GUIDE.md)
+- [Illustration and asset credits](docs/ASSET_CREDITS.md)
