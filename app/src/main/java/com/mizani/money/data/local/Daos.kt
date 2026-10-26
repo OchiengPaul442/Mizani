@@ -117,6 +117,13 @@ interface TransactionDao {
     @Query("SELECT COUNT(*) FROM transactions WHERE deletedAt IS NULL")
     fun observeCount(): Flow<Int>
 
+    @Query(
+        "SELECT EXISTS(SELECT 1 FROM transactions " +
+            "WHERE deletedAt IS NULL AND localDateEpochDay = :epochDay " +
+            "AND type IN ('INCOME', 'EXPENSE', 'REFUND'))",
+    )
+    suspend fun hasIncomeExpenseOrRefundOn(epochDay: Long): Boolean
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(transaction: TransactionEntity)
 

@@ -2,13 +2,22 @@ package com.mizani.money.ui
 
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AccountBalanceWallet
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.ArrowDownward
+import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material.icons.rounded.MoreHoriz
@@ -16,37 +25,41 @@ import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.animation.core.tween
 import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.mizani.money.feature.account.AccountScreen
-import com.mizani.money.feature.budget.BudgetScreen
 import com.mizani.money.feature.categories.CategoriesScreen
-import com.mizani.money.feature.debts.DebtsScreen
-import com.mizani.money.feature.goals.GoalScreen
 import com.mizani.money.feature.home.HomeScreen
 import com.mizani.money.feature.insights.InsightsScreen
 import com.mizani.money.feature.more.MoreScreen
-import com.mizani.money.feature.plan.PlanScreen
 import com.mizani.money.feature.settings.AboutScreen
 import com.mizani.money.feature.settings.SettingsScreen
 import com.mizani.money.feature.transactions.AddTransactionScreen
 import com.mizani.money.feature.transactions.TransactionsScreen
 import com.mizani.money.feature.wallets.WalletsScreen
+import com.mizani.money.core.model.TransactionType
 
 private data class Tab(
     val route: String,
@@ -57,27 +70,23 @@ private data class Tab(
 private val tabs = listOf(
     Tab("home", "Home", Icons.Rounded.Home),
     Tab("transactions", "Activity", Icons.Rounded.SwapHoriz),
-    Tab("plan", "Plan", Icons.Rounded.AccountBalanceWallet),
     Tab("insights", "Insights", Icons.Rounded.Insights),
     Tab("more", "More", Icons.Rounded.MoreHoriz),
 )
 
 private val topLevelRoutes = tabs.map { it.route }.toSet()
 
-// Direction-aware slide spec shared by every destination. The scope's initialState/targetState are
-// the NavBackStackEntry endpoints; their route depths decide which way the slide goes. Bottom tabs
-// use their left-to-right index, detail routes sit deeper, so navigating rightward in the bar (or
-// into any detail screen) slides content in from the right, and popping back reverses it.
-// ~280ms horizontal tween; direction follows route depth (see navEnter/navExit).
+// Keep every route change consistent and restrained: full-screen-width movement caused a visible
+// jump between tabs and made details feel as if they were thrown off screen.
 private fun navEnter(
     scope: androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>,
 ): EnterTransition {
     val from = depthOf(scope.initialState.destination.route)
     val to = depthOf(scope.targetState.destination.route)
     val towardsEnd = to >= from
-    return slideInHorizontally(animationSpec = tween(280)) { fullWidth ->
-        if (towardsEnd) fullWidth else -fullWidth
-    }
+    return fadeIn(tween(190)) + slideInHorizontally(
+        animationSpec = tween(220, easing = FastOutSlowInEasing),
+    ) { fullWidth -> if (towardsEnd) fullWidth / 14 else -fullWidth / 14 }
 }
 
 private fun navExit(
@@ -86,9 +95,9 @@ private fun navExit(
     val from = depthOf(scope.initialState.destination.route)
     val to = depthOf(scope.targetState.destination.route)
     val towardsEnd = to >= from
-    return slideOutHorizontally(animationSpec = tween(280)) { fullWidth ->
-        if (towardsEnd) -fullWidth else fullWidth
-    }
+    return fadeOut(tween(150)) + slideOutHorizontally(
+        animationSpec = tween(220, easing = FastOutSlowInEasing),
+    ) { fullWidth -> if (towardsEnd) -fullWidth / 14 else fullWidth / 14 }
 }
 
 // Pop transitions: backing out of a detail always feels like "going back", regardless of
@@ -96,11 +105,15 @@ private fun navExit(
 // slides in from the left and the outgoing one exits to the right.
 private fun navPopEnter(
     scope: androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>,
-): EnterTransition = slideInHorizontally(animationSpec = tween(280)) { fullWidth -> -fullWidth }
+): EnterTransition = fadeIn(tween(190)) + slideInHorizontally(
+    animationSpec = tween(220, easing = FastOutSlowInEasing),
+) { fullWidth -> -fullWidth / 14 }
 
 private fun navPopExit(
     scope: androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>,
-): ExitTransition = slideOutHorizontally(animationSpec = tween(280)) { fullWidth -> fullWidth }
+): ExitTransition = fadeOut(tween(150)) + slideOutHorizontally(
+    animationSpec = tween(220, easing = FastOutSlowInEasing),
+) { fullWidth -> fullWidth / 14 }
 
 // Maps a route to an integer depth used to decide slide direction. Bottom tabs use their index;
 // everything else (detail screens) is pushed below the deepest tab so navigating into any detail
@@ -108,19 +121,24 @@ private fun navPopExit(
 private fun depthOf(route: String?): Int = when (route) {
     "home" -> 0
     "transactions" -> 1
-    "plan" -> 2
-    "insights" -> 3
-    "more" -> 4
+    "insights" -> 2
+    "more" -> 3
     null -> -1
     else -> 10
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val isTopLevel = currentRoute == null || currentRoute in topLevelRoutes
+    var showAddSheet by remember { mutableStateOf(false) }
+
+    fun openAdd(type: TransactionType) {
+        navController.navigate("add/${type.name}")
+    }
 
     fun openTopLevel(route: String) {
         navController.navigate(route) {
@@ -132,6 +150,15 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        floatingActionButton = {
+            if (isTopLevel) {
+                ExtendedFloatingActionButton(
+                    onClick = { showAddSheet = true },
+                    icon = { Icon(Icons.Rounded.Add, contentDescription = null) },
+                    text = { Text("Add") },
+                )
+            }
+        },
         bottomBar = {
             if (isTopLevel) {
                 Column {
@@ -181,13 +208,10 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                     vm = vm,
                     state = state,
                     onOpenTransactions = { openTopLevel("transactions") },
-                    onOpenPlan = { openTopLevel("plan") },
                     onOpenInsights = { openTopLevel("insights") },
-                    onAdd = { navController.navigate("add") },
-                    onOpenBudget = { budgetId ->
-                        if (budgetId == null) navController.navigate("budget/new") else navController.navigate("budget/$budgetId")
-                    },
-                    onOpenSettings = { navController.navigate("settings") },
+                    onAdd = { showAddSheet = true },
+                    onAddIncome = { openAdd(TransactionType.INCOME) },
+                    onAddExpense = { openAdd(TransactionType.EXPENSE) },
                 )
             }
             composable(
@@ -201,26 +225,7 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                     vm = vm,
                     state = state,
                     onEdit = { id -> navController.navigate("edit/$id") },
-                    onAdd = { navController.navigate("add") },
-                )
-            }
-            composable(
-                "plan",
-                enterTransition = ::navEnter,
-                exitTransition = ::navExit,
-                popEnterTransition = ::navPopEnter,
-                popExitTransition = ::navPopExit,
-            ) {
-                PlanScreen(
-                    vm = vm,
-                    state = state,
-                    onOpenBudget = { id ->
-                        if (id == null) navController.navigate("budget/new") else navController.navigate("budget/$id")
-                    },
-                    onOpenGoal = { id ->
-                        if (id == null) navController.navigate("goal/new") else navController.navigate("goal/$id")
-                    },
-                    onOpenDebts = { navController.navigate("debts") },
+                    onAdd = { showAddSheet = true },
                 )
             }
             composable(
@@ -230,7 +235,11 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popEnterTransition = ::navPopEnter,
                 popExitTransition = ::navPopExit,
             ) {
-                InsightsScreen(vm = vm, state = state, onOpenPlan = { openTopLevel("plan") })
+                InsightsScreen(
+                    vm = vm,
+                    state = state,
+                    onExportData = { navController.navigate("export") },
+                )
             }
             composable(
                 "more",
@@ -240,21 +249,25 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popExitTransition = ::navPopExit,
             ) {
                 MoreScreen(
-                    state = state,
                     onNavigate = { route -> navController.navigate(route) },
                 )
             }
             composable(
-                "add",
+                "add/{type}",
                 enterTransition = ::navEnter,
                 exitTransition = ::navExit,
                 popEnterTransition = ::navPopEnter,
                 popExitTransition = ::navPopExit,
-            ) {
+            ) { entry ->
+                val initialType = entry.arguments?.getString("type")
+                    ?.let { runCatching { TransactionType.valueOf(it) }.getOrNull() }
+                    ?.takeIf { it == TransactionType.EXPENSE || it == TransactionType.INCOME || it == TransactionType.TRANSFER }
+                    ?: TransactionType.EXPENSE
                 AddTransactionScreen(
                     vm = vm,
                     state = state,
                     initialTransactionId = null,
+                    initialType = initialType,
                     onDone = { navController.popBackStack() },
                     onBack = { navController.popBackStack() },
                 )
@@ -293,73 +306,6 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 CategoriesScreen(vm = vm, state = state, onBack = { navController.popBackStack() })
             }
             composable(
-                "debts",
-                enterTransition = ::navEnter,
-                exitTransition = ::navExit,
-                popEnterTransition = ::navPopEnter,
-                popExitTransition = ::navPopExit,
-            ) {
-                DebtsScreen(vm = vm, state = state, onBack = { navController.popBackStack() })
-            }
-            composable(
-                "budget/new",
-                enterTransition = ::navEnter,
-                exitTransition = ::navExit,
-                popEnterTransition = ::navPopEnter,
-                popExitTransition = ::navPopExit,
-            ) {
-                BudgetScreen(
-                    vm = vm,
-                    state = state,
-                    budgetId = null,
-                    onBack = { navController.popBackStack() },
-                    onSaved = { navController.popBackStack() },
-                )
-            }
-            composable(
-                "budget/{id}",
-                enterTransition = ::navEnter,
-                exitTransition = ::navExit,
-                popEnterTransition = ::navPopEnter,
-                popExitTransition = ::navPopExit,
-            ) { entry ->
-                BudgetScreen(
-                    vm = vm,
-                    state = state,
-                    budgetId = entry.arguments?.getString("id"),
-                    onBack = { navController.popBackStack() },
-                    onSaved = { navController.popBackStack() },
-                )
-            }
-            composable(
-                "goal/new",
-                enterTransition = ::navEnter,
-                exitTransition = ::navExit,
-                popEnterTransition = ::navPopEnter,
-                popExitTransition = ::navPopExit,
-            ) {
-                GoalScreen(
-                    vm = vm,
-                    state = state,
-                    goalId = null,
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable(
-                "goal/{id}",
-                enterTransition = ::navEnter,
-                exitTransition = ::navExit,
-                popEnterTransition = ::navPopEnter,
-                popExitTransition = ::navPopExit,
-            ) { entry ->
-                GoalScreen(
-                    vm = vm,
-                    state = state,
-                    goalId = entry.arguments?.getString("id"),
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable(
                 "settings",
                 enterTransition = ::navEnter,
                 exitTransition = ::navExit,
@@ -383,16 +329,59 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 AboutScreen(state = state, onBack = { navController.popBackStack() })
             }
             composable(
-                "account",
+                "export",
                 enterTransition = ::navEnter,
                 exitTransition = ::navExit,
                 popEnterTransition = ::navPopEnter,
                 popExitTransition = ::navPopExit,
             ) {
-                AccountScreen(
+                SettingsScreen(
+                    vm = vm,
+                    state = state,
                     onBack = { navController.popBackStack() },
-                    onOpenBackupSettings = { navController.navigate("settings") },
+                    exportOnly = true,
                 )
+            }
+        }
+    }
+
+    if (showAddSheet) {
+        ModalBottomSheet(onDismissRequest = { showAddSheet = false }) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text("What would you like to record?", style = MaterialTheme.typography.titleLarge)
+                Text(
+                    "Choose the money that came in or went out.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(2.dp))
+                FilledTonalButton(
+                    onClick = { showAddSheet = false; openAdd(TransactionType.EXPENSE) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Rounded.ArrowUpward, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Record expense")
+                }
+                FilledTonalButton(
+                    onClick = { showAddSheet = false; openAdd(TransactionType.INCOME) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Rounded.ArrowDownward, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Record income")
+                }
+                TextButton(
+                    onClick = { showAddSheet = false; openAdd(TransactionType.TRANSFER) },
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                ) {
+                    Icon(Icons.Rounded.SwapHoriz, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Move money between wallets")
+                }
             }
         }
     }

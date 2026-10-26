@@ -327,27 +327,6 @@ class AnalyticsEngine(private val data: LedgerSnapshot) {
             .map { WalletBalance(it, balances[it.id] ?: 0L) }
     }
 
-    fun goalsProgress(range: DateRange): List<GoalProgress> = data.goals
-        .filter { it.deletedAt == null && !it.archived }
-        .sortedBy { it.priority }
-        .map { goal ->
-            val contributed = data.contributions
-                .filter {
-                    it.goalId == goal.id &&
-                        it.localDateEpochDay >= range.start.toEpochDay() &&
-                        it.localDateEpochDay <= range.end.toEpochDay()
-                }
-                .sumOf { it.amountMinor }
-            GoalProgress(
-                goal = goal,
-                contributedThisPeriodMinor = contributed,
-                remainingMinor = (goal.targetMinor - goal.allocatedMinor).coerceAtLeast(0),
-                progress = if (goal.targetMinor <= 0) 0.0 else {
-                    (goal.allocatedMinor.toDouble() / goal.targetMinor * 100.0).coerceIn(0.0, 100.0)
-                },
-            )
-        }
-
     fun expectedIncome(range: DateRange): Long = data.recurring
         .filter { it.deletedAt == null && !it.archived && it.type == RecurringType.INCOME }
         .sumOf { rule -> occurrencesInRange(rule, range) * rule.amountMinor }
@@ -495,12 +474,6 @@ class AnalyticsEngine(private val data: LedgerSnapshot) {
             .sortedByDescending { it.totalMinor }
         val previous = previousComparable(range, today)
         val received = incomeMinor(range)
-        val contributions = data.contributions
-            .filter {
-                it.localDateEpochDay >= range.start.toEpochDay() &&
-                    it.localDateEpochDay <= range.end.toEpochDay()
-            }
-            .sumOf { it.amountMinor }
         val essentialPlanned = budgetProgress?.lines
             ?.filter { it.line.essential }
             ?.sumOf { it.line.plannedMinor } ?: 0L
@@ -531,7 +504,6 @@ class AnalyticsEngine(private val data: LedgerSnapshot) {
             walletTotalMinor = walletTotal,
             walletLiquidMinor = walletLiquid,
             walletByType = byType,
-            goals = goalsProgress(range),
             recentTransactions = data.transactions
                 .filter { it.deletedAt == null }
                 .sortedWith(compareByDescending<TransactionEntity> { it.localDateEpochDay }.thenByDescending { it.occurredAt })
@@ -545,8 +517,6 @@ class AnalyticsEngine(private val data: LedgerSnapshot) {
             previousIncomeMinor = incomeMinor(previous),
             previousExpenseMinor = expenseMinor(previous),
             previousPeriod = previous,
-            savingsContributionsMinor = contributions,
-            savingsRatePercent = if (received > 0) ((contributions.toDouble() / received) * 100.0).toInt() else null,
             essentialCoveragePercent = essentialCoverage,
             incomeVariability = incomeVariability(today),
             daysTracked = daysTracked,

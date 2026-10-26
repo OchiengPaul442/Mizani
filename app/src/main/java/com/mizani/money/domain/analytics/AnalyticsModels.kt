@@ -5,7 +5,6 @@ import com.mizani.money.core.time.DateRange
 import com.mizani.money.data.local.BudgetEntity
 import com.mizani.money.data.local.BudgetLineEntity
 import com.mizani.money.data.local.CategoryEntity
-import com.mizani.money.data.local.GoalEntity
 import com.mizani.money.data.local.TransactionEntity
 import com.mizani.money.data.local.WalletEntity
 import java.time.LocalDate
@@ -77,13 +76,6 @@ data class UpcomingCommitment(
     val walletName: String,
 )
 
-data class GoalProgress(
-    val goal: GoalEntity,
-    val contributedThisPeriodMinor: Long,
-    val remainingMinor: Long,
-    val progress: Double,
-)
-
 data class IncomeVariability(
     val medianMinor: Long,
     val lowestMinor: Long,
@@ -106,7 +98,6 @@ data class DashboardMetrics(
     val walletTotalMinor: Long,
     val walletLiquidMinor: Long,
     val walletByType: List<WalletTypeTotal>,
-    val goals: List<GoalProgress>,
     val recentTransactions: List<TransactionEntity>,
     val safeToSpendDailyMinor: Long?,
     val budgetRemainingMinor: Long?,
@@ -117,8 +108,6 @@ data class DashboardMetrics(
     val previousIncomeMinor: Long,
     val previousExpenseMinor: Long,
     val previousPeriod: DateRange,
-    val savingsContributionsMinor: Long,
-    val savingsRatePercent: Int?,
     val essentialCoveragePercent: Int?,
     val incomeVariability: IncomeVariability?,
     val daysTracked: Int,

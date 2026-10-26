@@ -36,18 +36,36 @@ object Currencies {
     val EUR = Currency("EUR", "€", "Euro", 2)
     val GBP = Currency("GBP", "£", "British Pound", 2)
 
-    /** Currencies available as workspace currencies and during onboarding. */
-    val all: List<Currency> = listOf(UGX, KES, TZS, RWF, NGN, GHS, ZAR, USD, EUR, GBP)
+    private val curatedCurrencies = listOf(UGX, KES, TZS, RWF, NGN, GHS, ZAR, USD, EUR, GBP)
+    private val africanCurrencyCodes = setOf(
+        "AOA", "BIF", "BWP", "CDF", "CVE", "DJF", "DZD", "EGP", "ERN", "ETB", "GMD", "GNF",
+        "KMF", "LRD", "LYD", "MAD", "MGA", "MRU", "MUR", "MWK", "MZN", "NAD", "SCR", "SDG",
+        "SLE", "SOS", "SSP", "STN", "SZL", "TND", "XAF", "XOF", "ZMW", "ZWG",
+    )
+
+    /** Common account currencies for African regions plus the globally common choices. */
+    val all: List<Currency> by lazy {
+        val knownCodes = curatedCurrencies.mapTo(mutableSetOf()) { it.code }
+        curatedCurrencies + transactionCurrencies.filter {
+            it.code in africanCurrencyCodes && knownCodes.add(it.code)
+        }
+    }
+
+    /** Currency codes currently assigned to an ISO country or territory. */
+    private val currentCurrencyCodes: Set<String> by lazy {
+        Locale.getISOCountries().mapNotNullTo(mutableSetOf()) { region ->
+            runCatching {
+                JavaCurrency.getInstance(Locale.Builder().setRegion(region).build()).currencyCode
+            }.getOrNull()
+        }
+    }
 
     /**
-     * Foreign currencies supported for transaction entry. Keep this broader than [all]: a
-     * workspace still uses the app's verified country currencies, while users can record income
-     * and expenses in any ISO currency known to the runtime and convert it into the workspace
-     * currency using the existing reference-rate flow.
+     * All currencies known to the runtime are retained for formatting older records. Historical
+     * codes are deliberately excluded from new transaction entry.
      */
-    val transactionCurrencies: List<Currency> by lazy {
-        val curatedByCode = all.associateBy { it.code }
-        val runtimeCurrencies = JavaCurrency.getAvailableCurrencies().mapNotNull { javaCurrency ->
+    private val runtimeCurrencies: List<Currency> by lazy {
+        JavaCurrency.getAvailableCurrencies().mapNotNull { javaCurrency ->
             val code = javaCurrency.currencyCode
             val minorUnits = javaCurrency.defaultFractionDigits
             if (code == "XXX" || minorUnits !in 0..6) return@mapNotNull null
@@ -58,13 +76,27 @@ object Currencies {
                 minorUnits = minorUnits,
             )
         }
-        val byCode = (all + runtimeCurrencies).associateBy { it.code }
-        val preferred = all.mapNotNull { byCode[it.code] }
+    }
+
+    /**
+     * Foreign currencies supported for transaction entry. Keep this broader than [all]: a
+     * workspace still uses the app's verified country currencies, while users can record income
+     * and expenses in any current country currency known to the runtime.
+     */
+    val transactionCurrencies: List<Currency> by lazy {
+        val curatedByCode = curatedCurrencies.associateBy { it.code }
+        val byCode = (curatedCurrencies + runtimeCurrencies.filter { it.code in currentCurrencyCodes })
+            .associateBy { it.code }
+        val preferred = curatedCurrencies.mapNotNull { byCode[it.code] }
         preferred + byCode.values.filterNot { it.code in curatedByCode }.sortedBy { it.code }
     }
 
+    private val allCurrenciesByCode: Map<String, Currency> by lazy {
+        (curatedCurrencies + runtimeCurrencies).associateBy { it.code }
+    }
+
     fun byCode(code: String): Currency =
-        transactionCurrencies.firstOrNull { it.code.equals(code, ignoreCase = true) } ?: USD
+        allCurrenciesByCode[code.uppercase(Locale.ROOT)] ?: USD
 }
 
 /** Converts minor units using a decimal rate expressed as target major units per source major unit. */

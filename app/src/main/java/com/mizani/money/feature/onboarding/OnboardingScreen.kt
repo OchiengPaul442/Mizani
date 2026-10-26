@@ -1,16 +1,13 @@
 package com.mizani.money.feature.onboarding
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -40,12 +37,10 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.OfflineBolt
 import androidx.compose.material.icons.rounded.PersonOff
-import com.mizani.money.ui.components.MizaniAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -74,6 +69,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import java.util.Locale
 import com.mizani.money.R
 import com.mizani.money.core.model.CountryPacks
 import com.mizani.money.core.model.WalletSuggestion
@@ -91,19 +87,18 @@ import com.mizani.money.ui.components.Spacing
 import com.mizani.money.feature.legal.LegalDocumentsDialog
 import com.mizani.money.ui.theme.DeepTeal
 import com.mizani.money.ui.theme.Emerald
-import com.mizani.money.ui.theme.EmeraldDeep
 import com.mizani.money.ui.theme.Mint
 import kotlinx.coroutines.launch
 
 @Composable
 fun OnboardingScreen(vm: AppViewModel) {
     var step by rememberSaveable { mutableIntStateOf(0) }
-    var countryCode by rememberSaveable { mutableStateOf("UG") }
-    var currencyCode by rememberSaveable { mutableStateOf("UGX") }
+    val suggestedCountry = CountryPacks.forDeviceRegion(Locale.getDefault().country)
+    var countryCode by rememberSaveable { mutableStateOf(suggestedCountry.code) }
+    var currencyCode by rememberSaveable { mutableStateOf(suggestedCountry.currencyCode) }
     var walletName by rememberSaveable { mutableStateOf("Cash") }
     var walletType by rememberSaveable { mutableStateOf(WalletType.CASH) }
     var balanceText by rememberSaveable { mutableStateOf("") }
-    var showAccountDialog by remember { mutableStateOf(false) }
     var legalDocument by rememberSaveable { mutableStateOf<LegalDocumentId?>(null) }
     var acceptingLegal by rememberSaveable { mutableStateOf(false) }
     var legalError by rememberSaveable { mutableStateOf<String?>(null) }
@@ -182,7 +177,7 @@ fun OnboardingScreen(vm: AppViewModel) {
                     Spacer(Modifier.size(48.dp))
                 }
                 Spacer(Modifier.weight(1f))
-                StepDots(current = step, total = 4)
+                StepDots(current = step, total = 3)
                 Spacer(Modifier.weight(1f))
                 Spacer(Modifier.size(48.dp))
             }
@@ -209,10 +204,15 @@ fun OnboardingScreen(vm: AppViewModel) {
                         transitionSpec = {
                             val forward = targetState > initialState
                             val sign = if (forward) 1 else -1
-                            (slideInHorizontally(animationSpec = tween(280)) { full -> sign * full })
-                                .togetherWith(
-                                    slideOutHorizontally(animationSpec = tween(280)) { full -> -sign * full },
-                                )
+                            (
+                                fadeIn(tween(180)) + slideInHorizontally(
+                                    animationSpec = tween(220, easing = FastOutSlowInEasing),
+                                ) { width -> sign * width / 14 }
+                            ).togetherWith(
+                                fadeOut(tween(150)) + slideOutHorizontally(
+                                    animationSpec = tween(220, easing = FastOutSlowInEasing),
+                                ) { width -> -sign * width / 14 },
+                            ).using(SizeTransform(clip = false) { _, _ -> tween(0) })
                         },
                         label = "onboarding",
                     ) { current ->
@@ -222,24 +222,19 @@ fun OnboardingScreen(vm: AppViewModel) {
                                 accepting = acceptingLegal,
                                 legalError = legalError,
                                 onOpenLegal = { legalDocument = it },
-                                onCreateAccount = { showAccountDialog = true },
                             )
-                            1 -> CountryStep(
+                            1 -> MoneySetupStep(
+                                pack = pack,
                                 countryCode = countryCode,
                                 currencyCode = currencyCode,
+                                walletName = walletName,
+                                walletType = walletType,
+                                error = error,
                                 onCountryChange = { selected ->
                                     countryCode = selected
                                     currencyCode = CountryPacks.byCode(selected).currencyCode
                                 },
                                 onCurrencyChange = { currencyCode = it },
-                                onContinue = { step = 2 },
-                                onSkip = { step = 2 },
-                            )
-                            2 -> WalletStep(
-                                packSuggestions = pack.walletSuggestions,
-                                walletName = walletName,
-                                walletType = walletType,
-                                error = error,
                                 onNameChange = { walletName = it.take(40) },
                                 onTypeChange = { walletType = it },
                                 onPickSuggestion = { suggestion ->
@@ -251,20 +246,14 @@ fun OnboardingScreen(vm: AppViewModel) {
                                         error = walletNameErrorText
                                     } else {
                                         error = null
-                                        step = 3
+                                        step = 2
                                     }
-                                },
-                                onSkip = {
-                                    if (walletName.isBlank()) {
-                                        walletName = "Cash"
-                                        walletType = WalletType.CASH
-                                    }
-                                    step = 3
                                 },
                             )
                             else -> ReadyStep(
                                 currency = currency,
                                 walletName = walletName,
+                                walletType = walletType,
                                 balanceText = balanceText,
                                 onBalanceChange = { input -> balanceText = input },
                                 saving = saving,
@@ -278,23 +267,6 @@ fun OnboardingScreen(vm: AppViewModel) {
         }
     }
 
-    if (showAccountDialog) {
-        MizaniAlertDialog(
-            onDismissRequest = { showAccountDialog = false },
-            shape = MaterialTheme.shapes.large,
-            title = { Text(stringResource(R.string.onboarding_accounts_title)) },
-            text = { Text(stringResource(R.string.onboarding_accounts_body)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showAccountDialog = false
-                    acceptLegalAndContinue()
-                }) { Text("Agree and continue") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAccountDialog = false }) { Text(stringResource(R.string.onboarding_not_now)) }
-            },
-        )
-    }
     legalDocument?.let { document ->
         LegalDocumentsDialog(initialDocument = document, onClose = { legalDocument = null })
     }
@@ -330,8 +302,7 @@ private fun StepDots(current: Int, total: Int) {
     }
 }
 
-// A decorative illustration block: soft concentric circles with a primary Phosphor icon and
-// floating secondary chips that drift gently forever. Decorative (not announced).
+// A static decorative illustration keeps setup calm and avoids motion competing with form input.
 @Composable
 private fun IllustrationArt(
     modifier: Modifier = Modifier,
@@ -341,18 +312,7 @@ private fun IllustrationArt(
     tertiaryRes: Int,
     tint: Color = MaterialTheme.colorScheme.onPrimaryContainer,
 ) {
-    val drift by rememberInfiniteTransition(label = "float").animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 3200, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "float",
-    )
     val scale = size.value / 200f
-    val wobbleX = kotlin.math.sin(drift * Math.PI * 2).toFloat() * 10f * scale
-    val wobbleY = kotlin.math.cos(drift * Math.PI * 2).toFloat() * 8f * scale
 
     Box(modifier = modifier.size(size), contentAlignment = Alignment.Center) {
         Box(
@@ -373,8 +333,8 @@ private fun IllustrationArt(
             tint = tint,
             modifier = Modifier.size(size * 0.46f),
         )
-        FloatingChip(res = secondaryRes, size = (44 * scale).toInt(), offsetX = (-70 * scale + wobbleX), offsetY = (-48 * scale + wobbleY), tint = tint)
-        FloatingChip(res = tertiaryRes, size = (40 * scale).toInt(), offsetX = (72 * scale - wobbleX), offsetY = (44 * scale - wobbleY), tint = tint)
+        FloatingChip(res = secondaryRes, size = (44 * scale).toInt(), offsetX = -70 * scale, offsetY = -48 * scale, tint = tint)
+        FloatingChip(res = tertiaryRes, size = (40 * scale).toInt(), offsetX = 72 * scale, offsetY = 44 * scale, tint = tint)
     }
 }
 
@@ -407,7 +367,6 @@ private fun WelcomeStep(
     accepting: Boolean,
     legalError: String?,
     onOpenLegal: (LegalDocumentId) -> Unit,
-    onCreateAccount: () -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -454,7 +413,7 @@ private fun WelcomeStep(
                 androidx.compose.material3.CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                 Spacer(Modifier.width(10.dp))
             }
-            Text("Agree and continue", style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.onboarding_get_started), style = MaterialTheme.typography.titleSmall)
         }
         legalError?.let {
             Spacer(Modifier.height(6.dp))
@@ -473,14 +432,6 @@ private fun WelcomeStep(
         ) {
             TextButton(onClick = { onOpenLegal(LegalDocumentId.TERMS) }) { Text("Terms of Service") }
             TextButton(onClick = { onOpenLegal(LegalDocumentId.PRIVACY) }) { Text("Privacy Notice") }
-        }
-        Spacer(Modifier.height(4.dp))
-        OutlinedButton(
-            onClick = onCreateAccount,
-            modifier = Modifier.fillMaxWidth().height(52.dp),
-            shape = MaterialTheme.shapes.small,
-        ) {
-            Text(stringResource(R.string.onboarding_about_accounts))
         }
     }
 }
@@ -503,32 +454,29 @@ private fun ValueChip(icon: ImageVector, label: String) {
 }
 
 @Composable
-private fun CountryStep(
+private fun MoneySetupStep(
+    pack: com.mizani.money.core.model.CountryPack,
     countryCode: String,
     currencyCode: String,
+    walletName: String,
+    walletType: WalletType,
+    error: String?,
     onCountryChange: (String) -> Unit,
     onCurrencyChange: (String) -> Unit,
+    onNameChange: (String) -> Unit,
+    onTypeChange: (WalletType) -> Unit,
+    onPickSuggestion: (WalletSuggestion) -> Unit,
     onContinue: () -> Unit,
-    onSkip: () -> Unit,
 ) {
     val country = CountryPacks.byCode(countryCode)
+    val currency = Currencies.byCode(currencyCode)
     Column(modifier = Modifier.fillMaxWidth()) {
-        IllustrationArt(
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-            size = 156.dp,
-            primaryRes = R.drawable.ic_ph_globe,
-            secondaryRes = R.drawable.ic_ph_bank,
-            tertiaryRes = R.drawable.ic_ph_coins,
-        )
-        Spacer(Modifier.height(Spacing.lg))
-        Text(stringResource(R.string.onboarding_country_title), style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        Text(stringResource(R.string.onboarding_setup_title), style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(Spacing.xs))
         Text(
-            stringResource(R.string.onboarding_country_subtitle),
+            stringResource(R.string.onboarding_setup_subtitle),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(Spacing.lg))
         Text(stringResource(R.string.country), style = MaterialTheme.typography.labelLarge)
@@ -539,78 +487,34 @@ private fun CountryStep(
             onSelect = onCountryChange,
             modifier = Modifier.fillMaxWidth(),
         )
-        Spacer(Modifier.height(Spacing.lg))
+        Spacer(Modifier.height(Spacing.md))
         Text(stringResource(R.string.primary_currency), style = MaterialTheme.typography.labelLarge)
         Spacer(Modifier.height(6.dp))
         MizaniPicker(
-            selectedText = "${Currencies.byCode(currencyCode).code} · ${Currencies.byCode(currencyCode).name}",
-            options = Currencies.all.map { PickerOption(it.code, "${it.code} · ${it.name}") },
+            selectedText = "${currency.code} | ${currency.name}",
+            options = Currencies.all.map { PickerOption(it.code, "${it.code} | ${it.name}") },
             onSelect = onCurrencyChange,
+            searchable = true,
+            searchHint = "Search currencies",
             modifier = Modifier.fillMaxWidth(),
         )
-        Spacer(Modifier.height(Spacing.md))
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            shape = MaterialTheme.shapes.medium,
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(Spacing.md),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(MizaniIcons.wallet(WalletType.MOBILE_MONEY), contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(Spacing.md))
-                Text(
-                    "Common here: ${country.mobileMoneyProviders.joinToString(", ")}.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        Spacer(Modifier.height(Spacing.xl))
-        Button(onClick = onContinue, modifier = Modifier.fillMaxWidth().height(54.dp), shape = MaterialTheme.shapes.small) {
-            Text(stringResource(R.string.onboarding_country_continue))
-        }
-        Spacer(Modifier.height(8.dp))
-        TextButton(onClick = onSkip, modifier = Modifier.fillMaxWidth().height(48.dp), shape = MaterialTheme.shapes.small) {
-            Text(stringResource(R.string.onboarding_country_skip))
-        }
-    }
-}
-
-@Composable
-private fun WalletStep(
-    packSuggestions: List<WalletSuggestion>,
-    walletName: String,
-    walletType: WalletType,
-    error: String?,
-    onNameChange: (String) -> Unit,
-    onTypeChange: (WalletType) -> Unit,
-    onPickSuggestion: (WalletSuggestion) -> Unit,
-    onContinue: () -> Unit,
-    onSkip: () -> Unit,
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        IllustrationArt(
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-            size = 148.dp,
-            primaryRes = R.drawable.ic_ph_wallet,
-            secondaryRes = R.drawable.ic_ph_coins,
-            tertiaryRes = R.drawable.ic_ph_bank,
-        )
-        Spacer(Modifier.height(Spacing.lg))
-        Text(stringResource(R.string.onboarding_wallet_title), style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(Spacing.xs))
         Text(
-            stringResource(R.string.onboarding_wallet_subtitle),
-            style = MaterialTheme.typography.bodyMedium,
+            stringResource(R.string.onboarding_currency_explainer, currency.code),
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(Spacing.lg))
+        Text(stringResource(R.string.onboarding_wallet_title), style = MaterialTheme.typography.titleMedium)
+        Text(
+            stringResource(R.string.onboarding_wallet_subtitle),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(Spacing.md))
         Text(stringResource(R.string.suggestions), style = MaterialTheme.typography.labelLarge)
         Spacer(Modifier.height(Spacing.sm))
-        packSuggestions.chunked(2).forEach { suggestionsRow ->
+        pack.walletSuggestions.chunked(2).forEach { suggestionsRow ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -620,7 +524,7 @@ private fun WalletStep(
                     Surface(
                         modifier = Modifier
                             .weight(1f)
-                            .heightIn(min = 64.dp)
+                            .heightIn(min = 56.dp)
                             .clip(MaterialTheme.shapes.medium)
                             .clickable { onPickSuggestion(suggestion) },
                         color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
@@ -655,21 +559,18 @@ private fun WalletStep(
             }
             Spacer(Modifier.height(Spacing.xs))
         }
-        Spacer(Modifier.height(Spacing.lg))
-        Text(stringResource(R.string.onboarding_wallet_name_label), style = MaterialTheme.typography.labelLarge)
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(Spacing.md))
         androidx.compose.material3.OutlinedTextField(
             value = walletName,
             onValueChange = onNameChange,
+            label = { Text(stringResource(R.string.onboarding_wallet_name_label)) },
             singleLine = true,
             shape = MaterialTheme.shapes.small,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(Spacing.md))
-        Text(stringResource(R.string.onboarding_wallet_type_label), style = MaterialTheme.typography.labelLarge)
-        Spacer(Modifier.height(6.dp))
         MizaniPicker(
-            selectedText = "Type · ${walletType.label}",
+            selectedText = "${stringResource(R.string.onboarding_wallet_type_label)} | ${walletType.label}",
             options = WalletType.entries.map { PickerOption(it.name, it.label) },
             onSelect = { id -> onTypeChange(WalletType.valueOf(id)) },
             modifier = Modifier.fillMaxWidth(),
@@ -685,11 +586,7 @@ private fun WalletStep(
         }
         Spacer(Modifier.height(Spacing.xl))
         Button(onClick = onContinue, modifier = Modifier.fillMaxWidth().height(54.dp), shape = MaterialTheme.shapes.small) {
-            Text(stringResource(R.string.onboarding_wallet_continue))
-        }
-        Spacer(Modifier.height(8.dp))
-        TextButton(onClick = onSkip, modifier = Modifier.fillMaxWidth().height(48.dp), shape = MaterialTheme.shapes.small) {
-            Text(stringResource(R.string.onboarding_wallet_skip))
+            Text(stringResource(R.string.onboarding_country_continue))
         }
     }
 }
@@ -698,6 +595,7 @@ private fun WalletStep(
 private fun ReadyStep(
     currency: Currency,
     walletName: String,
+    walletType: WalletType,
     balanceText: String,
     onBalanceChange: (String) -> Unit,
     saving: Boolean,
@@ -727,7 +625,7 @@ private fun ReadyStep(
         ) {
             Column(Modifier.fillMaxWidth().padding(Spacing.lg)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(MizaniIcons.wallet(WalletType.CASH), contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Icon(MizaniIcons.wallet(walletType), contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.width(Spacing.md))
                     Text(walletName.ifBlank { WalletType.CASH.label }, style = MaterialTheme.typography.titleMedium)
                 }

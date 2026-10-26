@@ -118,14 +118,15 @@ System sans with tabular figures enabled for money. No custom font is bundled (o
 - **Dialogs**: `surfaceContainerHighest` container, `onSurface` title/body, and `onSurfaceVariant` for secondary details.
 - **Inputs**: 12dp radius, 56dp height, currency prefix, inline supporting text.
 - **Buttons**: 12dp radius, 52dp primary height, filled primary; outlined secondary; text actions otherwise.
-- **Charts**: donut with 18dp stroke, horizontal budget bars, six-month bar chart; every chart has a text summary
+- **Charts**: category donut and six-month cash-flow bars; every chart has a text summary
   and a TalkBack description.
-- **Navigation**: standard 5-tab Material navigation bar, translucent-free surface, FAB with 16dp radius.
+- **Navigation**: four-tab Material bar (Home, Activity, Insights, More) and a prominent Add action;
+  short, consistent transitions and a translucent-free surface.
 
 ## Accessibility
 
 - All tappable controls are at least 48dp.
-- Colour is never the only signal: amounts are signed, pace gaps are written out, transfer rows show "Transfer to".
+- Colour is never the only signal: amounts are signed and transfer rows show "Transfer to".
 - Donut and bar charts expose content descriptions and accompanying legends.
 - Type scale supports large-font rendering; amounts are allowed to wrap to two lines in compact cards.
 - Dark mode uses WCAG-AA contrast for text and amounts.

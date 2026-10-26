@@ -1,6 +1,9 @@
 package com.mizani.money.core.model
 
 import com.mizani.money.BuildConfig
+import com.mizani.money.core.money.Currencies
+import java.util.Currency as JavaCurrency
+import java.util.Locale
 import java.util.UUID
 
 enum class WalletType(val label: String) {
@@ -69,15 +72,10 @@ enum class ThemeMode(val label: String) {
 }
 
 enum class InsightKind {
-    BUDGET_PACE,
-    UPCOMING_COMMITMENT,
     FEE_TREND,
     INCOME_CONCENTRATION,
-    UNFUNDED_PRIORITY,
     SPENDING_TREND,
-    SAVINGS_PROGRESS,
     DATA_COMPLETENESS,
-    ESSENTIAL_COVERAGE,
 }
 
 enum class InsightTone {
@@ -234,10 +232,40 @@ object CountryPacks {
         mobileMoneyProviders = listOf("Mobile money"),
     )
 
-    val all: List<CountryPack> =
-        listOf(uganda, kenya, tanzania, rwanda, nigeria, ghana, southAfrica, other)
+    private val supportedPacks = listOf(uganda, kenya, tanzania, rwanda, nigeria, ghana, southAfrica)
+    private val africanCountryCodes = listOf(
+        "DZ", "AO", "BJ", "BW", "BF", "BI", "CV", "CM", "CF", "TD", "KM", "CG", "CD", "CI",
+        "DJ", "EG", "GQ", "ER", "SZ", "ET", "GA", "GM", "GN", "GW", "LS", "LR", "LY", "MG",
+        "MW", "ML", "MR", "MU", "MA", "MZ", "NA", "NE", "ST", "SN", "SC", "SL", "SO", "SS",
+        "SD", "TG", "TN", "ZM", "ZW",
+    )
+    private val supportedCodes = supportedPacks.mapTo(mutableSetOf()) { it.code }
+    private val genericAfricanPacks = africanCountryCodes.mapNotNull { code ->
+        if (code in supportedCodes) return@mapNotNull null
+        val region = Locale.Builder().setRegion(code).build()
+        val currencyCode = runCatching { JavaCurrency.getInstance(region).currencyCode }.getOrNull()
+            ?.takeIf { candidate -> Currencies.all.any { it.code == candidate } }
+            ?: return@mapNotNull null
+        CountryPack(
+            code = code,
+            name = region.getDisplayCountry(Locale.ENGLISH),
+            currencyCode = currencyCode,
+            walletSuggestions = listOf(
+                WalletSuggestion("Cash", WalletType.CASH),
+                WalletSuggestion("Mobile money", WalletType.MOBILE_MONEY),
+                WalletSuggestion("Bank account", WalletType.BANK),
+            ),
+            mobileMoneyProviders = emptyList(),
+        )
+    }
+
+    val all: List<CountryPack> = (supportedPacks + genericAfricanPacks)
+        .sortedBy { it.name } + other
 
     fun byCode(code: String): CountryPack = all.firstOrNull { it.code == code } ?: other
+
+    fun forDeviceRegion(regionCode: String): CountryPack =
+        all.firstOrNull { it.code.equals(regionCode, ignoreCase = true) } ?: uganda
 
     fun currencyFor(countryCode: String): String = byCode(countryCode).currencyCode
 }

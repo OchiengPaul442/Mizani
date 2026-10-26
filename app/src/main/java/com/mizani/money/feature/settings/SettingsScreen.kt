@@ -1,10 +1,17 @@
 package com.mizani.money.feature.settings
 
+import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.provider.Settings as AndroidSettings
+import android.text.format.DateFormat
+import android.app.TimePickerDialog
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricManager
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -39,21 +46,27 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.mizani.money.core.model.CountryPacks
 import com.mizani.money.core.model.ThemeMode
+import com.mizani.money.R
 import com.mizani.money.core.time.DateText
 import com.mizani.money.domain.export.BackupSummary
 import com.mizani.money.feature.lock.PinSetupDialog
@@ -71,12 +84,14 @@ import com.mizani.money.ui.components.MizaniTopBar
 import com.mizani.money.ui.components.PickerOption
 import com.mizani.money.ui.components.Spacing
 import com.mizani.money.ui.components.StatusBanner
+import com.mizani.money.reminder.DailyReminderNotifications
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.time.Instant
 import java.time.ZoneId
+import java.util.Calendar
 
 @Composable
 fun SettingsScreen(
@@ -84,6 +99,7 @@ fun SettingsScreen(
     state: AppUiState,
     onBack: () -> Unit,
     onOpenAbout: () -> Unit = {},
+    exportOnly: Boolean = false,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -106,6 +122,80 @@ fun SettingsScreen(
     var restorePassphrase by remember { mutableStateOf("") }
     var pendingRestoreBytes by remember { mutableStateOf<ByteArray?>(null) }
     var pendingSummary by remember { mutableStateOf<BackupSummary?>(null) }
+    var reminderStatus by rememberSaveable { mutableStateOf<String?>(null) }
+    var showReminderNotificationSettings by rememberSaveable { mutableStateOf(false) }
+    var notificationSettingsRevision by remember { mutableStateOf(0) }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) notificationSettingsRevision += 1
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    val notificationsAvailable = remember(notificationSettingsRevision) {
+        DailyReminderNotifications.canPost(context)
+    }
+
+    val enableDailyReminder: () -> Unit = {
+        scope.launch {
+            vm.setDailyReminderEnabled(true)
+                .onSuccess {
+                    reminderStatus = null
+                    showReminderNotificationSettings = false
+                }
+                .onFailure {
+                    reminderStatus = context.getString(R.string.settings_reminder_schedule_error)
+                }
+        }
+    }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        notificationSettingsRevision += 1
+        if (granted) {
+            enableDailyReminder()
+        } else {
+            reminderStatus = context.getString(R.string.settings_reminder_permission_denied)
+            showReminderNotificationSettings = true
+        }
+    }
+    val openReminderNotificationSettings: () -> Unit = {
+        val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Intent(AndroidSettings.ACTION_APP_NOTIFICATION_SETTINGS)
+                .putExtra(AndroidSettings.EXTRA_APP_PACKAGE, context.packageName)
+        } else {
+            Intent(
+                AndroidSettings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.parse("package:${context.packageName}"),
+            )
+        }
+        runCatching { context.startActivity(intent) }
+    }
+    val onDailyReminderChanged: (Boolean) -> Unit = { enabled ->
+        reminderStatus = null
+        showReminderNotificationSettings = false
+        if (!enabled) {
+            scope.launch {
+                vm.setDailyReminderEnabled(false)
+                    .onFailure { reminderStatus = context.getString(R.string.settings_reminder_schedule_error) }
+            }
+        } else {
+            DailyReminderNotifications.ensureChannel(context)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+                android.content.pm.PackageManager.PERMISSION_GRANTED
+            ) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else if (!DailyReminderNotifications.canPost(context)) {
+                reminderStatus = context.getString(R.string.settings_reminder_notifications_disabled)
+                showReminderNotificationSettings = true
+            } else {
+                enableDailyReminder()
+            }
+        }
+    }
 
     val canBiometric = remember {
         BiometricManager.from(context)
@@ -442,8 +532,8 @@ fun SettingsScreen(
                     )
                     Spacer(Modifier.height(Spacing.sm))
                     Text(
-                        "This replaces every wallet, transaction, plan, goal, bill and debt on this phone. " +
-                            "Your current data will be replaced. Create a backup first if you want to keep it.",
+                        "This replaces every wallet, transaction, and other saved record on this phone. " +
+                            "Create a backup first if you want to keep your current data.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                     )
@@ -479,7 +569,7 @@ fun SettingsScreen(
     if (showDeleteConfirm) {
         MizaniConfirmDialog(
             title = "Delete all local data?",
-            body = "This deletes all wallets, transactions, plans, goals, bills and debts. Without a backup, you cannot restore them. App lock and settings also reset.",
+            body = "This deletes all wallets, transactions, and other saved records on this phone. Without a backup, you cannot restore them. App lock and settings also reset.",
             confirmLabel = "Delete everything",
             destructive = true,
             onConfirm = {
@@ -499,6 +589,62 @@ fun SettingsScreen(
             },
             onDismiss = { showDeleteConfirm = false },
         )
+    }
+
+    if (exportOnly) {
+        Column(Modifier.fillMaxSize()) {
+            MizaniTopBar(title = "Export data", onBack = onBack)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = Spacing.lg)
+                    .padding(bottom = Spacing.bottom),
+                verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+            ) {
+                message?.let {
+                    StatusBanner(text = it, isError = false, onDismiss = { message = null })
+                }
+                if (error != null && !showBackupPassphrase && !showRestorePassphrase) {
+                    StatusBanner(text = error!!, isError = true, onDismiss = { error = null })
+                }
+                Text(
+                    "Download your records for your own analysis, or create an encrypted backup to move them to another phone.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                MizaniSectionCard {
+                    MizaniInfoRow(
+                        icon = Icons.Rounded.Download,
+                        title = "Download transactions (CSV)",
+                        subtitle = "Open in a spreadsheet or analysis app",
+                        onClick = { showCsvWarning = true },
+                    )
+                    MizaniSectionDivider()
+                    MizaniInfoRow(
+                        icon = Icons.Rounded.Download,
+                        title = "Download Excel workbook",
+                        subtitle = "Transactions and related records in sheets",
+                        onClick = { showExcelWarning = true },
+                    )
+                    MizaniSectionDivider()
+                    MizaniInfoRow(
+                        icon = Icons.Rounded.Backup,
+                        title = "Create encrypted backup",
+                        subtitle = "Protect the file with a passphrase",
+                        onClick = { showBackupPassphrase = true },
+                    )
+                    MizaniSectionDivider()
+                    MizaniInfoRow(
+                        icon = Icons.Rounded.Restore,
+                        title = "Restore or move data",
+                        subtitle = "Review backup contents before replacing this ledger",
+                        onClick = { openRestore.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) },
+                    )
+                }
+            }
+        }
+        return
     }
 
     Column(Modifier.fillMaxSize()) {
@@ -616,6 +762,89 @@ fun SettingsScreen(
             }
 
             Text(
+                stringResource(R.string.settings_reminders_title),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(top = Spacing.xs),
+            )
+            MizaniCard {
+                val reminderTimeLabel = formatReminderTime(context, settings.dailyReminderMinuteOfDay)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.settings_daily_reminder_title),
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                        Text(
+                            stringResource(R.string.settings_daily_reminder_description, reminderTimeLabel),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = settings.dailyReminderEnabled,
+                        onCheckedChange = onDailyReminderChanged,
+                        modifier = Modifier.semantics {
+                            contentDescription = context.getString(R.string.settings_daily_reminder_title)
+                        },
+                    )
+                }
+                if (settings.dailyReminderEnabled) {
+                    Spacer(Modifier.height(Spacing.sm))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(stringResource(R.string.settings_reminder_time_label), style = MaterialTheme.typography.bodyMedium)
+                        OutlinedButton(
+                            onClick = {
+                                TimePickerDialog(
+                                    context,
+                                    { _, hour, minute ->
+                                        scope.launch {
+                                            vm.setDailyReminderMinuteOfDay(hour * 60 + minute)
+                                                .onSuccess { reminderStatus = null }
+                                                .onFailure {
+                                                    reminderStatus = context.getString(R.string.settings_reminder_schedule_error)
+                                                }
+                                        }
+                                    },
+                                    settings.dailyReminderMinuteOfDay / 60,
+                                    settings.dailyReminderMinuteOfDay % 60,
+                                    DateFormat.is24HourFormat(context),
+                                ).show()
+                            },
+                        ) {
+                            Text(reminderTimeLabel)
+                        }
+                    }
+                    Text(
+                        stringResource(R.string.settings_reminder_local_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (!notificationsAvailable) {
+                        Text(
+                            stringResource(R.string.settings_reminder_notifications_disabled),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                        TextButton(onClick = openReminderNotificationSettings) {
+                            Text(stringResource(R.string.settings_open_notification_settings))
+                        }
+                    }
+                }
+                reminderStatus?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
+                if (showReminderNotificationSettings && !settings.dailyReminderEnabled) {
+                    TextButton(onClick = openReminderNotificationSettings) {
+                        Text(stringResource(R.string.settings_open_notification_settings))
+                    }
+                }
+            }
+
+            Text(
                 "Data & backups",
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(top = Spacing.xs),
@@ -687,6 +916,15 @@ fun SettingsScreen(
 
         }
     }
+}
+
+private fun formatReminderTime(context: Context, minuteOfDay: Int): String {
+    val time = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, minuteOfDay / 60)
+        set(Calendar.MINUTE, minuteOfDay % 60)
+        set(Calendar.SECOND, 0)
+    }
+    return DateFormat.getTimeFormat(context).format(time.time)
 }
 
 @Composable

@@ -7,7 +7,6 @@ import com.mizani.money.core.model.TransactionType
 import com.mizani.money.core.money.Currency
 import com.mizani.money.core.money.MoneyFormat
 import com.mizani.money.core.time.DateRange
-import com.mizani.money.core.time.DateText
 import com.mizani.money.core.time.Periods
 import com.mizani.money.data.repo.LedgerSnapshot
 import java.time.LocalDate
@@ -42,76 +41,6 @@ class InsightEngine(
             )
             return insights
         }
-
-        val budget = metrics.budget
-        if (budget != null && budget.elapsedFraction >= 0.2) {
-            val days = period.days
-            val day = (ChronoUnit.DAYS.between(period.start, today) + 1).toInt().coerceIn(1, days)
-            budget.lines
-                .filter { it.line.plannedMinor > 0 }
-                .sortedByDescending { it.paceVarianceMinor }
-                .take(2)
-                .forEach { line ->
-                    val threshold = maxOf(1_000L, (line.expectedToDateMinor * 0.1).toLong())
-                    if (line.paceVarianceMinor > threshold) {
-                        val name = line.category?.name ?: "A category"
-                        insights += Insight(
-                            id = "pace-${line.line.categoryId}",
-                            kind = InsightKind.BUDGET_PACE,
-                            tone = InsightTone.ATTENTION,
-                            title = "$name is ahead of your planned pace",
-                            body = "Spent ${money(line.spentMinor)} against a ${money(line.availableMinor)} budget — ${money(line.paceVarianceMinor)} more than the ${money(line.expectedToDateMinor)} planned pace at day $day of $days.",
-                            explanation = "Compares your spending so far with the amount your plan expected you to use by this point in the period.",
-                            actionLabel = "Review budget",
-                        )
-                    }
-                }
-        }
-
-        if (budget != null) {
-            val unfunded = budget.lines
-                .filter { it.line.essential && it.line.fundedMinor < it.line.plannedMinor }
-                .maxByOrNull { it.line.plannedMinor - it.line.fundedMinor }
-            if (unfunded != null) {
-                val gap = unfunded.line.plannedMinor - unfunded.line.fundedMinor
-                val name = unfunded.category?.name ?: "An essential category"
-                insights += Insight(
-                    id = "unfunded-${unfunded.line.categoryId}",
-                    kind = InsightKind.UNFUNDED_PRIORITY,
-                    tone = InsightTone.NEUTRAL,
-                    title = "$name is not fully funded",
-                    body = "$name still needs ${money(gap)} to be fully funded for this period.",
-                    explanation = "Shows what remains to set aside for this essential category. Funding is separate from money already spent.",
-                    actionLabel = "Update funding",
-                )
-            }
-        }
-
-        metrics.upcoming
-            .filter { !it.isIncome }
-            .filter { ChronoUnit.DAYS.between(today, it.dueDate) in 0..7 }
-            .minByOrNull { it.dueDate }
-            ?.let { upcoming ->
-                val days = ChronoUnit.DAYS.between(today, upcoming.dueDate).toInt()
-                val whenText = when (days) {
-                    0 -> "today"
-                    1 -> "tomorrow"
-                    else -> "in $days days"
-                }
-                val shortfall = upcoming.amountMinor > metrics.walletLiquidMinor
-                insights += Insight(
-                    id = "upcoming-${upcoming.id}",
-                    kind = InsightKind.UPCOMING_COMMITMENT,
-                    tone = if (shortfall) InsightTone.ATTENTION else InsightTone.NEUTRAL,
-                    title = "${upcoming.name} is due $whenText",
-                    body = if (shortfall) {
-                        "${money(upcoming.amountMinor)} is due ${DateText.short(upcoming.dueDate)}. Your tracked liquid balance is ${money(metrics.walletLiquidMinor)}."
-                    } else {
-                        "${money(upcoming.amountMinor)} is due ${DateText.short(upcoming.dueDate)}. You can mark it paid when it happens."
-                    },
-                    explanation = "Based on the due date and amount you entered. Your tracked liquid balance includes active non-debt wallets.",
-                )
-            }
 
         val currentMonth = Periods.monthOf(today)
         val previousMonth = Periods.monthOf(today.minusMonths(1))
@@ -161,38 +90,6 @@ class InsightEngine(
         val trend = spendingTrend(today)
         if (trend != null) {
             insights += trend
-        }
-
-        if (metrics.savingsContributionsMinor > 0) {
-            insights += Insight(
-                id = "savings",
-                kind = InsightKind.SAVINGS_PROGRESS,
-                tone = InsightTone.POSITIVE,
-                title = "You set money aside this period",
-                body = "You put ${money(metrics.savingsContributionsMinor)} toward your goals.",
-                explanation = "Savings contributions are tracked separately from ordinary spending. " +
-                    "Transfers between your own wallets are not counted as expenditure.",
-            )
-        } else if (metrics.savingsRatePercent != null && metrics.incomeMinor > 0) {
-            insights += Insight(
-                id = "savings-rate",
-                kind = InsightKind.SAVINGS_PROGRESS,
-                tone = InsightTone.NEUTRAL,
-                title = "No goal contributions yet this period",
-                body = "Your savings rate is ${metrics.savingsRatePercent}% of income received.",
-                explanation = "Compares goal contributions with income received this period. Only amounts you recorded are included.",
-            )
-        }
-
-        if (metrics.essentialCoveragePercent != null && metrics.essentialCoveragePercent < 100) {
-            insights += Insight(
-                id = "essential-coverage",
-                kind = InsightKind.ESSENTIAL_COVERAGE,
-                tone = InsightTone.NEUTRAL,
-                title = "Income received so far does not cover all essentials",
-                body = "Income received covers ${metrics.essentialCoveragePercent}% of the essential expenses you planned for this period.",
-                explanation = "Compares income received with essential amounts in your current plan. Expected income is not included.",
-            )
         }
 
         val lastTransaction = data.transactions

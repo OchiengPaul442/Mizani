@@ -19,20 +19,17 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.TipsAndUpdates
+import androidx.compose.material.icons.rounded.ArrowDownward
+import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,7 +56,6 @@ import com.mizani.money.core.time.DateRange
 import com.mizani.money.core.time.DateText
 import com.mizani.money.core.time.Periods
 import com.mizani.money.domain.analytics.DashboardMetrics
-import com.mizani.money.feature.home.components.UpcomingList
 import com.mizani.money.ui.AppUiState
 import com.mizani.money.ui.AppViewModel
 import com.mizani.money.ui.components.DateRangePickerDialog
@@ -69,9 +65,9 @@ import com.mizani.money.ui.components.MizaniCard
 import com.mizani.money.ui.components.MizaniDonutChart
 import com.mizani.money.ui.components.MizaniMark
 import com.mizani.money.ui.components.PeriodMenu
-import com.mizani.money.ui.components.ProgressBar
 import com.mizani.money.ui.components.SectionHeader
 import com.mizani.money.ui.components.Spacing
+import com.mizani.money.ui.components.TransactionRow
 import com.mizani.money.ui.components.parseHexColor
 import com.mizani.money.ui.theme.DeepTeal
 import com.mizani.money.ui.theme.Emerald
@@ -83,11 +79,10 @@ fun HomeScreen(
     vm: AppViewModel,
     state: AppUiState,
     onOpenTransactions: () -> Unit,
-    onOpenPlan: () -> Unit,
     onOpenInsights: () -> Unit,
     onAdd: () -> Unit,
-    onOpenBudget: (String?) -> Unit,
-    onOpenSettings: () -> Unit = {},
+    onAddIncome: () -> Unit,
+    onAddExpense: () -> Unit,
 ) {
     val metrics by vm.metrics.collectAsStateWithLifecycle()
     val insights by vm.insights.collectAsStateWithLifecycle()
@@ -134,29 +129,6 @@ fun HomeScreen(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Spacer(Modifier.width(Spacing.sm))
-            // 48dp: meets the design-system minimum touch target (was 40dp).
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(48.dp),
-            ) {
-                IconButton(onClick = onAdd, modifier = Modifier.fillMaxSize()) {
-                    Icon(
-                        Icons.Rounded.Add,
-                        contentDescription = stringResource(R.string.home_add_transaction),
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                    )
-                }
-            }
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            ) {
-                IconButton(onClick = onOpenSettings) {
-                    Icon(Icons.Rounded.Settings, contentDescription = "Settings")
-                }
-            }
         }
 
         PeriodMenu(
@@ -168,8 +140,7 @@ fun HomeScreen(
         )
 
         if (snapshot.transactions.isEmpty()) {
-            // One clear first step: a single hero with one action, nothing competing with it.
-            GetStartedHero(onAdd = onAdd)
+            GetStartedHero(onAddIncome = onAddIncome, onAddExpense = onAddExpense)
             return@Column
         }
 
@@ -189,45 +160,13 @@ fun HomeScreen(
             return@Column
         }
 
-        BudgetHero(current = current, currency = currency, onOpenBudget = onOpenBudget)
-
-        if (current.budget != null) {
-            SafeToSpendCard(
-                metrics = current,
-                currency = currency,
-                onOpenBudget = { onOpenBudget(current.budget?.budget?.id) },
-            )
-        }
-
         SummaryCard(metrics = current, currency = currency)
 
-        Button(
-            onClick = onAdd,
-            modifier = Modifier.fillMaxWidth().height(Spacing.buttonHeight),
-            shape = MaterialTheme.shapes.small,
-        ) {
-            Icon(Icons.Rounded.Add, contentDescription = null)
-            Spacer(Modifier.width(Spacing.sm))
-            Text(stringResource(R.string.home_add_transaction))
-        }
+        QuickAddActions(onAddIncome = onAddIncome, onAddExpense = onAddExpense)
 
-        if (current.upcoming.isNotEmpty()) {
-            SectionBlock(title = "Upcoming", actionLabel = "See all", onAction = onOpenPlan) {
-                UpcomingList(
-                    upcoming = current.upcoming.take(3),
-                    currency = currency,
-                    today = today,
-                )
-            }
-        } else {
-            SectionBlock(title = "Upcoming", actionLabel = "Add a bill", onAction = onOpenPlan) {
-                // Section header already carries the "Add a bill" action, so no CTA here.
-                EmptyState(
-                    title = "No bills yet",
-                    body = "Recurring bills show up here before they are due.",
-                    iconRes = R.drawable.ic_ph_receipt,
-                    compact = true,
-                )
+        SectionBlock(title = "Recent activity", actionLabel = "See all", onAction = onOpenTransactions) {
+            snapshot.transactions.take(4).forEach { transaction ->
+                TransactionRow(transaction = transaction, snapshot = snapshot, currency = currency)
             }
         }
 
@@ -291,7 +230,7 @@ fun HomeScreen(
             }
         }
 
-        val insight = insights.firstOrNull()
+    val insight = insights.firstOrNull()
         if (insight != null) {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 SectionHeader(title = "Insight")
@@ -303,7 +242,6 @@ fun HomeScreen(
                     onAction = {
                         when (insight.kind) {
                             InsightKind.DATA_COMPLETENESS -> onAdd()
-                            InsightKind.BUDGET_PACE, InsightKind.UNFUNDED_PRIORITY -> onOpenPlan()
                             else -> onOpenInsights()
                         }
                     },
@@ -311,13 +249,6 @@ fun HomeScreen(
             }
         }
 
-        Text(
-            "Based on the information you entered. Safe-to-spend is guidance, not a guarantee.",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
-        )
     }
 }
 
@@ -346,7 +277,7 @@ private fun SectionBlock(
  * The empty-ledger state: exactly one primary action, with one short reassurance card after it.
  */
 @Composable
-private fun GetStartedHero(onAdd: () -> Unit) {
+private fun GetStartedHero(onAddIncome: () -> Unit, onAddExpense: () -> Unit) {
     // Gradient capped at Emerald: opaque white reads at >=4.79:1, comfortably clearing
     // the 4.5:1 threshold for normal text on the lightest stop.
     Box(
@@ -398,232 +329,48 @@ private fun GetStartedHero(onAdd: () -> Unit) {
                 color = Color.White,
             )
             Spacer(Modifier.height(Spacing.lg))
-            Button(
-                onClick = onAdd,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White,
-                    contentColor = DeepTeal,
-                ),
-            ) {
-                Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(Spacing.sm))
-                Text(stringResource(R.string.home_add_transaction))
-            }
+            QuickAddActions(
+                onAddIncome = onAddIncome,
+                onAddExpense = onAddExpense,
+                onDarkBackground = true,
+            )
         }
     }
 }
 
 @Composable
-private fun BudgetHero(
-    current: DashboardMetrics,
-    currency: Currency,
-    onOpenBudget: (String?) -> Unit,
+private fun QuickAddActions(
+    onAddIncome: () -> Unit,
+    onAddExpense: () -> Unit,
+    onDarkBackground: Boolean = false,
 ) {
-    val budget = current.budget
-    if (budget == null) {
-        EmptyBudgetHero(onCreateBudget = { onOpenBudget(null) })
-        return
-    }
-
-    val remaining = budget.remainingMinor
-    val planned = budget.plannedMinor
-    val unfunded = (planned - budget.fundedMinor).coerceAtLeast(0)
-    // Always white on the emerald gradient: gold text fails WCAG contrast for the
-    // most-read figure, so gold is reserved for non-text accents elsewhere.
-    val remainingColor = Color.White
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.extraLarge)
-            .background(Brush.linearGradient(listOf(DeepTeal, Emerald)))
-            .padding(20.dp),
-    ) {
-        Column {
-            Text(
-                budget.budget.name.ifBlank { "This period" }.uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.White,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(Spacing.lg))
-            Text("Remaining", style = MaterialTheme.typography.labelMedium, color = Color.White)
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    currency.symbol,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White,
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    MoneyFormat.formatBare(remaining, currency),
-                    style = MaterialTheme.typography.displaySmall,
-                    color = remainingColor,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.semantics {
-                        contentDescription = "Plan remaining ${MoneyFormat.format(remaining, currency)}"
-                    },
-                )
-            }
-            Text(
-                "of ${MoneyFormat.format(planned, currency)} planned",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White,
-            )
-            Spacer(Modifier.height(Spacing.lg))
-            ProgressBar(
-                fraction = if (budget.availableMinor <= 0) {
-                    0f
-                } else {
-                    (budget.spentMinor.toDouble() / budget.availableMinor).toFloat()
-                },
-                // White fill keeps >=3:1 against the Emerald track/gradient (Mint was ~2.9:1).
-                color = Color.White,
-                trackColor = Color.White.copy(alpha = 0.20f),
-                height = 6,
-            )
-            Spacer(Modifier.height(Spacing.sm))
-            Row {
-                Text(
-                    "Spent ${MoneyFormat.format(budget.spentMinor, currency)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White,
-                )
-                Spacer(Modifier.weight(1f))
-                Text(
-                    "${budget.usedPercent.roundToInt()}% used",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White,
-                )
-            }
-            Spacer(Modifier.height(Spacing.md))
-            HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
-            Spacer(Modifier.height(Spacing.sm))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        "Funded ${MoneyFormat.format(budget.fundedMinor, currency)}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White,
-                    )
-                    Text(
-                        "Unfunded ${MoneyFormat.format(unfunded, currency)}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White,
-                    )
-                }
-                TextButton(
-                    onClick = { onOpenBudget(budget.budget.id) },
-                    // Mint text fails contrast on the Emerald gradient (~2.9:1); use solid white (>=4.9:1).
-                    colors = ButtonDefaults.textButtonColors(contentColor = Color.White),
-                ) {
-                    Text(stringResource(R.string.home_open_budget))
-                }
-            }
+    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        val colors = if (onDarkBackground) {
+            ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = DeepTeal)
+        } else {
+            ButtonDefaults.buttonColors()
         }
-    }
-}
-
-@Composable
-private fun EmptyBudgetHero(onCreateBudget: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.extraLarge)
-            .background(Brush.linearGradient(listOf(DeepTeal, Emerald)))
-            .padding(20.dp),
-    ) {
-        Column {
-            Text("Plan this month", style = MaterialTheme.typography.labelSmall, color = Color.White)
-            Spacer(Modifier.height(Spacing.sm))
-            Text("No plan yet", style = MaterialTheme.typography.headlineMedium, color = Color.White)
-            Spacer(Modifier.height(Spacing.xs))
-            Text(
-                "Set planned amounts for the categories that matter and mark what you have funded.",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White,
-            )
-            Spacer(Modifier.height(Spacing.lg))
-            Button(
-                onClick = onCreateBudget,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White,
-                    contentColor = DeepTeal,
-                ),
-            ) {
-                Text("Create a plan")
-            }
+        Button(
+            onClick = onAddExpense,
+            modifier = Modifier.weight(1f).height(Spacing.buttonHeight),
+            shape = MaterialTheme.shapes.small,
+            colors = colors,
+        ) {
+            Icon(Icons.Rounded.ArrowUpward, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(4.dp))
+            Text("Add expense", maxLines = 1)
         }
-    }
-}
-
-@Composable
-private fun SafeToSpendCard(
-    metrics: DashboardMetrics,
-    currency: Currency,
-    onOpenBudget: () -> Unit,
-) {
-    val daily = metrics.safeToSpendDailyMinor
-    MizaniCard {
-        Row(verticalAlignment = Alignment.Top) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(MaterialTheme.shapes.medium)
-                    .background(MaterialTheme.colorScheme.secondaryContainer),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.Rounded.TipsAndUpdates,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.size(22.dp),
-                )
-            }
-            Spacer(Modifier.width(Spacing.md))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    "Safe to spend / day",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                if (daily != null) {
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text(
-                            MoneyFormat.format(daily, currency),
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Text(
-                            " / day",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Text(
-                        "Through ${DateText.short(metrics.period.end)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                } else {
-                    Text(
-                        "Not available",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        "Fund your flexible plan to see a daily amount.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    TextButton(onClick = onOpenBudget) { Text(stringResource(R.string.home_open_budget)) }
-                }
-            }
+        OutlinedButton(
+            onClick = onAddIncome,
+            modifier = Modifier.weight(1f).height(Spacing.buttonHeight),
+            shape = MaterialTheme.shapes.small,
+            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                contentColor = if (onDarkBackground) Color.White else MaterialTheme.colorScheme.primary,
+            ),
+        ) {
+            Icon(Icons.Rounded.ArrowDownward, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(4.dp))
+            Text("Add income", maxLines = 1)
         }
     }
 }
@@ -643,7 +390,7 @@ private fun SummaryCard(metrics: DashboardMetrics, currency: Currency) {
             )
             SummaryDivider()
             SummaryColumn(
-                label = "Net spending",
+                label = "Net expenses",
                 value = MoneyFormat.format(metrics.expenseMinor, currency),
                 valueColor = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f),

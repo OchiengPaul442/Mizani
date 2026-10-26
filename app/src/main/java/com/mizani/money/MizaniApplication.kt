@@ -2,11 +2,13 @@ package com.mizani.money
 
 import android.app.Application
 import com.mizani.money.di.AppContainer
+import android.util.Log
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 
 class MizaniApplication : Application() {
 
@@ -29,6 +31,15 @@ class MizaniApplication : Application() {
                 sqlCipherReady.completeExceptionally(error)
             } catch (error: LinkageError) {
                 sqlCipherReady.completeExceptionally(error)
+            }
+        }
+        initializationScope.launch {
+            try {
+                val settings = container.settingsRepository.settings.first()
+                container.dailyReminderScheduler.ensureScheduled(settings)
+            } catch (_: Exception) {
+                // The next app launch repairs the schedule; never log local finance data.
+                Log.w("MizaniApplication", "Could not restore the daily reminder schedule")
             }
         }
     }

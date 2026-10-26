@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -261,9 +262,24 @@ class AppViewModel(private val container: AppContainer) : ViewModel() {
         settingsRepository.setCountry(countryCode, currencyCode)
     }
 
+    suspend fun setDailyReminderEnabled(enabled: Boolean): Result<Unit> = runCatching {
+        settingsRepository.setDailyReminderEnabled(enabled)
+        container.dailyReminderScheduler.update(settingsRepository.settings.first())
+    }
+
+    suspend fun setDailyReminderMinuteOfDay(minuteOfDay: Int): Result<Unit> = runCatching {
+        settingsRepository.setDailyReminderMinuteOfDay(minuteOfDay)
+        val updatedSettings = settingsRepository.settings.first()
+        if (updatedSettings.dailyReminderEnabled) {
+            container.dailyReminderScheduler.update(updatedSettings)
+        }
+    }
+
     suspend fun deleteAllData(): Result<Unit> = runCatching {
         finance.clearAllFinancialData()
         settingsRepository.resetAll()
+        // Clearing preferences disables the worker even if cancellation is delayed.
+        runCatching { container.dailyReminderScheduler.cancel() }
         unlocked.value = false
     }
 

@@ -16,7 +16,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,7 +42,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mizani.money.R
-import com.mizani.money.core.model.InsightKind
 import com.mizani.money.core.model.TransactionType
 import com.mizani.money.core.model.WalletType
 import com.mizani.money.core.money.Currency
@@ -73,7 +76,7 @@ import kotlin.math.roundToInt
 fun InsightsScreen(
     vm: AppViewModel,
     state: AppUiState,
-    onOpenPlan: () -> Unit,
+    onExportData: () -> Unit,
 ) {
     val metrics by vm.metrics.collectAsStateWithLifecycle()
     val insights by vm.insights.collectAsStateWithLifecycle()
@@ -172,6 +175,15 @@ fun InsightsScreen(
                 currency = currency,
             )
 
+            OutlinedButton(
+                onClick = onExportData,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Rounded.Download, contentDescription = null)
+                Spacer(Modifier.width(Spacing.sm))
+                Text("Export data")
+            }
+
             if (snapshot.transactions.isEmpty()) {
                 EmptyState(
                     title = "No transactions yet",
@@ -180,20 +192,16 @@ fun InsightsScreen(
                 )
             }
 
-            if (insights.isNotEmpty()) {
+            val visibleInsights = insights
+            if (visibleInsights.isNotEmpty()) {
                 Text("What changed", style = MaterialTheme.typography.titleMedium)
-                insights.take(3).forEach { insight ->
+                visibleInsights.take(3).forEach { insight ->
                     InsightCard(
                         title = insight.title,
                         body = insight.body,
                         tone = insight.tone,
-                        actionLabel = insight.actionLabel,
-                        onAction = {
-                            when (insight.kind) {
-                                InsightKind.BUDGET_PACE, InsightKind.UNFUNDED_PRIORITY -> onOpenPlan()
-                                else -> Unit
-                            }
-                        },
+                        actionLabel = null,
+                        onAction = {},
                     )
                 }
             }
@@ -283,46 +291,44 @@ fun InsightsScreen(
                 }
             }
 
-            val budgetNow = current.budget
-            if (budgetNow != null) {
-                MetricCard(
-                    title = "Plan pace",
-                    subtitle = budgetNow.budget.name,
-                ) {
-                    val lines = budgetNow.lines.filter { it.line.plannedMinor > 0 }.sortedByDescending { it.paceVarianceMinor }.take(5)
-                    if (lines.isEmpty()) {
-                        Text("No planned category amounts yet.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    lines.forEach { line ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+            MetricCard(
+                title = "Income trends",
+                subtitle = current.incomeVariability?.let { "${it.monthsWithIncome} months with income" }
+                    ?: "Record income to build a monthly trend",
+            ) {
+                val variability = current.incomeVariability
+                if (variability == null) {
+                    Text(
+                        if (current.incomeMinor > 0) {
+                            "Keep recording income across months to compare your income history."
+                        } else {
+                            "Record income to see your history."
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    VariabilityContent(variability, currency)
+                }
+                if (incomeSources.isNotEmpty()) {
+                    Spacer(Modifier.height(Spacing.md))
+                    Text("This month by source", style = MaterialTheme.typography.labelLarge)
+                    val total = incomeSources.sumOf { it.second }.coerceAtLeast(1)
+                    incomeSources.take(5).forEach { (label, amount) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(label, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(
-                                line.category?.name ?: "Category",
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.weight(1f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            Text(
-                                if (line.paceVarianceMinor > 0) {
-                                    "${MoneyFormat.format(line.paceVarianceMinor, currency)} ahead"
-                                } else {
-                                    "${MoneyFormat.format(abs(line.paceVarianceMinor), currency)} below"
-                                },
+                                "${(amount.toDouble() / total * 100).roundToInt()}% · ${MoneyFormat.format(amount, currency)}",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = if (line.paceVarianceMinor > 0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        Spacer(Modifier.height(3.dp))
-                        ProgressBar(
-                            fraction = if (line.availableMinor <= 0) 0f else (line.spentMinor.toDouble() / line.availableMinor).toFloat(),
-                            color = parseHexColor(line.category?.colorHex ?: "#3D6E8C"),
-                            height = 6,
-                        )
-                        Spacer(Modifier.height(Spacing.sm))
                     }
                 }
             }
-
             if (showMoreMetrics) {
                 MetricCard(
                     title = "Wallets",
@@ -352,40 +358,6 @@ fun InsightsScreen(
                             color = if (total.type == WalletType.DEBT) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                         )
                         Spacer(Modifier.height(Spacing.xs))
-                    }
-                }
-
-                MetricCard(
-                    title = "Income history",
-                    subtitle = current.incomeVariability?.let { "${it.monthsWithIncome} months with income" } ?: "Not enough history",
-                ) {
-                    val variability = current.incomeVariability
-                    if (variability == null) {
-                        Text(
-                            "Record income to see your history.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    } else {
-                        VariabilityContent(variability, currency)
-                        if (incomeSources.isNotEmpty()) {
-                            Spacer(Modifier.height(Spacing.md))
-                            Text("This month by source", style = MaterialTheme.typography.labelLarge)
-                            val total = incomeSources.sumOf { it.second }.coerceAtLeast(1)
-                            incomeSources.take(5).forEach { (label, amount) ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Text(label, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text(
-                                        "${(amount.toDouble() / total * 100).roundToInt()}% · ${MoneyFormat.format(amount, currency)}",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                        }
                     }
                 }
 
@@ -458,70 +430,6 @@ fun InsightsScreen(
                         )
                         Text(
                             "Your spending may finish around this amount.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Spacer(Modifier.height(Spacing.md))
-                    Text(
-                        "Safe to spend: ${current.safeToSpendDailyMinor?.let { "${MoneyFormat.format(it, currency)} per day" } ?: "not available"}",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Text(
-                        "A planning guide based on your funded plan and upcoming bills. It can change when your plan or due dates change.",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-
-                MetricCard(
-                    title = "Savings",
-                    subtitle = "Contributions and rate",
-                ) {
-                    Row {
-                        MetricValue("Set aside", MoneyFormat.format(current.savingsContributionsMinor, currency), MaterialTheme.colorScheme.primary, Modifier.weight(1f))
-                        MetricValue(
-                            "Savings rate",
-                            current.savingsRatePercent?.let { "$it%" } ?: "Not available",
-                            MaterialTheme.colorScheme.onSurface,
-                            Modifier.weight(1f),
-                        )
-                    }
-                    if (current.goals.isNotEmpty()) {
-                        Spacer(Modifier.height(Spacing.md))
-                        current.goals.take(3).forEach { goal ->
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(goal.goal.name, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(
-                                    "${(goal.progress).roundToInt()}%",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            Spacer(Modifier.height(3.dp))
-                            ProgressBar(fraction = (goal.progress / 100.0).toFloat(), height = 5)
-                        }
-                    }
-                }
-
-                MetricCard(
-                    title = "Essential coverage",
-                    subtitle = "Received income versus essential plans",
-                ) {
-                    val coverage = current.essentialCoveragePercent
-                    if (coverage == null) {
-                        Text(
-                            "Add a plan with essential categories to see how far received income covers them.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    } else {
-                        Text("$coverage%", style = MaterialTheme.typography.headlineMedium)
-                        Spacer(Modifier.height(Spacing.sm))
-                        ProgressBar(fraction = (coverage / 100f).coerceIn(0f, 1f), height = 8)
-                        Spacer(Modifier.height(Spacing.xs))
-                        Text(
-                            "Income received so far covers $coverage% of the essential expenses planned for this period.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

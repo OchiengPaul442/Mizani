@@ -275,6 +275,9 @@ private fun WalletDialog(
     var iconKey by rememberSaveable { mutableStateOf(initial?.icon ?: "wallet") }
     var error by remember { mutableStateOf<String?>(null) }
     val colors = BrandPalette.swatches
+    val typeOptions = WalletType.entries.filter {
+        it != WalletType.DEBT || initial?.type == WalletType.DEBT
+    }
     val opening = MoneyFormat.parse(openingText, currency) ?: 0L
 
     MizaniAlertDialog(
@@ -299,7 +302,7 @@ private fun WalletDialog(
                 Text("Type", style = MaterialTheme.typography.labelMedium)
                 MizaniPicker(
                     selectedText = type.label,
-                    options = WalletType.entries.map { PickerOption(it.name, it.label) },
+                    options = typeOptions.map { PickerOption(it.name, it.label) },
                     onSelect = { id -> type = WalletType.valueOf(id) },
                     modifier = Modifier.fillMaxWidth(),
                 )

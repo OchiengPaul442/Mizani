@@ -101,6 +101,17 @@ class MoneyTest {
     }
 
     @Test
+    fun `transaction currency choices omit discontinued codes but retain them for old records`() {
+        val selectableCodes = Currencies.transactionCurrencies.map { it.code }.toSet()
+
+        assertTrue("ADP" !in selectableCodes)
+        assertTrue("AFA" !in selectableCodes)
+        assertTrue("ALK" !in selectableCodes)
+        assertEquals("ADP", Currencies.byCode("ADP").code)
+        assertEquals("AFA", Currencies.byCode("AFA").code)
+    }
+
+    @Test
     fun `conversion handles zero and three decimal currencies`() {
         val yen = CurrencyConversion.convertMinorUnits(
             amountMinor = 10_000L,

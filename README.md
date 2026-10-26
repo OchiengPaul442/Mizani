@@ -1,30 +1,25 @@
 # Mizani — offline-first personal money management
 
-Mizani is a native Android budgeting app built with Kotlin and Jetpack Compose. It is
-guest-first: the local encrypted database is the source of truth, and core
-money-management works without an account. Entering an amount in another currency requires an
-internet connection to fetch its daily reference rate.
+Mizani is a native Android money-tracking app built with Kotlin and Jetpack Compose. Its four main
+areas are Home, Activity, Insights, and More, with one clear Add action for recording money in or
+out. It is guest-first: the encrypted on-device database is the source of truth, and the core app
+works without an account. Entering an amount in another currency requires an internet connection
+to fetch its latest available daily reference rate.
 
 **Tagline:** Your money, in balance.
 
 ## What is implemented
 
-- Guest onboarding with country pack, primary currency, first wallet and optional opening balance.
-- Wallets: cash, mobile money, bank, card, savings, debt and other; create, edit, archive.
+- Three-step guest onboarding with country, workspace currency, first wallet and optional opening balance.
+- Wallets: create and manage the cash, mobile money, bank and other places where money is kept.
 - Categories: seeded defaults plus custom categories, icons, colours, rename, archive/restore.
-- Transactions: expense, income, transfer, refund and balance adjustment, with optional fees,
-  payee, note and date. Foreign-currency expenses and income use a dated public reference rate;
+- Transactions: expenses and income are the main actions; transfers, refunds and balance adjustments
+  support accurate balances. Records include optional fees, payee, note and date. Foreign-currency
+  expenses and income use a dated public reference rate;
   the original amount and rate are retained alongside the workspace-currency ledger amount.
   Editing and soft deletion retain tombstones.
-- Budgets: weekly, monthly, four-week and custom periods; planned vs funded amounts,
-  essential flags, priority, rollover rules and category-level funding.
-- Expected income via recurring income rules; received income never includes expectations.
-- Recurring bills and commitments with local “mark paid” and next-date advancement.
-- Savings goals with contributions, optional linked savings wallet and target dates.
-- Debt tracking with balances, periodic payments, due dates and payment recording.
-- Deterministic analytics: cash flow, category shares, budget pace, safe-to-spend,
-  six-month history, income variability, wallet composition, fee trend, forecast,
-  savings rate and essential coverage — each with a “How this is calculated” explanation.
+- Deterministic analytics focused on cash flow, expense categories, six-month history, income
+  trends, wallet balances, fees and a spending forecast. Amounts are shown in the workspace currency.
   Charts (donut + grouped cash-flow bars) are rendered with **MPAndroidChart v3.1.0** and always
   keep a textual equivalent.
 - Local search and filters: text, date range, type, wallet, category and amount range.
@@ -45,7 +40,7 @@ internet connection to fetch its daily reference rate.
   the donut and grouped cash-flow bars, wrapped by `ui/components/MizaniDonutChart.kt` and
   `ui/components/MizaniCashFlowBars.kt`. All chart text, legends and accessibility labels are
   rendered in Compose, so every chart keeps a textual equivalent.
-- No app backend, advertising or analytics SDK, or AI model/inference runtime. A small HTTPS
+- No user account or sync backend, advertising or analytics SDK, or AI model/inference runtime. A small HTTPS
   client fetches public currency-pair reference rates from Frankfurter when conversion is used.
 
 ## Brand
@@ -166,8 +161,7 @@ by a pure Kotlin layer with unit tests.
 ## Deliberate V1 deviations
 
 - **Cloud sync / accounts:** no backend is provisioned in this build and no credentials may
-  ship in the APK. The Account screen is explicit that sync is not configured. Encrypted
-  backup is the available portability path.
+  ship in the APK. Encrypted backup is the available portability path.
 - **SMS mobile-money import:** policy-gated in the PRD; not included here. The importer
   boundary is documented but no SMS permission is declared.
 - **Split transactions:** P1; not in this build.

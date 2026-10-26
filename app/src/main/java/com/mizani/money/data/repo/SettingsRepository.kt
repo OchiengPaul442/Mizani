@@ -16,6 +16,7 @@ import com.mizani.money.core.model.ThemeMode
 import com.mizani.money.core.legal.LegalDocuments
 import com.mizani.money.core.security.PinDefaults
 import com.mizani.money.core.security.PinHasher
+import com.mizani.money.core.time.DailyReminderSchedule
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -34,6 +35,10 @@ data class AppSettings(
     val lockEnabled: Boolean = false,
     val biometricEnabled: Boolean = false,
     val hasPin: Boolean = false,
+    val dailyReminderEnabled: Boolean = false,
+    val dailyReminderMinuteOfDay: Int = DailyReminderSchedule.DEFAULT_MINUTE_OF_DAY,
+    val dailyReminderScheduleVersion: Long = 0L,
+    val lastDailyReminderEpochDay: Long? = null,
     val acceptedTermsVersion: String? = null,
     val acceptedPrivacyVersion: String? = null,
     val legalAcceptedAtMillis: Long? = null,
@@ -59,6 +64,10 @@ class SettingsRepository(private val context: Context) {
         // Persisted failed-PIN backoff state (not schema; plain DataStore entries).
         val PIN_FAILED_ATTEMPTS = intPreferencesKey("pin_failed_attempts")
         val PIN_LAST_FAILURE_AT = longPreferencesKey("pin_last_failure_at")
+        val DAILY_REMINDER_ENABLED = booleanPreferencesKey("daily_reminder_enabled")
+        val DAILY_REMINDER_MINUTE_OF_DAY = intPreferencesKey("daily_reminder_minute_of_day")
+        val DAILY_REMINDER_SCHEDULE_VERSION = longPreferencesKey("daily_reminder_schedule_version")
+        val LAST_DAILY_REMINDER_EPOCH_DAY = longPreferencesKey("last_daily_reminder_epoch_day")
         val ACCEPTED_TERMS_VERSION = stringPreferencesKey("accepted_terms_version")
         val ACCEPTED_PRIVACY_VERSION = stringPreferencesKey("accepted_privacy_version")
         val LEGAL_ACCEPTED_AT = longPreferencesKey("legal_accepted_at")
@@ -79,6 +88,12 @@ class SettingsRepository(private val context: Context) {
                 lockEnabled = preferences[Keys.LOCK_ENABLED] ?: false,
                 biometricEnabled = preferences[Keys.BIOMETRIC_ENABLED] ?: false,
                 hasPin = preferences[Keys.PIN_HASH] != null && preferences[Keys.PIN_SALT] != null,
+                dailyReminderEnabled = preferences[Keys.DAILY_REMINDER_ENABLED] ?: false,
+                dailyReminderMinuteOfDay = (preferences[Keys.DAILY_REMINDER_MINUTE_OF_DAY]
+                    ?: DailyReminderSchedule.DEFAULT_MINUTE_OF_DAY)
+                    .coerceIn(0, DailyReminderSchedule.MINUTES_PER_DAY - 1),
+                dailyReminderScheduleVersion = preferences[Keys.DAILY_REMINDER_SCHEDULE_VERSION] ?: 0L,
+                lastDailyReminderEpochDay = preferences[Keys.LAST_DAILY_REMINDER_EPOCH_DAY],
                 acceptedTermsVersion = preferences[Keys.ACCEPTED_TERMS_VERSION],
                 acceptedPrivacyVersion = preferences[Keys.ACCEPTED_PRIVACY_VERSION],
                 legalAcceptedAtMillis = preferences[Keys.LEGAL_ACCEPTED_AT],
@@ -103,6 +118,34 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setTheme(mode: ThemeMode) {
         context.mizaniSettings.edit { it[Keys.THEME] = mode.name }
+    }
+
+    suspend fun setDailyReminderEnabled(enabled: Boolean) {
+        context.mizaniSettings.edit { preferences ->
+            preferences[Keys.DAILY_REMINDER_ENABLED] = enabled
+            preferences[Keys.DAILY_REMINDER_SCHEDULE_VERSION] =
+                (preferences[Keys.DAILY_REMINDER_SCHEDULE_VERSION] ?: 0L) + 1L
+        }
+    }
+
+    suspend fun setDailyReminderMinuteOfDay(minuteOfDay: Int) {
+        require(minuteOfDay in 0 until DailyReminderSchedule.MINUTES_PER_DAY)
+        context.mizaniSettings.edit { preferences ->
+            preferences[Keys.DAILY_REMINDER_MINUTE_OF_DAY] = minuteOfDay
+            preferences[Keys.DAILY_REMINDER_SCHEDULE_VERSION] =
+                (preferences[Keys.DAILY_REMINDER_SCHEDULE_VERSION] ?: 0L) + 1L
+        }
+    }
+
+    suspend fun bumpDailyReminderScheduleVersion() {
+        context.mizaniSettings.edit { preferences ->
+            preferences[Keys.DAILY_REMINDER_SCHEDULE_VERSION] =
+                (preferences[Keys.DAILY_REMINDER_SCHEDULE_VERSION] ?: 0L) + 1L
+        }
+    }
+
+    suspend fun markDailyReminderShown(epochDay: Long) {
+        context.mizaniSettings.edit { it[Keys.LAST_DAILY_REMINDER_EPOCH_DAY] = epochDay }
     }
 
     suspend fun setCountry(countryCode: String, currencyCode: String) {

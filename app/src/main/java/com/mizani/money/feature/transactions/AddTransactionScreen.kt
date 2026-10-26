@@ -108,6 +108,7 @@ fun AddTransactionScreen(
     vm: AppViewModel,
     state: AppUiState,
     initialTransactionId: String?,
+    initialType: TransactionType = TransactionType.EXPENSE,
     onDone: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -120,7 +121,7 @@ fun AddTransactionScreen(
     val balances = remember(snapshot) { snapshot.walletBalances() }
     val wallets = snapshot.activeWallets.ifEmpty { snapshot.wallets }
 
-    var type by rememberSaveable(existing?.id) { mutableStateOf(existing?.type ?: TransactionType.EXPENSE) }
+    var type by rememberSaveable(existing?.id, initialType) { mutableStateOf(existing?.type ?: initialType) }
     var entryCurrencyCode by rememberSaveable(existing?.id, currency.code) {
         mutableStateOf(
             existing?.takeIf { it.type == TransactionType.EXPENSE || it.type == TransactionType.INCOME }
@@ -685,7 +686,7 @@ fun AddTransactionScreen(
                         modifier = Modifier.fillMaxWidth().padding(Spacing.md),
                         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                     ) {
-                        Text("Recorded in ${currency.code}", style = MaterialTheme.typography.labelLarge)
+                        Text("Automatically converted to ${currency.code}", style = MaterialTheme.typography.labelLarge)
                         when {
                             conversionRate != null -> {
                                 if (enteredAmountMinor > 0L && amountMinor > 0L) {

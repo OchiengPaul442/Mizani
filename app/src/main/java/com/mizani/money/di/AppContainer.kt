@@ -7,6 +7,7 @@ import com.mizani.money.data.repo.FinanceRepository
 import com.mizani.money.data.repo.ExchangeRateRepository
 import com.mizani.money.data.repo.SettingsRepository
 import com.mizani.money.domain.export.ExportManager
+import com.mizani.money.reminder.DailyReminderScheduler
 import kotlinx.coroutines.Deferred
 
 /**
@@ -31,4 +32,6 @@ class AppContainer(
     val exchangeRateRepository: ExchangeRateRepository by lazy { ExchangeRateRepository(application) }
 
     val exportManager: ExportManager by lazy { ExportManager(application, financeRepository) }
+
+    val dailyReminderScheduler: DailyReminderScheduler by lazy { DailyReminderScheduler(application) }
 }

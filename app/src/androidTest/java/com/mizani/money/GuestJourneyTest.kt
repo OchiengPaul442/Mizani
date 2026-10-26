@@ -55,13 +55,9 @@ class GuestJourneyTest {
     @Test
     fun guestCanOnboardAndRecordIncomeAndExpense() {
         compose.waitUntil(timeoutMillis = 20_000) {
-            compose.onAllNodesWithText("Continue without account").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithText("Get started").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithText("Continue without account").performClick()
-        compose.waitUntil(timeoutMillis = 5_000) {
-            compose.onAllNodesWithText("Continue").fetchSemanticsNodes().isNotEmpty()
-        }
-        compose.onAllNodesWithText("Continue").onFirst().performClick()
+        compose.onNodeWithText("Get started").performClick()
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodesWithText("Continue").fetchSemanticsNodes().isNotEmpty()
         }
@@ -74,7 +70,7 @@ class GuestJourneyTest {
         compose.waitUntil(timeoutMillis = 20_000) {
             compose.onAllNodesWithText("Activity").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithContentDescription("Add transaction").performClick()
+        compose.onNodeWithText("Add expense").performClick()
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodes(hasSetTextAction()).fetchSemanticsNodes().isNotEmpty()
         }
@@ -88,11 +84,10 @@ class GuestJourneyTest {
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithText("Activity").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithContentDescription("Add transaction").performClick()
+        compose.onNodeWithText("Add income").performClick()
         compose.waitUntil(timeoutMillis = 5_000) {
-            compose.onAllNodesWithText("Income").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodes(hasSetTextAction()).fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onAllNodesWithText("Income").onFirst().performClick()
         compose.onAllNodes(hasSetTextAction()).onFirst().performTextInput("100000")
         Espresso.closeSoftKeyboard()
         compose.onNodeWithText("Save income").performClick()

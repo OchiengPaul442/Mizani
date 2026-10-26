@@ -35,9 +35,8 @@ com.mizani.money
 │   ├── theme/                     colour, type, shapes, palette tokens
 │   └── components/                reusable Compose primitives (cards, charts, pickers)
 └── feature/
-    ├── onboarding/ home/ transactions/ wallets/ more/
-    ├── plan/ budget/ categories/ goals/ debts/
-    ├── insights/ settings/ account/ lock/
+    ├── onboarding/ home/ transactions/ wallets/ categories/
+    ├── insights/ more/ settings/ legal/ lock/
 ```
 
 ## Dependency direction
@@ -51,7 +50,7 @@ feature / ui  ->  domain  ->  data  ->  core
 - `domain.analytics` consumes plain entities/models and has **no Android UI dependency**; it is deterministic.
 - `data.local` depends on `core.model` and Room/SQLCipher; it does not know about screens.
 - `data.repo` is the only layer that opens write transactions. `FinanceRepository` is the single validated write
-  boundary so balances, budgets, goals, bills and debts never partially apply.
+  boundary so money records, balances, and imports never partially apply.
 - `ui`/`feature` read through `AppViewModel`/repositories and never touch DAOs or SQLite directly.
 - `feature` packages are package-by-feature; each owns its screen, local state and dialogs.
 

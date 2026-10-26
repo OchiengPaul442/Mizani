@@ -18,46 +18,50 @@
     <string name="onboarding_error_balance">Enter a valid starting balance, or skip this step.</string>
     <string name="onboarding_error_workspace">Could not create your workspace.</string>
     <string name="onboarding_error_wallet_name">Give your first wallet a name.</string>
-    <string name="onboarding_continue_without_account">Continue without account</string>
-    <string name="onboarding_about_accounts">About accounts</string>
-    <string name="onboarding_accounts_title">Accounts are optional</string>
-    <string name="onboarding_accounts_body">No account required. Your ledger stays on this phone. Currency conversion sends currency codes only. Create a backup in Settings anytime.</string>
-    <string name="onboarding_not_now">Not now</string>
+    <string name="onboarding_get_started">Get started</string>
     <string name="onboarding_welcome_title">Your money, in balance.</string>
-    <string name="onboarding_welcome_subtitle">Track spending and plan ahead.</string>
+    <string name="onboarding_welcome_subtitle">Track money received and spent. Check your progress at a glance.</string>
     <string name="onboarding_chip_offline">Works offline</string>
     <string name="onboarding_chip_encrypted">Encrypted</string>
     <string name="onboarding_chip_no_signup">No sign-up</string>
-    <string name="onboarding_country_title">Set your country</string>
-    <string name="onboarding_country_subtitle">Sets your currency and wallet suggestions.</string>
     <string name="onboarding_country_continue">Continue</string>
-    <string name="onboarding_country_skip">Skip</string>
-    <string name="onboarding_wallet_title">Add your first wallet</string>
-    <string name="onboarding_wallet_subtitle">Cash, mobile money or bank.</string>
+    <string name="onboarding_setup_title">Set up your money</string>
+    <string name="onboarding_setup_subtitle">Choose your country, the currency for your totals, and a place to start tracking.</string>
+    <string name="onboarding_currency_explainer">Your totals and charts will use %1$s. You can also record money in other currencies.</string>
+    <string name="onboarding_wallet_title">Where do you keep your money?</string>
+    <string name="onboarding_wallet_subtitle">Choose cash, mobile money or a bank wallet. You can add more later.</string>
     <string name="onboarding_wallet_name_label">Wallet name</string>
     <string name="onboarding_wallet_type_label">Type</string>
-    <string name="onboarding_wallet_continue">Continue</string>
-    <string name="onboarding_wallet_skip">Skip</string>
-    <string name="onboarding_ready_title">You are ready</string>
-    <string name="onboarding_ready_subtitle">Your data is encrypted and stored on this phone.</string>
-    <string name="onboarding_ready_balance_label">Starting balance (optional)</string>
+    <string name="onboarding_ready_title">Add your current balance</string>
+    <string name="onboarding_ready_subtitle">Enter what is already in this wallet so your balance starts accurately. Leave it blank to start from today.</string>
+    <string name="onboarding_ready_balance_label">Current balance (optional)</string>
     <string name="onboarding_ready_start">Start using Mizani</string>
-    <string name="onboarding_ready_encrypted">Create a backup anytime in Settings.</string>
+    <string name="onboarding_ready_encrypted">Your records stay encrypted on this phone. You can make a backup later.</string>
     <string name="onboarding_ready_preparing">Preparing your workspace…</string>
-    <string name="onboarding_continue">Continue</string>
 
     <!-- Home -->
-    <string name="home_add_transaction">Add transaction</string>
-    <string name="home_get_started_title">Add your first transaction</string>
-    <string name="home_get_started_body">Add income and expenses to start tracking.</string>
-    <string name="home_upcoming_empty">Add recurring bills to see upcoming payments.</string>
-    <string name="home_upcoming_tile">Due %1$s</string>
-    <string name="home_open_budget">Open plan</string>
+    <string name="home_get_started_title">Start tracking your money</string>
+    <string name="home_get_started_body">Record money as it comes in or goes out. Your totals update right away.</string>
     <string name="home_loading">Loading your summary…</string>
 
     <!-- Insights -->
     <string name="insights_subtitle">What your records show</string>
     <string name="insights_loading">Loading insights…</string>
+
+    <!-- Daily reminders -->
+    <string name="settings_reminders_title">Reminders</string>
+    <string name="settings_daily_reminder_title">Daily log reminder</string>
+    <string name="settings_daily_reminder_description">Around %1$s, remind me to record income or expenses if nothing is logged today.</string>
+    <string name="settings_reminder_time_label">Reminder time</string>
+    <string name="settings_reminder_local_note">This reminder checks your records on this phone. Android may delay it when battery saving is active.</string>
+    <string name="settings_reminder_permission_denied">Notifications are off, so Mizani cannot send this reminder.</string>
+    <string name="settings_reminder_notifications_disabled">Notifications are disabled in Android settings. Turn them on to receive this reminder.</string>
+    <string name="settings_open_notification_settings">Open notification settings</string>
+    <string name="settings_reminder_schedule_error">Could not update the reminder. Try again.</string>
+    <string name="notification_channel_reminders">Money reminders</string>
+    <string name="notification_channel_reminders_description">Optional reminders to record income and expenses.</string>
+    <string name="notification_daily_reminder_title">Record today’s money</string>
+    <string name="notification_daily_reminder_body">Open Mizani to add income or expenses you have not logged yet.</string>
 
     <!-- App lock -->
     <string name="lock_error_pin">Incorrect PIN. Try again.</string>
