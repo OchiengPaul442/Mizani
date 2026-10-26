@@ -44,9 +44,9 @@ jobs:
         with:
           packages: ''
 
-      # API 37 is currently published through the Android 17 preview channel.
-      - name: Install Android 17 API 37 preview platform
-        run: sdkmanager --channel=3 "platforms;android-37"
+      # This project's installed SDK uses the versioned API 37.0 package path.
+      - name: Install Android 17 API 37.0 platform
+        run: android sdk install --canary platforms/android-37.0
 
       - name: Build and test
         run: ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug
