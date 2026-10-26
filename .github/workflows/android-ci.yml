@@ -49,4 +49,4 @@ jobs:
         run: android sdk install --canary platforms/android-37.0
 
       - name: Build and test
-        run: ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug
+        run: bash ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug
