@@ -18,7 +18,7 @@
   <img src="https://img.shields.io/badge/Kotlin-087F72?logo=kotlin&logoColor=white" alt="Built with Kotlin">
 </p>
 
-Mizani is an Android budgeting app designed to work offline. It needs no account: your ledger stays on your device, and the core tracking features work without a connection. Country setup includes presets for Uganda, Kenya, Tanzania, Rwanda, Nigeria, Ghana and South Africa.
+Mizani is an Android budgeting app designed to work offline. It needs no account: your ledger stays on your device, and the core tracking features work without a connection. Country setup includes presets for Uganda, Kenya, Tanzania, Rwanda, Nigeria, Ghana and South Africa
 
 ## What you can do
 
@@ -43,14 +43,14 @@ Mizani is an Android budgeting app designed to work offline. It needs no account
 The Mizani identity is built around balance, clarity and trust. The interface uses the official
 mark and restrained palette:
 
-| Color | Hex | Use |
-| --- | --- | --- |
-| Deep Teal | <code>#102A32</code> | Brand mark and dark surfaces |
-| Emerald | <code>#087F72</code> | Primary actions and selected states |
-| Mint | <code>#76D7C2</code> | Dark-theme emphasis and positive accents |
-| Warm Gold | <code>#E8BF6A</code> | Small highlights |
-| Soft White | <code>#F7FAF8</code> | Light background |
-| Ink | <code>#17353D</code> | Primary text |
+| Color      | Hex                  | Use                                      |
+| ---------- | -------------------- | ---------------------------------------- |
+| Deep Teal  | <code>#102A32</code> | Brand mark and dark surfaces             |
+| Emerald    | <code>#087F72</code> | Primary actions and selected states      |
+| Mint       | <code>#76D7C2</code> | Dark-theme emphasis and positive accents |
+| Warm Gold  | <code>#E8BF6A</code> | Small highlights                         |
+| Soft White | <code>#F7FAF8</code> | Light background                         |
+| Ink        | <code>#17353D</code> | Primary text                             |
 
 See the [brand guide](docs/brand/BRAND_GUIDE.md) and [design system](docs/DESIGN_SYSTEM.md) for logo use, color, typography, spacing and component guidance.
 
@@ -84,20 +84,20 @@ JDK/JBR path. Keep machine-specific paths out of commits. Android Studio can cre
 
 Clone the repository and build with the Gradle wrapper:
 
-~~~powershell
+```powershell
 git clone https://github.com/OchiengPaul442/budgeting-application.git
 cd budgeting-application
 .\gradlew.bat :app:assembleDebug
-~~~
+```
 
 On macOS or Linux, use <code>./gradlew</code> in place of <code>.\gradlew.bat</code>.
 
 The APK is written to <code>app/build/outputs/apk/debug/app-debug.apk</code>. Install it on a
 connected device or emulator with:
 
-~~~powershell
+```powershell
 adb install -r app/build/outputs/apk/debug/app-debug.apk
-~~~
+```
 
 ### Run checks
 
@@ -105,16 +105,16 @@ The **Build & Tests** badge reports one GitHub Actions run for the debug APK and
 It runs on pull requests and pushes to <code>main</code>. Instrumentation tests remain a local
 check because they need a disposable Android emulator and clear its app data.
 
-~~~powershell
+```powershell
 .\gradlew.bat :app:testDebugUnitTest
 .\gradlew.bat :app:assembleDebugAndroidTest
-~~~
+```
 
 To run the Android instrumentation suite, connect a disposable emulator and use:
 
-~~~powershell
+```powershell
 .\gradlew.bat :app:connectedDebugAndroidTest
-~~~
+```
 
 > **Test data warning:** Instrumentation tests clear the app’s local database and settings. Run
 > them only on a disposable emulator or test profile, never on a device containing a ledger you
@@ -124,7 +124,7 @@ To run the Android instrumentation suite, connect a disposable emulator and use:
 
 Set <code>mizaniVersionName</code> in <code>gradle.properties</code> using
 <code>MAJOR.MINOR.PATCH</code>; Gradle derives Android’s <code>versionCode</code> from it. A release
-build is unsigned unless all four <code>MIZANI_RELEASE_*</code> signing properties are configured.
+build is unsigned unless all four <code>MIZANI*RELEASE*\*</code> signing properties are configured.
 Keep signing credentials outside the repository. See [security guidance](docs/SECURITY.md) before
 preparing a release.
 
@@ -132,14 +132,14 @@ preparing a release.
 
 Mizani is a single Android app module with package boundaries:
 
-| Package | Responsibility |
-| --- | --- |
-| <code>core</code> | Money, currencies, country defaults, dates and security policy |
-| <code>data/local</code> | Room entities and encrypted database |
-| <code>data/repo</code> | Validated data access, preferences and exchange-rate lookup |
-| <code>domain</code> | Analytics, CSV/Excel export and encrypted backup |
-| <code>feature</code> | Compose screens for onboarding, Home, Activity, Insights and More |
-| <code>ui</code> | Navigation, theme and reusable components |
+| Package                 | Responsibility                                                    |
+| ----------------------- | ----------------------------------------------------------------- |
+| <code>core</code>       | Money, currencies, country defaults, dates and security policy    |
+| <code>data/local</code> | Room entities and encrypted database                              |
+| <code>data/repo</code>  | Validated data access, preferences and exchange-rate lookup       |
+| <code>domain</code>     | Analytics, CSV/Excel export and encrypted backup                  |
+| <code>feature</code>    | Compose screens for onboarding, Home, Activity, Insights and More |
+| <code>ui</code>         | Navigation, theme and reusable components                         |
 
 Start with the [project structure](docs/PROJECT_STRUCTURE.md) and [architecture
 contract](docs/ARCHITECTURE_CONTRACT.md) when changing the app.
