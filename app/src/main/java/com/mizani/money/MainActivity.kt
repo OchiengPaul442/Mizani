@@ -1,6 +1,7 @@
 package com.mizani.money
 
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -65,6 +66,8 @@ class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Financial records must not appear in screenshots, screen recordings, or recents previews.
+        setSecureWindow()
         enableEdgeToEdge()
         setContent {
             val state by appViewModel.uiState.collectAsStateWithLifecycle()
@@ -72,6 +75,19 @@ class MainActivity : FragmentActivity() {
                 MizaniRoot(appViewModel, state)
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Reassert after returning from external activities or system UI.
+        setSecureWindow()
+    }
+
+    private fun setSecureWindow() {
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_SECURE,
+            WindowManager.LayoutParams.FLAG_SECURE,
+        )
     }
 
     override fun onStart() {

@@ -1,11 +1,11 @@
 package com.mizani.money
 
-import android.content.Context
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -23,7 +23,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.io.File
 
 /**
  * End-to-end guest journey against the real encrypted database. The test clears only test-owned
@@ -39,11 +38,7 @@ class GuestJourneyTest {
 
     @Before
     fun resetLocalState() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        context.deleteDatabase("mizani.db")
-        context.getSharedPreferences("mizani_database_key", Context.MODE_PRIVATE)
-            .edit().clear().commit()
-        File(context.filesDir, "datastore/mizani_settings.preferences_pb").delete()
+        TestState.reset()
         scenario = ActivityScenario.launch(MainActivity::class.java)
     }
 
@@ -55,22 +50,30 @@ class GuestJourneyTest {
     @Test
     fun guestCanOnboardAndRecordIncomeAndExpense() {
         compose.waitUntil(timeoutMillis = 20_000) {
-            compose.onAllNodesWithText("Get started").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithText("Track every side of your money.").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithText("Get started").performClick()
+        compose.onNodeWithText("Next").performClick()
         compose.waitUntil(timeoutMillis = 5_000) {
-            compose.onAllNodesWithText("Continue").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithText("See your money clearly.").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onAllNodesWithText("Continue").onFirst().performClick()
+        compose.onNodeWithText("Terms of Service").assertExists()
+        compose.onNodeWithText("Privacy Notice").assertExists()
+        compose.onNodeWithText("Agree and set up").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithText("Set up your money").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("Continue").performClick()
         compose.waitUntil(timeoutMillis = 5_000) {
-            compose.onAllNodesWithText("Start using Mizani").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithText("Add your current balance").fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithText("Start using Mizani").performClick()
 
         compose.waitUntil(timeoutMillis = 20_000) {
             compose.onAllNodesWithText("Activity").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithText("Add expense").performClick()
+        compose.onNode(hasText("Activity") and hasClickAction()).performClick()
+        compose.onNodeWithText("Add transaction").performClick()
+        compose.onNodeWithText("Record expense").performClick()
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodes(hasSetTextAction()).fetchSemanticsNodes().isNotEmpty()
         }
@@ -84,7 +87,8 @@ class GuestJourneyTest {
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithText("Activity").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithText("Add income").performClick()
+        compose.onNodeWithText("Add", useUnmergedTree = true).performClick()
+        compose.onNodeWithText("Record income").performClick()
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodes(hasSetTextAction()).fetchSemanticsNodes().isNotEmpty()
         }
@@ -95,7 +99,6 @@ class GuestJourneyTest {
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithText("Activity").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithText("Activity").performClick()
         compose.onNodeWithText("Housing & rent").assertExists()
 
         val app = ApplicationProvider.getApplicationContext<MizaniApplication>()

@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.SecureFlagPolicy
 import com.mizani.money.core.legal.LegalDocument
 import com.mizani.money.core.legal.LegalDocumentId
 import com.mizani.money.core.legal.LegalDocuments
@@ -50,7 +51,10 @@ fun LegalDocumentsDialog(
 
     Dialog(
         onDismissRequest = onClose,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            securePolicy = SecureFlagPolicy.SecureOn,
+        ),
     ) {
         Surface(
             modifier = Modifier

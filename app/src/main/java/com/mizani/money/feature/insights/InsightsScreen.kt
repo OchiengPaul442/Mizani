@@ -17,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -146,7 +147,7 @@ fun InsightsScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = Spacing.lg)
-                .padding(bottom = Spacing.bottom),
+                .padding(bottom = Spacing.bottomFab),
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
             PeriodMenu(
@@ -156,6 +157,16 @@ fun InsightsScreen(
                 onSelect = { preset -> vm.selectPreset(preset) },
                 onCustom = { showRangePicker = true },
             )
+
+            if (snapshot.transactions.isEmpty()) {
+                EmptyState(
+                    title = "No transactions yet",
+                    body = "Add income or expenses to see your cash flow and analysis.",
+                    icon = Icons.Rounded.BarChart,
+                    illustrationAsset = "financial_data_cuate.svg",
+                )
+                return@Column
+            }
 
             val current = metrics
             if (current == null) {
@@ -182,14 +193,6 @@ fun InsightsScreen(
                 Icon(Icons.Rounded.Download, contentDescription = null)
                 Spacer(Modifier.width(Spacing.sm))
                 Text("Export data")
-            }
-
-            if (snapshot.transactions.isEmpty()) {
-                EmptyState(
-                    title = "No transactions yet",
-                    body = "Add income or expenses to see your insights.",
-                    iconRes = R.drawable.ic_ph_chart_donut,
-                )
             }
 
             val visibleInsights = insights

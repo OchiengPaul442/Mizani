@@ -1,6 +1,7 @@
 package com.mizani.money.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -64,6 +65,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.SecureFlagPolicy
 import com.mizani.money.R
 import com.mizani.money.core.model.InsightTone
 import com.mizani.money.core.model.TransactionType
@@ -112,6 +114,7 @@ object Spacing {
     val section = 16.dp
     val bottomFab = 96.dp
     val bottom = 32.dp
+    val fieldHeight = 56.dp
     val buttonHeight = 52.dp
 }
 
@@ -276,13 +279,18 @@ fun EmptyState(
     modifier: Modifier = Modifier,
     icon: androidx.compose.ui.graphics.vector.ImageVector = Icons.Rounded.Inbox,
     iconRes: Int? = null,
+    illustrationAsset: String? = null,
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
     compact: Boolean = false,
 ) {
     // Layered translucent brand circles behind a themed icon tile, with a small floating
     // accent sparkle. Compact variant drops the circles and the CTA gap for use inside cards.
-    val ringSize = if (compact) 64.dp else 96.dp
+    val ringSize = when {
+        illustrationAsset != null -> 176.dp
+        compact -> 64.dp
+        else -> 96.dp
+    }
     Column(
         modifier = modifier.fillMaxWidth().padding(vertical = if (compact) Spacing.lg else Spacing.xxl, horizontal = Spacing.xl),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -298,30 +306,37 @@ fun EmptyState(
                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.20f)),
                 )
             }
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(MaterialTheme.shapes.medium)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (iconRes != null) {
-                    Icon(
-                        painter = painterResource(iconRes),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(32.dp),
-                    )
-                } else {
-                    Icon(
-                        icon,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(32.dp),
-                    )
+            if (illustrationAsset != null) {
+                StorysetIllustration(
+                    assetName = illustrationAsset,
+                    modifier = Modifier.fillMaxSize().padding(Spacing.xs),
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (iconRes != null) {
+                        Icon(
+                            painter = painterResource(iconRes),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(32.dp),
+                        )
+                    } else {
+                        Icon(
+                            icon,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(32.dp),
+                        )
+                    }
                 }
             }
-            if (!compact) {
+            if (!compact && illustrationAsset == null) {
                 Icon(
                     painter = painterResource(R.drawable.ic_ph_sparkle),
                     contentDescription = null,
@@ -474,10 +489,25 @@ fun DateField(
     modifier: Modifier = Modifier,
 ) {
     var showPicker by remember { mutableStateOf(false) }
-    OutlinedButton(onClick = { showPicker = true }, modifier = modifier) {
-        Icon(Icons.Rounded.CalendarMonth, contentDescription = null, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(Spacing.sm))
-        Text("$label · ${DateText.medium(date)}")
+    OutlinedButton(
+        onClick = { showPicker = true },
+        modifier = modifier.height(Spacing.fieldHeight),
+        shape = MaterialTheme.shapes.small,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Rounded.CalendarMonth, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(Spacing.sm))
+            Text(
+                "$label · ${DateText.medium(date)}",
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
     if (showPicker) {
         val pickerState = rememberDatePickerState(
@@ -486,7 +516,10 @@ fun DateField(
         DatePickerDialog(
             onDismissRequest = { showPicker = false },
             modifier = Modifier.fillMaxWidth(0.94f).widthIn(max = 560.dp),
-            properties = DialogProperties(usePlatformDefaultWidth = false),
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                securePolicy = SecureFlagPolicy.SecureOn,
+            ),
             confirmButton = {
                 TextButton(
                     onClick = {

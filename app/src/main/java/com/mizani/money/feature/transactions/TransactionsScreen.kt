@@ -17,7 +17,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Search
@@ -156,9 +155,6 @@ fun TransactionsScreen(
             title = "Activity",
             subtitle = "${filtered.size} transactions",
             actions = {
-                IconButton(onClick = onAdd) {
-                    Icon(Icons.Rounded.Add, contentDescription = "Add transaction")
-                }
                 IconButton(onClick = { showFilters = !showFilters }) {
                     Icon(Icons.Rounded.FilterList, contentDescription = "Filters")
                 }
@@ -169,7 +165,7 @@ fun TransactionsScreen(
             contentPadding = androidx.compose.foundation.layout.PaddingValues(
                 start = Spacing.lg,
                 end = Spacing.lg,
-                bottom = Spacing.bottom,
+                bottom = if (snapshot.transactions.isEmpty()) Spacing.bottom else Spacing.bottomFab,
             ),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
@@ -261,7 +257,7 @@ fun TransactionsScreen(
                         } else {
                             "Try a different search, date range or filter."
                         },
-                        iconRes = R.drawable.ic_ph_chart_donut,
+                        iconRes = R.drawable.ic_ph_receipt,
                         actionLabel = if (snapshot.transactions.isEmpty()) "Add transaction" else null,
                         onAction = if (snapshot.transactions.isEmpty()) onAdd else null,
                         compact = true,

@@ -1,8 +1,7 @@
 package com.mizani.money
 
-import android.content.Context
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.core.app.ApplicationProvider
 import com.mizani.money.core.model.BudgetPeriodType
 import com.mizani.money.core.model.CategoryType
 import com.mizani.money.core.model.DefaultCategories
@@ -22,7 +21,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.io.File
 import java.time.LocalDate
 
 /**
@@ -34,11 +32,7 @@ class DemoDataTest {
 
     @Before
     fun clearLocalState() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        context.deleteDatabase("mizani.db")
-        context.getSharedPreferences("mizani_database_key", Context.MODE_PRIVATE)
-            .edit().clear().commit()
-        File(context.filesDir, "datastore/mizani_settings.preferences_pb").delete()
+        TestState.reset()
     }
 
     @Test

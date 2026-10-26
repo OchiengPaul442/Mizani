@@ -790,9 +790,9 @@ class FinanceRepository(private val database: MizaniDatabase) {
 
     // --------------------------------------------------------------- backup I/O
 
-    suspend fun exportBundle(): RestoreBundle {
+    suspend fun exportBundle(): RestoreBundle = database.withTransaction {
         val workspace = workspaceDao.get() ?: error("No workspace")
-        return RestoreBundle(
+        RestoreBundle(
             workspace = workspace,
             wallets = walletDao.getAll(),
             categories = categoryDao.getAll(),

@@ -74,9 +74,6 @@ class SettingsRepository(private val context: Context) {
     }
 
     val settings: Flow<AppSettings> = context.mizaniSettings.data
-        .catch { error ->
-            if (error is IOException) emit(emptyPreferences()) else throw error
-        }
         .map { preferences ->
             AppSettings(
                 onboardingComplete = preferences[Keys.ONBOARDING_COMPLETE] ?: false,

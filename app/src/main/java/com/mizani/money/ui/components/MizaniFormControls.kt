@@ -1,9 +1,11 @@
 package com.mizani.money.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -33,6 +35,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.PopupProperties
+import androidx.compose.ui.window.SecureFlagPolicy
 import com.mizani.money.R
 import com.mizani.money.core.money.Currency
 
@@ -68,9 +72,10 @@ fun MizaniPicker(
                 query = ""
                 expanded = true
             },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().height(Spacing.fieldHeight),
             enabled = enabled,
             shape = MaterialTheme.shapes.small,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         ) {
             Text(
                 selectedText,
@@ -89,6 +94,7 @@ fun MizaniPicker(
                 query = ""
             },
             modifier = Modifier.heightIn(max = 560.dp),
+            properties = PopupProperties(securePolicy = SecureFlagPolicy.SecureOn),
         ) {
             if (searchable) {
                 OutlinedTextField(

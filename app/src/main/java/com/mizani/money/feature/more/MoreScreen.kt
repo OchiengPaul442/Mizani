@@ -33,7 +33,7 @@ fun MoreScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = Spacing.lg)
-                .padding(bottom = Spacing.bottom),
+                .padding(bottom = Spacing.bottomFab),
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
             Text("Manage money", style = MaterialTheme.typography.titleMedium)
@@ -58,7 +58,7 @@ fun MoreScreen(
                 MizaniInfoRow(
                     icon = Icons.Rounded.Download,
                     title = "Export or back up data",
-                    subtitle = "Download CSV or Excel, or move to another phone",
+                    subtitle = "CSV, Excel, encrypted backup and restore",
                     onClick = { onNavigate("export") },
                 )
             }
@@ -68,7 +68,7 @@ fun MoreScreen(
                 MizaniInfoRow(
                     icon = Icons.Rounded.Settings,
                     title = "Settings",
-                    subtitle = "Appearance, app lock and country",
+                    subtitle = "Theme, app lock, country and reminders",
                     onClick = { onNavigate("settings") },
                 )
                 MizaniSectionDivider()

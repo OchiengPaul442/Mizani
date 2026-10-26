@@ -28,33 +28,50 @@ object PinHasher {
         require(iterations > 0) { "Iterations must be positive" }
         require(keyLength > 0) { "Key length must be positive" }
 
+        val secretBytes = secret.toByteArray(Charsets.UTF_8)
         val mac = Mac.getInstance("HmacSHA256")
-        mac.init(SecretKeySpec(secret.toByteArray(Charsets.UTF_8), "HmacSHA256"))
         val output = ByteArray(keyLength)
         var generated = 0
         var blockIndex = 1
         val block = ByteArray(4)
-        while (generated < keyLength) {
-            block[0] = (blockIndex ushr 24).toByte()
-            block[1] = (blockIndex ushr 16).toByte()
-            block[2] = (blockIndex ushr 8).toByte()
-            block[3] = blockIndex.toByte()
-            mac.update(salt)
-            mac.update(block)
-            var u = mac.doFinal()
-            val accumulator = u.copyOf()
-            for (iteration in 1 until iterations) {
-                u = mac.doFinal(u)
-                for (index in accumulator.indices) {
-                    accumulator[index] = (accumulator[index].toInt() xor u[index].toInt()).toByte()
+        try {
+            mac.init(SecretKeySpec(secretBytes, "HmacSHA256"))
+            while (generated < keyLength) {
+                block[0] = (blockIndex ushr 24).toByte()
+                block[1] = (blockIndex ushr 16).toByte()
+                block[2] = (blockIndex ushr 8).toByte()
+                block[3] = blockIndex.toByte()
+                mac.update(salt)
+                mac.update(block)
+                var u = mac.doFinal()
+                val accumulator = u.copyOf()
+                try {
+                    for (iteration in 1 until iterations) {
+                        val previous = u
+                        u = mac.doFinal(previous)
+                        previous.fill(0)
+                        for (index in accumulator.indices) {
+                            accumulator[index] = (accumulator[index].toInt() xor u[index].toInt()).toByte()
+                        }
+                    }
+                    val toCopy = minOf(keyLength - generated, accumulator.size)
+                    System.arraycopy(accumulator, 0, output, generated, toCopy)
+                    generated += toCopy
+                    blockIndex++
+                } finally {
+                    u.fill(0)
+                    accumulator.fill(0)
                 }
             }
-            val toCopy = minOf(keyLength - generated, accumulator.size)
-            System.arraycopy(accumulator, 0, output, generated, toCopy)
-            generated += toCopy
-            blockIndex++
+            return output
+        } catch (error: Exception) {
+            output.fill(0)
+            throw error
+        } finally {
+            secretBytes.fill(0)
+            block.fill(0)
+            mac.reset()
         }
-        return output
     }
 
     fun verify(
@@ -65,7 +82,12 @@ object PinHasher {
     ): Boolean {
         if (expected.isEmpty()) return false
         return try {
-            MessageDigest.isEqual(hash(secret, salt, iterations, expected.size), expected)
+            val candidate = hash(secret, salt, iterations, expected.size)
+            try {
+                MessageDigest.isEqual(candidate, expected)
+            } finally {
+                candidate.fill(0)
+            }
         } catch (_: Exception) {
             false
         }

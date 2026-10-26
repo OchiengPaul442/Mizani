@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.SecureFlagPolicy
 import com.mizani.money.core.time.DateRange
 import java.time.Instant
 import java.time.LocalDate
@@ -32,7 +33,10 @@ fun DateRangePickerDialog(
     DatePickerDialog(
         onDismissRequest = onDismiss,
         modifier = Modifier.fillMaxWidth(0.94f).widthIn(max = 560.dp),
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            securePolicy = SecureFlagPolicy.SecureOn,
+        ),
         confirmButton = {
             TextButton(
                 enabled = state.selectedStartDateMillis != null && state.selectedEndDateMillis != null,

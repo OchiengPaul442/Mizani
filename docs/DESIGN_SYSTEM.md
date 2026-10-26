@@ -40,7 +40,7 @@ Dark Surface `#12323A`.
 | On surface | `#17353D` ink | primary text |
 | On surface variant | `#405A5E` | secondary text |
 | Muted | `#61777A` | disabled and placeholder text |
-| Outline | `#C9D9D4` | dividers, field borders |
+| Outline | `#7B8F8A` | field and selector borders |
 | Outline variant | `#E1ECE8` | hairlines, subtle separators |
 | Error | `#B3261E` | errors only |
 

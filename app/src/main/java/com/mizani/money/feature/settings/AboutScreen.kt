@@ -18,8 +18,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Shield
+import com.mizani.money.ui.components.MizaniAlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -59,6 +61,8 @@ fun AboutScreen(state: AppUiState, onBack: () -> Unit) {
     var isCheckingForUpdate by remember { mutableStateOf(false) }
     var updateMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var releasePageUrl by rememberSaveable { mutableStateOf<String?>(null) }
+    var availableVersionName by rememberSaveable { mutableStateOf<String?>(null) }
+    var showUpdatePrompt by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val updateRepository = remember { UpdateRepository() }
@@ -69,6 +73,8 @@ fun AboutScreen(state: AppUiState, onBack: () -> Unit) {
         isCheckingForUpdate = true
         updateMessage = null
         releasePageUrl = null
+        availableVersionName = null
+        showUpdatePrompt = false
         scope.launch {
             try {
                 when (val result = withContext(Dispatchers.IO) {
@@ -79,6 +85,8 @@ fun AboutScreen(state: AppUiState, onBack: () -> Unit) {
                     is UpdateCheckResult.Available -> {
                         updateMessage = "Version ${result.release.versionName} is available."
                         releasePageUrl = result.release.pageUrl
+                        availableVersionName = result.release.versionName
+                        showUpdatePrompt = true
                     }
                 }
             } catch (cancelled: CancellationException) {
@@ -97,6 +105,12 @@ fun AboutScreen(state: AppUiState, onBack: () -> Unit) {
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         } catch (_: ActivityNotFoundException) {
             updateMessage = "No browser is available to open the release."
+        }
+    }
+
+    fun openStoryset() {
+        runCatching {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://storyset.com/")))
         }
     }
 
@@ -209,12 +223,39 @@ fun AboutScreen(state: AppUiState, onBack: () -> Unit) {
                     subtitle = "How your information is handled",
                     onClick = { legalDocument = LegalDocumentId.PRIVACY },
                 )
+                MizaniSectionDivider()
+                MizaniInfoRow(
+                    icon = Icons.Rounded.Image,
+                    title = "Illustrations by Storyset",
+                    subtitle = "Freepik Company · View the source",
+                    onClick = ::openStoryset,
+                )
             }
 
         }
     }
     legalDocument?.let { document ->
         LegalDocumentsDialog(initialDocument = document, onClose = { legalDocument = null })
+    }
+    if (showUpdatePrompt && availableVersionName != null) {
+        MizaniAlertDialog(
+            onDismissRequest = { showUpdatePrompt = false },
+            title = { Text("Update available") },
+            text = {
+                Text(
+                    "Mizani version $availableVersionName is available. Open the official release page to review the update and installation instructions.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showUpdatePrompt = false
+                    openReleasePage()
+                }) { Text("View update") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUpdatePrompt = false }) { Text("Later") }
+            },
+        )
     }
 }
 

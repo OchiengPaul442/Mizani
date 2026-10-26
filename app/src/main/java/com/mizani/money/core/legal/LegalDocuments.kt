@@ -22,12 +22,12 @@ data class LegalDocument(
  * then asks existing users to accept the revised documents before opening their ledger.
  */
 object LegalDocuments {
-    const val EFFECTIVE_DATE = "25 October 2026"
-    const val TERMS_VERSION = "2026-10-25-2"
-    const val PRIVACY_VERSION = "2026-10-25-2"
+    const val EFFECTIVE_DATE = "26 October 2026"
+    const val TERMS_VERSION = "2026-10-26-1"
+    const val PRIVACY_VERSION = "2026-10-26-1"
     const val PRIVACY_CONTACT = "paul.ochieng.dev@gmail.com"
     const val PROVIDER_NAME_RELEASE_PLACEHOLDER =
-        "Mizani app publisher (legal name to be added before public release)"
+        "Mizani app publisher (legal name and business address required before public release)"
 
     val terms = LegalDocument(
         id = LegalDocumentId.TERMS,
@@ -59,6 +59,12 @@ object LegalDocuments {
                 "Mizani does not keep an online copy of your financial records. They are encrypted and stored " +
                     "on your device. You are responsible for securing the device and keeping exports and backups " +
                     "safe. The Privacy Notice explains optional exchange-rate and update checks.",
+                "Mizani uses Android's secure-window setting to block ordinary screenshots, screen recordings, " +
+                    "and capture on non-secure displays. This platform control cannot stop a camera or a " +
+                    "compromised device, and its behavior depends on Android and the device maker.",
+                "If you turn on a daily reminder, Mizani checks the ledger on this device and can show a generic " +
+                    "notification when no income, expense, or refund has been recorded that day. It does not send your " +
+                    "ledger to a reminder service.",
                 "Enter information you are entitled to use. Avoid putting another person’s sensitive details " +
                     "in a payee or note unless you have a valid reason and permission to do so.",
             )),
@@ -126,13 +132,13 @@ object LegalDocuments {
                     "and contributions; recurring items; and debt records. Free-text names and notes may contain " +
                     "personal information if you choose to put it there.",
                 "Mizani also stores settings such as your selected country, primary currency, theme and app-lock " +
-                    "preferences. App-lock details stay on this device. The app records which versions of these " +
-                    "documents you accepted and when.",
+                    "preferences, optional reminder settings and time, and cached currency rates. App-lock details " +
+                    "stay on this device. The app records which versions of these documents you accepted and when.",
             )),
             LegalSection("3. Why the app uses this information", listOf(
                 "Mizani uses your information to provide the budgeting features you choose, protect your records, " +
-                    "and create exports or backups when you request them. Applicable law may also require certain " +
-                    "records to be kept or disclosed.",
+                    "and create exports or backups when you request them. The optional reminder checks your local " +
+                    "ledger and uses a generic notification; it does not send ledger information off the device.",
                 "Mizani does not require a name, email address, phone number, bank login, or account. Your " +
                     "ledger is not used for advertising or usage tracking.",
             )),
@@ -143,16 +149,21 @@ object LegalDocuments {
                     "transaction on your phone.",
                 "Frankfurter says it neither collects nor logs personal data, IP addresses, or request details. Your network " +
                     "provider still handles the connection. Read more at https://frankfurter.dev/.",
-                "If you installed Mizani outside Google Play, you can choose to check for updates. The check " +
-                    "sends an app identifier to GitHub, not your ledger. GitHub may receive your IP address and " +
-                    "request details under its Privacy Statement. You can skip the check.",
+                "If you installed Mizani outside Google Play, you can choose to check for updates. Mizani requests " +
+                    "public release information from GitHub and compares the release version on your device. It " +
+                    "does not send your installed version or ledger. GitHub may receive your IP address and request " +
+                    "details under its Privacy Statement. You can skip the check.",
             )),
             LegalSection("5. Storage, security and retention", listOf(
                 "Your financial records are encrypted and stored on this phone. Device security helps protect " +
                     "access to them. No security measure can guarantee that a device or data is safe in every " +
                     "circumstance.",
+                "Mizani sets Android's secure-window protection on app screens, dialogs and menus to block " +
+                    "ordinary screenshots, screen recordings, and non-secure display capture. Android and device " +
+                    "behavior varies; this cannot prevent capture with an external camera or on a compromised device.",
                 "Mizani keeps no online copy of your ledger. Local records remain in the app until you delete all " +
-                    "local data, clear the app’s storage, or uninstall it. Automatic device backups are disabled. " +
+                    "local data, clear the app’s storage, or uninstall it. Delete all data also clears saved currency " +
+                    "rates, settings and reminder schedules. Automatic device backups are disabled. " +
                     "Uninstalling the app or losing access to this phone may make local data unrecoverable.",
             )),
             LegalSection("6. Exports and other services", listOf(
@@ -164,7 +175,7 @@ object LegalDocuments {
                     "notice. Mizani cannot delete those external copies for you.",
             )),
             LegalSection("7. Sharing and other services", listOf(
-                "Mizani does not receive or sell your ledger, or use it for advertising. " +
+                "The provider does not receive or sell an online copy of your ledger, or use it for advertising. " +
                     "External services receive only the information described above or a file you choose to " +
                     "save or share. The operating system, app marketplace, and network providers may process " +
                     "technical information under their own terms.",
@@ -174,10 +185,11 @@ object LegalDocuments {
                     "data from Settings. Deletion does not remove exports or backups already saved elsewhere. " +
                     "Currency-rate requests happen only when you convert a foreign-currency transaction. Update " +
                     "checks are optional and available when you install outside Google Play. Neither sends ledger " +
-                    "entries.",
-                "Depending on where you live, you may have rights to access, correct, delete, restrict, object to, " +
-                    "or receive your information, and to complain to a data-protection authority. Email " +
-                    "$PRIVACY_CONTACT with a request. Mizani keeps no online ledger; do not email financial " +
+                    "entries. The optional reminder uses local settings and checks local records only.",
+                "Privacy rights depend on the law that applies where you live. That law may give you rights to " +
+                    "request access, correction or deletion, object to certain processing, or complain to a data " +
+                    "protection authority. You can manage records stored only on this device in the app. For a " +
+                    "request about information the provider handles, email $PRIVACY_CONTACT. Do not email ledger " +
                     "details unless needed to handle your request.",
             )),
             LegalSection("9. Children", listOf(

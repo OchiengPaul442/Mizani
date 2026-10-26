@@ -49,6 +49,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.SecureFlagPolicy
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import com.mizani.money.R
@@ -357,7 +358,10 @@ fun PinSetupDialog(
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            securePolicy = SecureFlagPolicy.SecureOn,
+        ),
     ) {
         Surface(
             modifier = Modifier.fillMaxWidth().padding(Spacing.xl),
@@ -420,7 +424,13 @@ fun PinVerifyDialog(
             if (pin.length == PinDefaults.LENGTH) onSubmit(pin)
         }
     }
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            securePolicy = SecureFlagPolicy.SecureOn,
+        ),
+    ) {
         Surface(
             modifier = Modifier.fillMaxWidth().padding(Spacing.xl),
             shape = MaterialTheme.shapes.extraLarge,

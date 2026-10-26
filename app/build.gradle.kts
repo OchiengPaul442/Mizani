@@ -14,6 +14,28 @@ if (mizaniVersionCode == 0) {
     throw GradleException("mizaniVersionName must be greater than 0.0.0")
 }
 
+// Read release credentials from Gradle user-home properties so secrets stay outside the repository
+// and Gradle's configuration cache stores only the properties file fingerprint.
+val releaseStoreFilePath = providers.gradleProperty("MIZANI_RELEASE_STORE_FILE").orNull
+val releaseStorePassword = providers.gradleProperty("MIZANI_RELEASE_STORE_PASSWORD").orNull
+val releaseKeyAlias = providers.gradleProperty("MIZANI_RELEASE_KEY_ALIAS").orNull
+val releaseKeyPassword = providers.gradleProperty("MIZANI_RELEASE_KEY_PASSWORD").orNull
+val releaseSigningInputs = listOf(
+    releaseStoreFilePath,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword,
+)
+val hasAnyReleaseSigningInput = releaseSigningInputs.any { !it.isNullOrBlank() }
+val hasCompleteReleaseSigningInputs = releaseSigningInputs.all { !it.isNullOrBlank() }
+if (hasAnyReleaseSigningInput && !hasCompleteReleaseSigningInputs) {
+    throw GradleException("Set all four MIZANI_RELEASE_* Gradle properties, or leave all unset")
+}
+val releaseStoreFile = releaseStoreFilePath?.let(::file)
+if (hasCompleteReleaseSigningInputs && releaseStoreFile?.isFile != true) {
+    throw GradleException("MIZANI_RELEASE_STORE_FILE must point to an existing keystore file")
+}
+
 android {
     namespace = "com.mizani.money"
     compileSdk {
@@ -33,6 +55,17 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            if (hasCompleteReleaseSigningInputs) {
+                storeFile = releaseStoreFile
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     androidResources {
         // English-only UI; drop unused library translations (AGP 9.4 replacement for resourceConfigurations).
         localeFilters += listOf("en")
@@ -40,6 +73,11 @@ android {
 
     buildTypes {
         release {
+            if (hasCompleteReleaseSigningInputs) {
+                signingConfig = signingConfigs.getByName("release")
+            } else {
+                logger.warn("Release APK will be unsigned; configure all four MIZANI_RELEASE_* Gradle properties before distribution.")
+            }
             // R8 code shrinking + resource optimization enabled (AGP 9.3+ DSL).
             // Default Android keep rules were sufficient — Room (KSP), SQLCipher,
             // and MPAndroidChart all kept the code they need with no app-side rules.
@@ -101,6 +139,7 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidsvg)
 
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)

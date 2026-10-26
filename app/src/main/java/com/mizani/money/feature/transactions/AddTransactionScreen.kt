@@ -33,7 +33,7 @@ import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.Tune
-import androidx.compose.material.icons.rounded.Undo
+import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -464,7 +464,7 @@ fun AddTransactionScreen(
                             TransactionType.EXPENSE -> Icons.Rounded.ArrowUpward
                             TransactionType.INCOME -> Icons.Rounded.ArrowDownward
                             TransactionType.TRANSFER -> Icons.Rounded.SwapHoriz
-                            TransactionType.REFUND -> Icons.Rounded.Undo
+                            TransactionType.REFUND -> Icons.AutoMirrored.Rounded.Undo
                             TransactionType.ADJUSTMENT -> Icons.Rounded.Tune
                         }
                         FilterChip(
@@ -763,112 +763,119 @@ fun AddTransactionScreen(
             }
 
             if (type == TransactionType.TRANSFER) {
-                Text("From wallet", style = MaterialTheme.typography.labelLarge)
-                WalletPickerRow(
-                    wallets = wallets,
-                    selectedId = walletId,
-                    balances = balances,
-                    currency = currency,
-                    onSelect = { walletId = it },
-                )
-                Text("To wallet", style = MaterialTheme.typography.labelLarge)
-                WalletPickerRow(
-                    wallets = wallets.filter { it.id != walletId },
-                    selectedId = toWalletId,
-                    balances = balances,
-                    currency = currency,
-                    onSelect = { toWalletId = it },
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    Text("From wallet", style = MaterialTheme.typography.labelLarge)
+                    WalletPickerRow(
+                        wallets = wallets,
+                        selectedId = walletId,
+                        balances = balances,
+                        currency = currency,
+                        onSelect = { walletId = it },
+                    )
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    Text("To wallet", style = MaterialTheme.typography.labelLarge)
+                    WalletPickerRow(
+                        wallets = wallets.filter { it.id != walletId },
+                        selectedId = toWalletId,
+                        balances = balances,
+                        currency = currency,
+                        onSelect = { toWalletId = it },
+                    )
+                }
                 Text(
                     "Transfers move money between your own wallets. They never count as income or spending; any fee does.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
-                Text("Wallet", style = MaterialTheme.typography.labelLarge)
-                WalletPickerRow(
-                    wallets = wallets,
-                    selectedId = walletId,
-                    balances = balances,
-                    currency = currency,
-                    onSelect = { walletId = it },
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    Text("Wallet", style = MaterialTheme.typography.labelLarge)
+                    WalletPickerRow(
+                        wallets = wallets,
+                        selectedId = walletId,
+                        balances = balances,
+                        currency = currency,
+                        onSelect = { walletId = it },
+                    )
+                }
             }
 
             if (type == TransactionType.EXPENSE || type == TransactionType.INCOME || type == TransactionType.REFUND) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        if (type == TransactionType.INCOME) "Income category" else "Category",
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.weight(1f),
-                    )
-                    if (recentCategoryIds.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            "Recent first",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-                val primaryCategories = orderedCategories.take(9).let { head ->
-                    val selected = orderedCategories.firstOrNull { it.id == categoryId }
-                    if (selected != null && head.none { it.id == selected.id }) head + selected else head
-                }
-                val primaryIds = primaryCategories.mapTo(mutableSetOf()) { it.id }
-                val extra = orderedCategories.filterNot { it.id in primaryIds }
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-                    maxItemsInEachRow = 3,
-                ) {
-                    primaryCategories.forEach { category ->
-                        CategoryTile(
-                            category = category,
-                            selected = category.id == categoryId,
+                            if (type == TransactionType.INCOME) "Income category" else "Category",
+                            style = MaterialTheme.typography.labelLarge,
                             modifier = Modifier.weight(1f),
-                            onClick = {
-                                categoryId = category.id
-                                error = null
-                            },
                         )
+                        if (recentCategoryIds.isNotEmpty()) {
+                            Text(
+                                "Recent first",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
-                }
-                if (extra.isNotEmpty()) {
-                    var expanded by remember { mutableStateOf(false) }
-                    TextButton(onClick = { expanded = !expanded }) {
-                        Text(if (expanded) "Show fewer categories" else "More categories (${extra.size})")
+                    val primaryCategories = orderedCategories.take(9).let { head ->
+                        val selected = orderedCategories.firstOrNull { it.id == categoryId }
+                        if (selected != null && head.none { it.id == selected.id }) head + selected else head
                     }
-                    if (expanded) {
-                        FlowRow(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-                            maxItemsInEachRow = 3,
-                        ) {
-                            extra.forEach { category ->
-                                CategoryTile(
-                                    category = category,
-                                    selected = category.id == categoryId,
-                                    modifier = Modifier.weight(1f),
-                                    onClick = {
-                                        categoryId = category.id
-                                        error = null
-                                    },
-                                )
+                    val primaryIds = primaryCategories.mapTo(mutableSetOf()) { it.id }
+                    val extra = orderedCategories.filterNot { it.id in primaryIds }
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        maxItemsInEachRow = 3,
+                    ) {
+                        primaryCategories.forEach { category ->
+                            CategoryTile(
+                                category = category,
+                                selected = category.id == categoryId,
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    categoryId = category.id
+                                    error = null
+                                },
+                            )
+                        }
+                    }
+                    if (extra.isNotEmpty()) {
+                        var expanded by remember { mutableStateOf(false) }
+                        TextButton(onClick = { expanded = !expanded }) {
+                            Text(if (expanded) "Show fewer categories" else "More categories (${extra.size})")
+                        }
+                        if (expanded) {
+                            FlowRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                                maxItemsInEachRow = 3,
+                            ) {
+                                extra.forEach { category ->
+                                    CategoryTile(
+                                        category = category,
+                                        selected = category.id == categoryId,
+                                        modifier = Modifier.weight(1f),
+                                        onClick = {
+                                            categoryId = category.id
+                                            error = null
+                                        },
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
-                DateField(
-                    label = "Date",
-                    date = date,
-                    onDateSelected = { date = it },
-                )
-            }
+            DateField(
+                label = "Date",
+                date = date,
+                onDateSelected = { date = it },
+                modifier = Modifier.fillMaxWidth(),
+            )
 
             Row(
                 modifier = Modifier
@@ -921,49 +928,53 @@ fun AddTransactionScreen(
                     },
                 )
                 if (type == TransactionType.INCOME) {
-                    Text("Income source (optional)", style = MaterialTheme.typography.labelLarge)
-                    MizaniPicker(
-                        selectedText = incomeSourceId?.let { snapshot.incomeSourceName(it) } ?: "Not specified",
-                        options = snapshot.incomeSources.map { PickerOption(it.id, it.name) },
-                        onSelect = { incomeSourceId = it },
-                        noneLabel = "Not specified",
-                        onSelectNone = { incomeSourceId = null },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                        Text("Income source (optional)", style = MaterialTheme.typography.labelLarge)
+                        MizaniPicker(
+                            selectedText = incomeSourceId?.let { snapshot.incomeSourceName(it) } ?: "Not specified",
+                            options = snapshot.incomeSources.map { PickerOption(it.id, it.name) },
+                            onSelect = { incomeSourceId = it },
+                            noneLabel = "Not specified",
+                            onSelectNone = { incomeSourceId = null },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                 }
                 if (type == TransactionType.REFUND) {
-                    Text("Refunded expense (optional)", style = MaterialTheme.typography.labelLarge)
-                    val linked = snapshot.transactions.firstOrNull { it.id == linkedTransactionId }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        MizaniPicker(
-                            selectedText = linked?.let {
-                                "${it.payee.ifBlank { snapshot.categoryName(it.categoryId) }} · ${MoneyFormat.format(it.amountMinor, currency)} · ${DateText.short(LocalDate.ofEpochDay(it.localDateEpochDay))}"
-                            } ?: "Link an earlier expense",
-                            options = recentExpenses.map { expense ->
-                                PickerOption(
-                                    id = expense.id,
-                                    label = "${expense.payee.ifBlank { snapshot.categoryName(expense.categoryId) }} · ${MoneyFormat.format(expense.amountMinor, currency)} · ${DateText.short(LocalDate.ofEpochDay(expense.localDateEpochDay))}",
-                                )
-                            },
-                            onSelect = { id ->
-                                recentExpenses.firstOrNull { it.id == id }?.let { expense ->
-                                    linkedTransactionId = expense.id
-                                    categoryId = expense.categoryId
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                        Text("Refunded expense (optional)", style = MaterialTheme.typography.labelLarge)
+                        val linked = snapshot.transactions.firstOrNull { it.id == linkedTransactionId }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            MizaniPicker(
+                                selectedText = linked?.let {
+                                    "${it.payee.ifBlank { snapshot.categoryName(it.categoryId) }} · ${MoneyFormat.format(it.amountMinor, currency)} · ${DateText.short(LocalDate.ofEpochDay(it.localDateEpochDay))}"
+                                } ?: "Link an earlier expense",
+                                options = recentExpenses.map { expense ->
+                                    PickerOption(
+                                        id = expense.id,
+                                        label = "${expense.payee.ifBlank { snapshot.categoryName(expense.categoryId) }} · ${MoneyFormat.format(expense.amountMinor, currency)} · ${DateText.short(LocalDate.ofEpochDay(expense.localDateEpochDay))}",
+                                    )
+                                },
+                                onSelect = { id ->
+                                    recentExpenses.firstOrNull { it.id == id }?.let { expense ->
+                                        linkedTransactionId = expense.id
+                                        categoryId = expense.categoryId
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (linkedTransactionId != null) {
+                                IconButton(onClick = { linkedTransactionId = null; categoryId = null }) {
+                                    Icon(Icons.Rounded.Close, contentDescription = "Clear linked expense")
                                 }
-                            },
-                            modifier = Modifier.weight(1f),
-                        )
-                        if (linkedTransactionId != null) {
-                            IconButton(onClick = { linkedTransactionId = null; categoryId = null }) {
-                                Icon(Icons.Rounded.Close, contentDescription = "Clear linked expense")
                             }
                         }
+                        Text(
+                            "Linking reduces net spending in the original category. It is not counted as new income.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
-                    Text(
-                        "Linking reduces net spending in the original category. It is not counted as new income.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
             }
 
@@ -1037,7 +1048,7 @@ private fun WalletPickerRow(
     onSelect: (String) -> Unit,
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-        val itemWidth = (maxWidth - Spacing.sm) / 2
+        val itemWidth = if (wallets.size == 1) maxWidth else (maxWidth - Spacing.sm) / 2
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -1049,7 +1060,14 @@ private fun WalletPickerRow(
                 Surface(
                     modifier = Modifier
                         .width(itemWidth)
+                        .heightIn(min = Spacing.fieldHeight)
                         .clip(MaterialTheme.shapes.medium)
+                        .border(
+                            width = 1.dp,
+                            color = if (selected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.outline,
+                            shape = MaterialTheme.shapes.medium,
+                        )
                         .clickable { onSelect(wallet.id) },
                     color = if (selected) MaterialTheme.colorScheme.primaryContainer
                     else MaterialTheme.colorScheme.surfaceContainerLowest,
@@ -1096,7 +1114,7 @@ private fun CategoryTile(
             )
             .border(
                 width = 1.dp,
-                color = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                 shape = MaterialTheme.shapes.medium,
             )
             .clickable(onClick = onClick)

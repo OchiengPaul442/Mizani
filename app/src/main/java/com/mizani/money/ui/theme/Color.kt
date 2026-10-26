@@ -48,7 +48,8 @@ val SurfaceLightLow = Color(0xFFFBFDFC)
 val SurfaceLightContainer = Color(0xFFF1F7F4)
 val SurfaceLightHigh = Color(0xFFE9F2EE)
 val SurfaceLightHighest = Color(0xFFE0ECE7)
-val OutlineLight = Color(0xFFC9D9D4)
+// Form and selector boundaries need enough contrast to remain visible on soft-white surfaces.
+val OutlineLight = Color(0xFF7B8F8A)
 val OutlineVariantLight = Color(0xFFE1ECE8)
 
 // Dark surface containers

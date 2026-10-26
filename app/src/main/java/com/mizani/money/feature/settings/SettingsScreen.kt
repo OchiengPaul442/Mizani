@@ -8,6 +8,7 @@ import android.os.Build
 import android.provider.Settings as AndroidSettings
 import android.text.format.DateFormat
 import android.app.TimePickerDialog
+import android.view.WindowManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricManager
@@ -29,7 +30,6 @@ import androidx.compose.material.icons.rounded.Backup
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Fingerprint
-import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
@@ -69,6 +69,7 @@ import com.mizani.money.core.model.ThemeMode
 import com.mizani.money.R
 import com.mizani.money.core.time.DateText
 import com.mizani.money.domain.export.BackupSummary
+import com.mizani.money.domain.export.BackupFileReader
 import com.mizani.money.feature.lock.PinSetupDialog
 import com.mizani.money.feature.lock.PinVerifyDialog
 import com.mizani.money.ui.AppUiState
@@ -86,6 +87,7 @@ import com.mizani.money.ui.components.Spacing
 import com.mizani.money.ui.components.StatusBanner
 import com.mizani.money.reminder.DailyReminderNotifications
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -98,8 +100,7 @@ fun SettingsScreen(
     vm: AppViewModel,
     state: AppUiState,
     onBack: () -> Unit,
-    onOpenAbout: () -> Unit = {},
-    exportOnly: Boolean = false,
+    dataToolsOnly: Boolean = false,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -119,12 +120,31 @@ fun SettingsScreen(
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var backupPassphrase by remember { mutableStateOf("") }
     var backupPassphraseConfirm by remember { mutableStateOf("") }
+    var pendingBackupPassphrase by remember { mutableStateOf("") }
     var restorePassphrase by remember { mutableStateOf("") }
     var pendingRestoreBytes by remember { mutableStateOf<ByteArray?>(null) }
     var pendingSummary by remember { mutableStateOf<BackupSummary?>(null) }
+    var creatingBackup by remember { mutableStateOf(false) }
+    var checkingBackup by remember { mutableStateOf(false) }
+    var restoringBackup by remember { mutableStateOf(false) }
     var reminderStatus by rememberSaveable { mutableStateOf<String?>(null) }
     var showReminderNotificationSettings by rememberSaveable { mutableStateOf(false) }
     var notificationSettingsRevision by remember { mutableStateOf(0) }
+
+    fun discardBackupPassphrase() {
+        showBackupPassphrase = false
+        backupPassphrase = ""
+        backupPassphraseConfirm = ""
+        pendingBackupPassphrase = ""
+    }
+
+    fun discardPendingRestore() {
+        showRestorePassphrase = false
+        showRestoreConfirm = false
+        restorePassphrase = ""
+        pendingRestoreBytes = null
+        pendingSummary = null
+    }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -133,6 +153,15 @@ fun SettingsScreen(
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            pendingRestoreBytes?.fill(0)
+            backupPassphrase = ""
+            backupPassphraseConfirm = ""
+            pendingBackupPassphrase = ""
+            restorePassphrase = ""
+        }
     }
     val notificationsAvailable = remember(notificationSettingsRevision) {
         DailyReminderNotifications.canPost(context)
@@ -245,19 +274,31 @@ fun SettingsScreen(
     val createBackup = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/octet-stream"),
     ) { uri ->
-        if (uri != null) {
-            val passphrase = backupPassphrase
+        val passphrase = pendingBackupPassphrase
+        pendingBackupPassphrase = ""
+        if (uri == null) {
+            backupPassphrase = ""
+            backupPassphraseConfirm = ""
+        } else {
+            backupPassphrase = ""
+            backupPassphraseConfirm = ""
             scope.launch {
-                runCatching {
-                    val bytes = vm.exporter.buildBackup(passphrase)
-                    writeBytes(context, uri, bytes)
-                }.onSuccess {
-                    message = "Encrypted backup created. Keep your passphrase safe; it cannot be recovered."
-                    error = null
-                    backupPassphrase = ""
-                    backupPassphraseConfirm = ""
-                }.onFailure {
-                    error = it.message ?: "Could not create the backup"
+                creatingBackup = true
+                message = "Creating encrypted backup…"
+                try {
+                    runCatching {
+                        if (passphrase.isBlank()) throw IOException("The passphrase was cleared. Please try again.")
+                        val bytes = vm.exporter.buildBackup(passphrase)
+                        writeBytes(context, uri, bytes)
+                    }.onSuccess {
+                        message = "Encrypted backup created. Keep your passphrase safe; it cannot be recovered."
+                        error = null
+                    }.onFailure {
+                        message = null
+                        error = it.message ?: "Could not create the backup"
+                    }
+                } finally {
+                    creatingBackup = false
                 }
             }
         }
@@ -270,7 +311,7 @@ fun SettingsScreen(
             scope.launch {
                 runCatching {
                     withContext(Dispatchers.IO) {
-                        context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                        context.contentResolver.openInputStream(uri)?.use { BackupFileReader.read(it) }
                             ?: throw IOException("Could not open the selected file")
                     }
                 }.onSuccess { bytes ->
@@ -279,6 +320,7 @@ fun SettingsScreen(
                     showRestorePassphrase = true
                     error = null
                 }.onFailure {
+                    discardPendingRestore()
                     error = it.message ?: "Could not read the selected file"
                 }
             }
@@ -410,13 +452,14 @@ fun SettingsScreen(
 
     if (showBackupPassphrase) {
         MizaniAlertDialog(
-            onDismissRequest = { showBackupPassphrase = false },
+            onDismissRequest = ::discardBackupPassphrase,
             shape = MaterialTheme.shapes.large,
             title = { Text("Protect your backup") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     Text(
                         "Encrypted with a key derived from this passphrase. " +
+                            "A memorable phrase of 12 or more characters is easier to remember. " +
                             "There is no recovery if you forget it.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -424,7 +467,7 @@ fun SettingsScreen(
                     OutlinedTextField(
                         value = backupPassphrase,
                         onValueChange = { backupPassphrase = it },
-                        label = { Text("Passphrase (8+ characters)") },
+                        label = { Text("Passphrase (12+ characters)") },
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
                         shape = MaterialTheme.shapes.small,
@@ -447,23 +490,26 @@ fun SettingsScreen(
             confirmButton = {
                 TextButton(onClick = {
                     when {
-                        backupPassphrase.length < 8 -> error = "Use at least 8 characters"
+                        backupPassphrase.length < 12 -> error = "Use at least 12 characters"
                         backupPassphrase != backupPassphraseConfirm -> error = "Passphrases do not match"
                         else -> {
                             error = null
+                            pendingBackupPassphrase = backupPassphrase
+                            backupPassphrase = ""
+                            backupPassphraseConfirm = ""
                             showBackupPassphrase = false
                             createBackup.launch(vm.exporter.suggestedBackupName())
                         }
                     }
                 }) { Text("Choose file") }
             },
-            dismissButton = { TextButton(onClick = { showBackupPassphrase = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = ::discardBackupPassphrase) { Text("Cancel") } },
         )
     }
 
     if (showRestorePassphrase) {
         MizaniAlertDialog(
-            onDismissRequest = { showRestorePassphrase = false },
+            onDismissRequest = { if (!checkingBackup) discardPendingRestore() },
             shape = MaterialTheme.shapes.large,
             title = { Text("Open encrypted backup") },
             text = {
@@ -478,6 +524,7 @@ fun SettingsScreen(
                         onValueChange = { restorePassphrase = it },
                         label = { Text("Backup passphrase") },
                         singleLine = true,
+                        enabled = !checkingBackup,
                         visualTransformation = PasswordVisualTransformation(),
                         shape = MaterialTheme.shapes.small,
                         modifier = Modifier.fillMaxWidth(),
@@ -489,31 +536,48 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val bytes = pendingRestoreBytes
-                    if (bytes == null) {
-                        error = "Choose a backup file first"
-                    } else {
-                        scope.launch {
-                            runCatching { vm.exporter.inspectBackup(bytes, restorePassphrase) }
-                                .onSuccess { summary ->
-                                    pendingSummary = summary
-                                    showRestorePassphrase = false
-                                    showRestoreConfirm = true
-                                    error = null
+                    if (!checkingBackup) {
+                        val bytes = pendingRestoreBytes
+                        val passphrase = restorePassphrase
+                        if (bytes == null) {
+                            error = "Choose a backup file first"
+                        } else {
+                            checkingBackup = true
+                            scope.launch {
+                                try {
+                                    val summary = vm.exporter.inspectBackup(bytes, passphrase)
+                                    if (showRestorePassphrase && pendingRestoreBytes === bytes) {
+                                        pendingSummary = summary
+                                        showRestorePassphrase = false
+                                        showRestoreConfirm = true
+                                        error = null
+                                    }
+                                } catch (cancelled: CancellationException) {
+                                    throw cancelled
+                                } catch (failure: Exception) {
+                                    if (showRestorePassphrase) {
+                                        error = failure.message ?: "Could not read this backup"
+                                    }
+                                } finally {
+                                    checkingBackup = false
                                 }
-                                .onFailure { error = it.message ?: "Could not read this backup" }
+                            }
                         }
                     }
-                }) { Text("Check backup") }
+                }, enabled = !checkingBackup) {
+                    Text(if (checkingBackup) "Checking…" else "Check backup")
+                }
             },
-            dismissButton = { TextButton(onClick = { showRestorePassphrase = false }) { Text("Cancel") } },
+            dismissButton = {
+                TextButton(onClick = ::discardPendingRestore, enabled = !checkingBackup) { Text("Cancel") }
+            },
         )
     }
 
     val summary = pendingSummary
     if (showRestoreConfirm && summary != null) {
         MizaniAlertDialog(
-            onDismissRequest = { showRestoreConfirm = false },
+            onDismissRequest = { if (!restoringBackup) discardPendingRestore() },
             shape = MaterialTheme.shapes.large,
             title = { Text("Replace local data with this backup?") },
             text = {
@@ -541,28 +605,41 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val bytes = pendingRestoreBytes ?: return@TextButton
-                    scope.launch {
-                        runCatching { vm.exporter.restore(bytes, restorePassphrase) }
-                            .onSuccess {
-                                val workspace = vm.finance.currentWorkspace()
-                                if (workspace != null) {
-                                    vm.setCountry(workspace.countryCode, workspace.currencyCode)
-                                }
-                                showRestoreConfirm = false
-                                pendingSummary = null
-                                pendingRestoreBytes = null
+                    if (!restoringBackup) {
+                        val bytes = pendingRestoreBytes ?: return@TextButton
+                        val passphrase = restorePassphrase
+                        restorePassphrase = ""
+                        restoringBackup = true
+                        scope.launch {
+                            try {
+                                vm.exporter.restore(bytes, passphrase)
+                                discardPendingRestore()
                                 message = "Backup restored. Your local ledger was replaced."
                                 error = null
+                                try {
+                                    vm.finance.currentWorkspace()?.let { workspace ->
+                                        vm.setCountry(workspace.countryCode, workspace.currencyCode)
+                                    }
+                                } catch (failure: Exception) {
+                                    error = "Backup restored, but settings could not refresh. Restart the app to reload them."
+                                }
+                            } catch (cancelled: CancellationException) {
+                                throw cancelled
+                            } catch (failure: Exception) {
+                                error = failure.message ?: "Could not restore this backup"
+                                discardPendingRestore()
+                            } finally {
+                                restoringBackup = false
                             }
-                            .onFailure {
-                                error = it.message ?: "Could not restore this backup"
-                                showRestoreConfirm = false
-                            }
+                        }
                     }
-                }) { Text("Restore backup") }
+                }, enabled = !restoringBackup) {
+                    Text(if (restoringBackup) "Restoring…" else "Restore backup")
+                }
             },
-            dismissButton = { TextButton(onClick = { showRestoreConfirm = false }) { Text("Cancel") } },
+            dismissButton = {
+                TextButton(onClick = ::discardPendingRestore, enabled = !restoringBackup) { Text("Cancel") }
+            },
         )
     }
 
@@ -591,9 +668,9 @@ fun SettingsScreen(
         )
     }
 
-    if (exportOnly) {
+    if (dataToolsOnly) {
         Column(Modifier.fillMaxSize()) {
-            MizaniTopBar(title = "Export data", onBack = onBack)
+            MizaniTopBar(title = "Data export & backup", onBack = onBack)
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -630,16 +707,20 @@ fun SettingsScreen(
                     MizaniSectionDivider()
                     MizaniInfoRow(
                         icon = Icons.Rounded.Backup,
-                        title = "Create encrypted backup",
-                        subtitle = "Protect the file with a passphrase",
-                        onClick = { showBackupPassphrase = true },
+                        title = if (creatingBackup) "Creating encrypted backup…" else "Create encrypted backup",
+                        subtitle = if (creatingBackup) "Keep Mizani open while the backup is saved" else "Protect the file with a passphrase",
+                        onClick = { if (!creatingBackup) showBackupPassphrase = true },
                     )
                     MizaniSectionDivider()
                     MizaniInfoRow(
                         icon = Icons.Rounded.Restore,
                         title = "Restore or move data",
                         subtitle = "Review backup contents before replacing this ledger",
-                        onClick = { openRestore.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) },
+                        onClick = {
+                            discardPendingRestore()
+                            error = null
+                            openRestore.launch(arrayOf("application/octet-stream", "application/zip", "*/*"))
+                        },
                     )
                 }
             }
@@ -812,7 +893,12 @@ fun SettingsScreen(
                                     settings.dailyReminderMinuteOfDay / 60,
                                     settings.dailyReminderMinuteOfDay % 60,
                                     DateFormat.is24HourFormat(context),
-                                ).show()
+                                ).apply {
+                                    window?.setFlags(
+                                        WindowManager.LayoutParams.FLAG_SECURE,
+                                        WindowManager.LayoutParams.FLAG_SECURE,
+                                    )
+                                }.show()
                             },
                         ) {
                             Text(reminderTimeLabel)
@@ -845,53 +931,11 @@ fun SettingsScreen(
             }
 
             Text(
-                "Data & backups",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(top = Spacing.xs),
-            )
-            MizaniSectionCard {
-                MizaniInfoRow(
-                    icon = Icons.Rounded.Download,
-                    title = "Export transactions (CSV)",
-                    subtitle = "Transactions only · unencrypted",
-                    onClick = { showCsvWarning = true },
-                )
-                MizaniSectionDivider()
-                MizaniInfoRow(
-                    icon = Icons.Rounded.Download,
-                    title = "Export Excel workbook",
-                    subtitle = "Multiple sheets · unencrypted",
-                    onClick = { showExcelWarning = true },
-                )
-                MizaniSectionDivider()
-                MizaniInfoRow(
-                    icon = Icons.Rounded.Backup,
-                    title = "Create encrypted backup",
-                    subtitle = "Encrypted file protected by a passphrase",
-                    onClick = { showBackupPassphrase = true },
-                )
-                MizaniSectionDivider()
-                MizaniInfoRow(
-                    icon = Icons.Rounded.Restore,
-                    title = "Restore backup",
-                    subtitle = "Check contents before replacing your data",
-                    onClick = { openRestore.launch(arrayOf("application/octet-stream", "application/zip", "*/*")) },
-                )
-            }
-
-            Text(
                 "Privacy",
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(top = Spacing.xs),
             )
             MizaniSectionCard {
-                MizaniInfoRow(
-                    icon = Icons.Rounded.Info,
-                    title = "About & privacy",
-                    subtitle = "Privacy, storage and backups",
-                    onClick = onOpenAbout,
-                )
-                MizaniSectionDivider()
                 MizaniInfoRow(
                     icon = Icons.Rounded.Security,
                     title = "No tracking",
@@ -974,8 +1018,15 @@ private fun CountryCurrencyDialog(
 }
 
 private suspend fun writeBytes(context: Context, uri: Uri, bytes: ByteArray) {
-    withContext(Dispatchers.IO) {
-        context.contentResolver.openOutputStream(uri, "w")?.use { output -> output.write(bytes) }
-            ?: throw IOException("Could not open the selected file for writing")
+    try {
+        withContext(Dispatchers.IO) {
+            context.contentResolver.openOutputStream(uri, "w")?.use { output ->
+                output.write(bytes)
+                output.flush()
+            } ?: throw IOException("Could not open the selected file for writing")
+        }
+    } finally {
+        // The helper consumes a caller-owned buffer so clear both encrypted backups and CSV copies.
+        bytes.fill(0)
     }
 }

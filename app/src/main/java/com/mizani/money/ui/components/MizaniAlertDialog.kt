@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.SecureFlagPolicy
 
 /** Shared alert-dialog sizing: 94% of a phone width, capped on large displays. */
 @Composable
@@ -29,7 +30,10 @@ fun MizaniAlertDialog(
     titleContentColor: Color = MaterialTheme.colorScheme.onSurface,
     textContentColor: Color = MaterialTheme.colorScheme.onSurface,
     tonalElevation: Dp = AlertDialogDefaults.TonalElevation,
-    properties: DialogProperties = DialogProperties(usePlatformDefaultWidth = false),
+    properties: DialogProperties = DialogProperties(
+        usePlatformDefaultWidth = false,
+        securePolicy = SecureFlagPolicy.SecureOn,
+    ),
 ) {
     AlertDialog(
         onDismissRequest = onDismissRequest,

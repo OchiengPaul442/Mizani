@@ -1,15 +1,15 @@
 # Mizani Terms of Service
 
-**Version:** 2026-10-25-2
-**Effective:** 25 October 2026
-**Provider:** Mizani app publisher (legal name to be added before public release)
+**Version:** 2026-10-26-1
+**Effective:** 26 October 2026
+**Provider:** Mizani app publisher (legal name and business address required before public release)
 **Contact:** paul.ochieng.dev@gmail.com
 
 These Terms apply when you install or use Mizani. By tapping **Agree and continue** during setup, or after accepting a new version in the app, you agree to these Terms. Read them before proceeding.
 
 ## 1. Provider and contact
 
-Provider: Mizani app publisher (legal name to be added before public release). Contact: paul.ochieng.dev@gmail.com.
+Provider: Mizani app publisher (legal name and business address required before public release). Contact: paul.ochieng.dev@gmail.com.
 
 ## 2. Who may use Mizani
 
@@ -24,6 +24,10 @@ The app does not provide financial, investment, legal, accounting, or tax advice
 ## 4. Your information and device
 
 Mizani does not keep an online copy of your financial records. They are encrypted and stored on your device. You are responsible for securing the device and keeping exports and backups safe. The [Privacy Notice](PRIVACY_NOTICE.md) explains optional exchange-rate and update checks.
+
+Mizani uses Android's secure-window setting to block ordinary screenshots, screen recordings, and capture on non-secure displays. This platform control cannot stop a camera or a compromised device, and its behavior depends on Android and the device maker.
+
+If you turn on a daily reminder, Mizani checks the ledger on this device and can show a generic notification when no income, expense, or refund has been recorded that day. It does not send your ledger to a reminder service.
 
 Enter information you are entitled to use. Avoid putting another person’s sensitive details in a payee or note unless you have a valid reason and permission to do so.
 

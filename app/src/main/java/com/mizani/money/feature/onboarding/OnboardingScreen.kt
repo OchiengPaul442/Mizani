@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,18 +35,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Lock
-import androidx.compose.material.icons.rounded.OfflineBolt
-import androidx.compose.material.icons.rounded.PersonOff
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -58,15 +54,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import java.util.Locale
@@ -84,6 +77,7 @@ import com.mizani.money.ui.components.MizaniIcons
 import com.mizani.money.ui.components.MizaniPicker
 import com.mizani.money.ui.components.PickerOption
 import com.mizani.money.ui.components.Spacing
+import com.mizani.money.ui.components.StorysetIllustration
 import com.mizani.money.feature.legal.LegalDocumentsDialog
 import com.mizani.money.ui.theme.DeepTeal
 import com.mizani.money.ui.theme.Emerald
@@ -107,7 +101,6 @@ fun OnboardingScreen(vm: AppViewModel) {
     val scope = rememberCoroutineScope()
     val pack = CountryPacks.byCode(countryCode)
     val currency = Currencies.byCode(currencyCode)
-    val onboardingScrollState = rememberScrollState()
     val balanceErrorText = stringResource(R.string.onboarding_error_balance)
     val walletNameErrorText = stringResource(R.string.onboarding_error_wallet_name)
     val workspaceErrorText = stringResource(R.string.onboarding_error_workspace)
@@ -120,12 +113,8 @@ fun OnboardingScreen(vm: AppViewModel) {
             val result = vm.acceptCurrentLegalDocuments()
             acceptingLegal = false
             result.exceptionOrNull()?.let { legalError = "Could not save your agreement. Please try again." }
-                ?: run { step = 1 }
+                ?: run { step = 2 }
         }
-    }
-
-    LaunchedEffect(step) {
-        onboardingScrollState.scrollTo(0)
     }
 
     fun finish() {
@@ -177,7 +166,7 @@ fun OnboardingScreen(vm: AppViewModel) {
                     Spacer(Modifier.size(48.dp))
                 }
                 Spacer(Modifier.weight(1f))
-                StepDots(current = step, total = 3)
+                StepDots(current = step, total = 4)
                 Spacer(Modifier.weight(1f))
                 Spacer(Modifier.size(48.dp))
             }
@@ -187,43 +176,37 @@ fun OnboardingScreen(vm: AppViewModel) {
             BoxWithConstraints(
                 modifier = Modifier.fillMaxWidth().widthIn(max = 560.dp).weight(1f),
             ) {
-                // Short steps sit in the visual center. Longer steps remain scrollable on
-                // compact screens and while the keyboard is open.
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = maxHeight)
-                        .verticalScroll(onboardingScrollState),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    // Horizontal slide between steps: forward slides in from the right, back from the left.
-                    AnimatedContent(
-                        modifier = Modifier.fillMaxWidth(),
-                        targetState = step,
-                        transitionSpec = {
-                            val forward = targetState > initialState
-                            val sign = if (forward) 1 else -1
-                            (
-                                fadeIn(tween(180)) + slideInHorizontally(
-                                    animationSpec = tween(220, easing = FastOutSlowInEasing),
-                                ) { width -> sign * width / 14 }
-                            ).togetherWith(
-                                fadeOut(tween(150)) + slideOutHorizontally(
-                                    animationSpec = tween(220, easing = FastOutSlowInEasing),
-                                ) { width -> -sign * width / 14 },
-                            ).using(SizeTransform(clip = false) { _, _ -> tween(0) })
-                        },
-                        label = "onboarding",
-                    ) { current ->
-                        when (current) {
-                            0 -> WelcomeStep(
-                                onAccept = ::acceptLegalAndContinue,
-                                accepting = acceptingLegal,
-                                legalError = legalError,
-                                onOpenLegal = { legalDocument = it },
-                            )
-                            1 -> MoneySetupStep(
+                // Every page moves inside the same viewport. Equal-duration fades and slides,
+                // plus fixed-height page containers, keep form content from jumping between steps.
+                AnimatedContent(
+                    modifier = Modifier.fillMaxSize(),
+                    targetState = step,
+                    contentAlignment = Alignment.TopCenter,
+                    transitionSpec = {
+                        val direction = if (targetState > initialState) 1 else -1
+                        (
+                            fadeIn(tween(180)) + slideInHorizontally(
+                                animationSpec = tween(260, easing = FastOutSlowInEasing),
+                            ) { width -> direction * width / 5 }
+                        ).togetherWith(
+                            fadeOut(tween(180)) + slideOutHorizontally(
+                                animationSpec = tween(260, easing = FastOutSlowInEasing),
+                            ) { width -> -direction * width / 5 },
+                        ).using(SizeTransform(clip = true) { _, _ -> tween(0) })
+                    },
+                    label = "onboarding",
+                ) { current ->
+                    when (current) {
+                        0, 1 -> WelcomeStep(
+                            page = current,
+                            onNext = { step = 1 },
+                            onAccept = ::acceptLegalAndContinue,
+                            accepting = acceptingLegal,
+                            legalError = legalError,
+                            onOpenLegal = { legalDocument = it },
+                        )
+                        2 -> OnboardingStepViewport(height = maxHeight) {
+                            MoneySetupStep(
                                 pack = pack,
                                 countryCode = countryCode,
                                 currencyCode = currencyCode,
@@ -246,11 +229,13 @@ fun OnboardingScreen(vm: AppViewModel) {
                                         error = walletNameErrorText
                                     } else {
                                         error = null
-                                        step = 2
+                                        step = 3
                                     }
                                 },
                             )
-                            else -> ReadyStep(
+                        }
+                        else -> OnboardingStepViewport(height = maxHeight) {
+                            ReadyStep(
                                 currency = currency,
                                 walletName = walletName,
                                 walletType = walletType,
@@ -299,6 +284,21 @@ private fun StepDots(current: Int, total: Int) {
                     ),
             )
         }
+    }
+}
+
+@Composable
+private fun OnboardingStepViewport(
+    height: androidx.compose.ui.unit.Dp,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        Column(
+            modifier = Modifier.fillMaxWidth().heightIn(min = height),
+            verticalArrangement = Arrangement.Top,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            content = content,
+        )
     }
 }
 
@@ -363,69 +363,81 @@ private fun FloatingChip(res: Int, size: Int, offsetX: Float, offsetY: Float, ti
 
 @Composable
 private fun WelcomeStep(
+    page: Int,
+    onNext: () -> Unit,
     onAccept: () -> Unit,
     accepting: Boolean,
     legalError: String?,
     onOpenLegal: (LegalDocumentId) -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        IllustrationArt(
-            size = 180.dp,
-            primaryRes = R.drawable.ic_ph_wallet,
-            secondaryRes = R.drawable.ic_ph_chart_donut,
-            tertiaryRes = R.drawable.ic_ph_shield_check,
-        )
-        Spacer(Modifier.height(Spacing.lg))
-        Text(
-            stringResource(R.string.onboarding_welcome_title),
-            style = MaterialTheme.typography.headlineMedium,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(Modifier.height(Spacing.sm))
-        Text(
-            stringResource(R.string.onboarding_welcome_subtitle),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(Modifier.height(Spacing.lg))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.CenterHorizontally),
+        Column(
+            modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            ValueChip(Icons.Rounded.OfflineBolt, stringResource(R.string.onboarding_chip_offline))
-            ValueChip(Icons.Rounded.Lock, stringResource(R.string.onboarding_chip_encrypted))
-            ValueChip(Icons.Rounded.PersonOff, stringResource(R.string.onboarding_chip_no_signup))
-        }
-        Spacer(Modifier.height(Spacing.xl))
-        Button(
-            onClick = onAccept,
-            enabled = !accepting,
-            modifier = Modifier.fillMaxWidth().height(52.dp),
-            shape = MaterialTheme.shapes.small,
-        ) {
-            if (accepting) {
-                androidx.compose.material3.CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                Spacer(Modifier.width(10.dp))
+            Box(
+                modifier = Modifier.size(224.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(
+                    Modifier.size(212.dp).clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.78f)),
+                )
+                Box(
+                    Modifier.size(164.dp).clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.72f)),
+                )
+                StorysetIllustration(
+                    assetName = if (page == 0) "finance_cuate.svg" else "financial_data_cuate.svg",
+                    modifier = Modifier.fillMaxSize().padding(Spacing.xs),
+                )
             }
-            Text(stringResource(R.string.onboarding_get_started), style = MaterialTheme.typography.titleSmall)
+            Spacer(Modifier.height(Spacing.md))
+            Box(
+                modifier = Modifier.fillMaxWidth().height(72.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    stringResource(
+                        if (page == 0) R.string.onboarding_welcome_title
+                        else R.string.onboarding_analysis_title,
+                    ),
+                    style = MaterialTheme.typography.headlineMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            Spacer(Modifier.height(Spacing.sm))
+            Text(
+                stringResource(
+                    if (page == 0) R.string.onboarding_welcome_subtitle
+                    else R.string.onboarding_analysis_subtitle,
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
-        legalError?.let {
-            Spacer(Modifier.height(6.dp))
-            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
+        Spacer(Modifier.height(Spacing.sm))
+        Box(
+            modifier = Modifier.fillMaxWidth().height(44.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                stringResource(
+                    if (page == 0) R.string.onboarding_review_legal
+                    else R.string.onboarding_agree_legal,
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+            )
         }
-        Spacer(Modifier.height(4.dp))
-        Text(
-            "By continuing, you agree to the Terms of Service and acknowledge the Privacy Notice.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
         Row(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
@@ -433,22 +445,37 @@ private fun WelcomeStep(
             TextButton(onClick = { onOpenLegal(LegalDocumentId.TERMS) }) { Text("Terms of Service") }
             TextButton(onClick = { onOpenLegal(LegalDocumentId.PRIVACY) }) { Text("Privacy Notice") }
         }
-    }
-}
-
-@Composable
-private fun ValueChip(icon: ImageVector, label: String) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = MaterialTheme.shapes.small,
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+        Button(
+            onClick = if (page == 0) onNext else onAccept,
+            enabled = page == 0 || !accepting,
+            modifier = Modifier.fillMaxWidth().height(54.dp),
+            shape = MaterialTheme.shapes.small,
         ) {
-            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-            Text(label, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium)
+            if (page == 1 && accepting) {
+                androidx.compose.material3.CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(Spacing.sm))
+            }
+            Text(
+                stringResource(
+                    if (page == 0) R.string.onboarding_next
+                    else R.string.onboarding_agree_setup,
+                ),
+                style = MaterialTheme.typography.titleSmall,
+            )
+        }
+        Box(
+            modifier = Modifier.fillMaxWidth().height(40.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            legalError?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                )
+            }
         }
     }
 }

@@ -55,6 +55,12 @@ sealed interface PinAttemptResult {
 /** User-safe message shown while the failed-PIN backoff is active. */
 const val PIN_RETRY_MESSAGE = "Too many attempts. Please wait a moment, then try again."
 
+private sealed interface SettingsReadState {
+    object Loading : SettingsReadState
+    data class Ready(val settings: AppSettings) : SettingsReadState
+    object Failed : SettingsReadState
+}
+
 class AppViewModel(private val container: AppContainer) : ViewModel() {
 
     lateinit var finance: FinanceRepository
@@ -66,8 +72,8 @@ class AppViewModel(private val container: AppContainer) : ViewModel() {
 
     val today: LocalDate = LocalDate.now()
 
-    private val settingsFlow = settingsRepository.settings
-        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    private val settingsAttempt = MutableStateFlow(0)
+    private val settingsReadState = MutableStateFlow<SettingsReadState>(SettingsReadState.Loading)
     private val snapshotFlow = MutableStateFlow<LedgerSnapshot?>(null)
     private val startupError = MutableStateFlow(false)
     private val startupAttempt = MutableStateFlow(0)
@@ -84,16 +90,17 @@ class AppViewModel(private val container: AppContainer) : ViewModel() {
     val customRange: StateFlow<DateRange?> = _customRange
 
     val uiState: StateFlow<AppUiState> = combine(
-        settingsFlow,
+        settingsReadState,
         snapshotFlow,
         unlocked,
         startupError,
-    ) { settings, snapshot, isUnlocked, hasStartupError ->
-        if (hasStartupError) {
+    ) { settingsState, snapshot, isUnlocked, hasStartupError ->
+        if (hasStartupError || settingsState is SettingsReadState.Failed) {
             AppUiState(loading = false, startupError = true)
-        } else if (settings == null || snapshot == null) {
+        } else if (settingsState !is SettingsReadState.Ready || snapshot == null) {
             AppUiState(loading = true)
         } else {
+            val settings = settingsState.settings
             AppUiState(
                 loading = false,
                 settings = settings,
@@ -105,6 +112,22 @@ class AppViewModel(private val container: AppContainer) : ViewModel() {
         .stateIn(viewModelScope, SharingStarted.Eagerly, AppUiState())
 
     init {
+        viewModelScope.launch {
+            settingsAttempt.collectLatest {
+                settingsReadState.value = SettingsReadState.Loading
+                try {
+                    settingsRepository.settings.collect { settings ->
+                        settingsReadState.value = SettingsReadState.Ready(settings)
+                    }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    // Never substitute empty settings: that could silently disable the app lock.
+                    settingsReadState.value = SettingsReadState.Failed
+                }
+            }
+        }
+
         // Keystore access and encrypted Room initialization can be slow on entry-level devices.
         // Keep both off the main thread so the splash appears promptly and stays animated.
         viewModelScope.launch {
@@ -133,6 +156,7 @@ class AppViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     fun retryStartup() {
+        settingsAttempt.value += 1
         startupAttempt.value += 1
     }
 
@@ -276,6 +300,7 @@ class AppViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     suspend fun deleteAllData(): Result<Unit> = runCatching {
+        container.exchangeRateRepository.clearCache()
         finance.clearAllFinancialData()
         settingsRepository.resetAll()
         // Clearing preferences disables the worker even if cancellation is delayed.

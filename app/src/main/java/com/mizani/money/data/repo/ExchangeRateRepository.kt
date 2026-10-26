@@ -67,6 +67,8 @@ class ExchangeRateRepository(
 
     private val dataStore = context.applicationContext.exchangeRateDataStore
     private val cacheMutex = Mutex()
+    private val cacheWriteMutex = Mutex()
+    private var cacheGeneration = 0L
     private val cache = mutableMapOf<Pair<String, String>, CachedRate>()
     private val refreshMutex = Mutex()
     private val pairRefreshLocks = mutableMapOf<Pair<String, String>, Mutex>()
@@ -76,6 +78,15 @@ class ExchangeRateRepository(
     suspend fun cachedRate(baseCurrencyCode: String, quoteCurrencyCode: String): ExchangeRate? {
         val (base, quote) = normalizePair(baseCurrencyCode, quoteCurrencyCode)
         return readCached(base to quote)?.rate
+    }
+
+    /** Removes both persisted and in-memory rates when the user deletes all app data. */
+    suspend fun clearCache() {
+        cacheWriteMutex.withLock {
+            cacheGeneration += 1
+            cacheMutex.withLock { cache.clear() }
+            dataStore.edit { preferences -> preferences.clear() }
+        }
     }
 
     /**
@@ -101,18 +112,24 @@ class ExchangeRateRepository(
             val cached = readCached(key)
             if (cached != null && cached.fetchedAtMillis >= requestStartedAt) return@withLock cached.rate
 
+            val generation = cacheWriteMutex.withLock { cacheGeneration }
             val rate = fetchLatestRate(base, quote)
             validateRateDate(rate.date, clock)
             val stored = CachedRate(rate, clock.millis())
-            cacheMutex.withLock { cache[key] = stored }
-            persist(key, stored)
+            cacheWriteMutex.withLock {
+                // A deletion that happened while the network request was in flight wins.
+                if (generation == cacheGeneration) {
+                    cacheMutex.withLock { cache[key] = stored }
+                    persist(key, stored)
+                }
+            }
             rate
         }
     }
 
-    private suspend fun readCached(key: Pair<String, String>): CachedRate? {
+    private suspend fun readCached(key: Pair<String, String>): CachedRate? = cacheWriteMutex.withLock {
         val inMemory = cacheMutex.withLock { cache[key] }
-        if (inMemory != null) return inMemory.takeIf { it.rate.isWithinAllowedAge(clock) }
+        if (inMemory != null) return@withLock inMemory.takeIf { it.rate.isWithinAllowedAge(clock) }
 
         val (base, quote) = key
         val rateKey = stringPreferencesKey(rateKeyName(base, quote))
@@ -123,17 +140,19 @@ class ExchangeRateRepository(
                 .catch { error -> if (error is IOException) emit(emptyPreferences()) else throw error }
                 .first()
         }
-        val rateText = preferences[rateKey] ?: return null
-        val date = preferences[dateKey]?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: return null
-        val decimalRate = rateText.toBigDecimalOrNull()?.takeIf { it.signum() > 0 } ?: return null
-        val fetchedAt = preferences[fetchedAtKey] ?: return null
+        val rateText = preferences[rateKey] ?: return@withLock null
+        val date = preferences[dateKey]?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+            ?: return@withLock null
+        val decimalRate = rateText.toBigDecimalOrNull()?.takeIf { it.signum() > 0 }
+            ?: return@withLock null
+        val fetchedAt = preferences[fetchedAtKey] ?: return@withLock null
         val cached = CachedRate(
             rate = ExchangeRate(base, quote, decimalRate.stripTrailingZeros().toPlainString(), date),
             fetchedAtMillis = fetchedAt,
         )
-        if (!cached.rate.isWithinAllowedAge(clock)) return null
+        if (!cached.rate.isWithinAllowedAge(clock)) return@withLock null
         cacheMutex.withLock { cache[key] = cached }
-        return cached
+        cached
     }
 
     private suspend fun persist(key: Pair<String, String>, cached: CachedRate) {

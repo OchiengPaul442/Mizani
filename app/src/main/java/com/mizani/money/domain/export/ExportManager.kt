@@ -11,7 +11,6 @@ import com.mizani.money.core.model.TransactionType
 import com.mizani.money.core.model.WalletType
 import com.mizani.money.core.money.Currencies
 import com.mizani.money.core.money.MoneyFormat
-import com.mizani.money.core.security.PinHasher
 import com.mizani.money.data.local.BudgetEntity
 import com.mizani.money.data.local.BudgetLineEntity
 import com.mizani.money.data.local.CategoryEntity
@@ -25,15 +24,15 @@ import com.mizani.money.data.local.WalletEntity
 import com.mizani.money.data.local.WorkspaceEntity
 import com.mizani.money.data.repo.FinanceRepository
 import com.mizani.money.data.repo.RestoreBundle
+import com.mizani.money.data.repo.BackupValidator
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDate
 import java.io.OutputStream
 import java.math.BigDecimal
-import javax.crypto.Cipher
-import javax.crypto.spec.GCMParameterSpec
-import javax.crypto.spec.SecretKeySpec
 
 class BackupException(message: String) : Exception(message)
 
@@ -291,21 +290,34 @@ class ExportManager(
     }
 
     suspend fun buildBackup(passphrase: String): ByteArray {
-        require(passphrase.length >= 8) { "Use at least 8 characters for the backup passphrase" }
+        require(passphrase.length >= 12) { "Use a passphrase with at least 12 characters" }
         val bundle = repository.exportBundle()
-        val json = encodeBundle(bundle).toString()
-        return encrypt(json.toByteArray(Charsets.UTF_8), passphrase)
+        val plaintext = withContext(Dispatchers.Default) {
+            encodeBundle(bundle).toString().toByteArray(Charsets.UTF_8)
+        }
+        return try {
+            withContext(Dispatchers.Default) { BackupCrypto.encrypt(plaintext, passphrase) }
+        } finally {
+            plaintext.fill(0)
+        }
     }
 
-    suspend fun inspectBackup(bytes: ByteArray, passphrase: String): BackupSummary {
-        val bundle = decodeBundle(decrypt(bytes, passphrase))
-        return summarize(bundle)
-    }
+    suspend fun inspectBackup(bytes: ByteArray, passphrase: String): BackupSummary =
+        withContext(Dispatchers.Default) { summarize(decodeBackup(bytes, passphrase)) }
 
     suspend fun restore(bytes: ByteArray, passphrase: String): BackupSummary {
-        val bundle = decodeBundle(decrypt(bytes, passphrase))
+        val bundle = withContext(Dispatchers.Default) { decodeBackup(bytes, passphrase) }
         repository.restoreBundle(bundle)
         return summarize(bundle)
+    }
+
+    private fun decodeBackup(bytes: ByteArray, passphrase: String): RestoreBundle {
+        val plaintext = BackupCrypto.decrypt(bytes, passphrase)
+        return try {
+            decodeBundle(plaintext).also(BackupValidator::validate)
+        } finally {
+            plaintext.fill(0)
+        }
     }
 
     fun suggestedCsvName(today: LocalDate = LocalDate.now()): String =
@@ -358,35 +370,6 @@ class ExportManager(
 
     // --------------------------------------------------------------- encryption
 
-    private fun encrypt(plain: ByteArray, passphrase: String): ByteArray {
-        val salt = PinHasher.newSalt(16)
-        val key = PinHasher.hash(passphrase, salt, iterations = 100_000)
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key, "AES"))
-        val iv = cipher.iv
-        val encrypted = cipher.doFinal(plain)
-        return MAGIC + salt + iv + encrypted
-    }
-
-    private fun decrypt(bytes: ByteArray, passphrase: String): ByteArray {
-        if (bytes.size > MAX_BACKUP_BYTES) throw BackupException("Backup is too large")
-        if (bytes.size < MAGIC.size + 16 + 12 + 16) throw BackupException("This is not a valid Mizani backup")
-        if (!bytes.copyOfRange(0, MAGIC.size).contentEquals(MAGIC)) {
-            throw BackupException("Unsupported backup format")
-        }
-        return try {
-            val salt = bytes.copyOfRange(MAGIC.size, MAGIC.size + 16)
-            val iv = bytes.copyOfRange(MAGIC.size + 16, MAGIC.size + 28)
-            val encrypted = bytes.copyOfRange(MAGIC.size + 28, bytes.size)
-            val key = PinHasher.hash(passphrase, salt, iterations = 100_000)
-            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-            cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(128, iv))
-            cipher.doFinal(encrypted)
-        } catch (error: Exception) {
-            throw BackupException("Incorrect passphrase or damaged backup", )
-        }
-    }
-
     // ------------------------------------------------------------------- json
 
     private fun encodeBundle(bundle: RestoreBundle): JSONObject = JSONObject().apply {
@@ -416,6 +399,8 @@ class ExportManager(
         val version = root.optInt("version", 0)
         if (version > VERSION) throw BackupException("This backup was created by a newer version of Mizani")
         if (version < 1) throw BackupException("Unsupported backup version")
+        val recordCount = RECORD_ARRAY_NAMES.sumOf { root.optJSONArray(it)?.length()?.toLong() ?: 0L }
+        if (recordCount > MAX_BACKUP_RECORDS) throw BackupException("Backup contains too many records")
         val bundle = RestoreBundle(
             workspace = decodeWorkspace(root.getJSONObject("workspace")),
             wallets = root.getJSONArray("wallets").mapObjects(::decodeWallet),
@@ -476,7 +461,7 @@ class ExportManager(
     private fun decodeWallet(json: JSONObject) = WalletEntity(
         id = json.getString("id"),
         name = json.getString("name"),
-        type = WalletType.entries.firstOrNull { it.name == json.optString("type") } ?: WalletType.OTHER,
+        type = json.enumOrDefault("type", WalletType.OTHER),
         openingBalanceMinor = json.optLong("openingBalanceMinor"),
         currencyCode = json.optString("currencyCode", "UGX"),
         colorHex = json.optString("colorHex", "#2F6B5E"),
@@ -507,7 +492,7 @@ class ExportManager(
     private fun decodeCategory(json: JSONObject) = CategoryEntity(
         id = json.getString("id"),
         name = json.getString("name"),
-        type = CategoryType.entries.firstOrNull { it.name == json.optString("type") } ?: CategoryType.EXPENSE,
+        type = json.enumOrDefault("type", CategoryType.EXPENSE),
         icon = json.optString("icon", "category"),
         colorHex = json.optString("colorHex", "#6D6D6D"),
         isDefault = json.optBoolean("isDefault"),
@@ -533,7 +518,7 @@ class ExportManager(
     private fun decodeIncomeSource(json: JSONObject) = IncomeSourceEntity(
         id = json.getString("id"),
         name = json.getString("name"),
-        kind = IncomeSourceKind.entries.firstOrNull { it.name == json.optString("kind") } ?: IncomeSourceKind.OTHER,
+        kind = json.enumOrDefault("kind", IncomeSourceKind.OTHER),
         archived = json.optBoolean("archived"),
         createdAt = json.optLong("createdAt"),
         updatedAt = json.optLong("updatedAt"),
@@ -570,7 +555,7 @@ class ExportManager(
 
     private fun decodeTransaction(json: JSONObject) = TransactionEntity(
         id = json.getString("id"),
-        type = TransactionType.entries.firstOrNull { it.name == json.optString("type") } ?: TransactionType.EXPENSE,
+        type = json.enumOrDefault("type", TransactionType.EXPENSE),
         amountMinor = json.optLong("amountMinor"),
         feeMinor = json.optLong("feeMinor"),
         currencyCode = json.optString("currencyCode", "UGX"),
@@ -610,7 +595,7 @@ class ExportManager(
     private fun decodeBudget(json: JSONObject) = BudgetEntity(
         id = json.getString("id"),
         name = json.optString("name", "Budget"),
-        periodType = BudgetPeriodType.entries.firstOrNull { it.name == json.optString("periodType") } ?: BudgetPeriodType.MONTHLY,
+        periodType = json.enumOrDefault("periodType", BudgetPeriodType.MONTHLY),
         startEpochDay = json.optLong("startEpochDay"),
         endEpochDay = json.optLong("endEpochDay"),
         createdAt = json.optLong("createdAt"),
@@ -637,7 +622,7 @@ class ExportManager(
         categoryId = json.getString("categoryId"),
         plannedMinor = json.optLong("plannedMinor"),
         fundedMinor = json.optLong("fundedMinor"),
-        rolloverRule = RolloverRule.entries.firstOrNull { it.name == json.optString("rolloverRule") } ?: RolloverRule.NONE,
+        rolloverRule = json.enumOrDefault("rolloverRule", RolloverRule.NONE),
         essential = json.optBoolean("essential"),
         priority = json.optInt("priority", 2),
         note = json.optString("note"),
@@ -721,11 +706,11 @@ class ExportManager(
     private fun decodeRecurring(json: JSONObject) = RecurringRuleEntity(
         id = json.getString("id"),
         name = json.getString("name"),
-        type = RecurringType.entries.firstOrNull { it.name == json.optString("type") } ?: RecurringType.BILL,
+        type = json.enumOrDefault("type", RecurringType.BILL),
         amountMinor = json.optLong("amountMinor"),
         categoryId = json.optNullableString("categoryId"),
         walletId = json.optNullableString("walletId"),
-        frequency = Frequency.entries.firstOrNull { it.name == json.optString("frequency") } ?: Frequency.MONTHLY,
+        frequency = json.enumOrDefault("frequency", Frequency.MONTHLY),
         nextDueEpochDay = json.optLong("nextDueEpochDay"),
         autoPost = json.optBoolean("autoPost"),
         essential = json.optBoolean("essential", true),
@@ -799,9 +784,18 @@ class ExportManager(
     companion object {
         private const val FORMAT = "mizani-backup"
         private const val VERSION = 1
-        private const val MAX_BACKUP_BYTES = 20 * 1024 * 1024
-        private val MAGIC = "MZNB1".toByteArray(Charsets.US_ASCII)
+        private const val MAX_BACKUP_RECORDS = 100_000L
+        private val RECORD_ARRAY_NAMES = listOf(
+            "wallets", "categories", "incomeSources", "transactions", "budgets", "budgetLines",
+            "goals", "contributions", "recurring", "debts",
+        )
     }
+}
+
+private inline fun <reified T : Enum<T>> JSONObject.enumOrDefault(name: String, default: T): T {
+    val encoded = optString(name, default.name)
+    return enumValues<T>().firstOrNull { it.name == encoded }
+        ?: throw BackupException("Backup contains an unsupported value for $name")
 }
 
 /**

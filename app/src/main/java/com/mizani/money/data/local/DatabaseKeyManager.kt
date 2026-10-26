@@ -5,6 +5,7 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import android.util.Log
+import java.io.File
 import java.security.KeyStore
 import java.security.SecureRandom
 import javax.crypto.Cipher
@@ -42,10 +43,32 @@ object DatabaseKeyManager {
             }
         }
 
+        if (hasDatabaseArtifacts(context)) {
+            throw IllegalStateException(
+                "The local database key is missing. Restore the ledger from an encrypted backup.",
+            )
+        }
+
         val raw = ByteArray(KEY_BYTES).also { SecureRandom().nextBytes(it) }
-        val wrapped = wrap(raw)
-        prefs.edit().putString(PREF_WRAPPED, wrapped).commit()
-        return raw
+        try {
+            val wrapped = wrap(raw)
+            val persisted = prefs.edit().putString(PREF_WRAPPED, wrapped).commit()
+            check(persisted) { "Unable to persist database key" }
+            return raw
+        } catch (error: Exception) {
+            raw.fill(0)
+            throw IllegalStateException("The local database key could not be stored", error)
+        }
+    }
+
+    private fun hasDatabaseArtifacts(context: Context): Boolean {
+        val database = context.getDatabasePath(MizaniDatabase.NAME)
+        return sequenceOf(
+            database,
+            File("${database.path}-wal"),
+            File("${database.path}-shm"),
+            File("${database.path}-journal"),
+        ).any(File::exists)
     }
 
     private fun wrap(raw: ByteArray): String {

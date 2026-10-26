@@ -67,6 +67,7 @@ import com.mizani.money.ui.components.MizaniMark
 import com.mizani.money.ui.components.PeriodMenu
 import com.mizani.money.ui.components.SectionHeader
 import com.mizani.money.ui.components.Spacing
+import com.mizani.money.ui.components.StorysetIllustration
 import com.mizani.money.ui.components.TransactionRow
 import com.mizani.money.ui.components.parseHexColor
 import com.mizani.money.ui.theme.DeepTeal
@@ -273,9 +274,7 @@ private fun SectionBlock(
     }
 }
 
-/**
- * The empty-ledger state: exactly one primary action, with one short reassurance card after it.
- */
+/** A compact empty-ledger introduction with direct income and expense actions. */
 @Composable
 private fun GetStartedHero(onAddIncome: () -> Unit, onAddExpense: () -> Unit) {
     // Gradient capped at Emerald: opaque white reads at >=4.79:1, comfortably clearing
@@ -288,35 +287,18 @@ private fun GetStartedHero(onAddIncome: () -> Unit, onAddExpense: () -> Unit) {
             .padding(20.dp),
     ) {
         Column {
-            // Compact illustration cluster: wallet + coins + chart donut, solid white on the gradient.
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(bottom = Spacing.md),
+            Box(
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+                    .size(144.dp).clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.14f)),
+                contentAlignment = Alignment.Center,
             ) {
-                listOf(
-                    R.drawable.ic_ph_wallet to 36,
-                    R.drawable.ic_ph_coins to 30,
-                    R.drawable.ic_ph_chart_donut to 36,
-                ).forEachIndexed { index, (res, size) ->
-                    if (index > 0) Spacer(Modifier.width(Spacing.sm))
-                    Box(
-                        modifier = Modifier
-                            .size((size + 16).dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.18f)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            painter = painterResource(res),
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(size.dp),
-                        )
-                    }
-                }
+                StorysetIllustration(
+                    assetName = "finance_cuate.svg",
+                    modifier = Modifier.fillMaxSize().padding(Spacing.xs),
+                )
             }
-            Text("Get started", style = MaterialTheme.typography.labelMedium, color = Color.White)
-            Spacer(Modifier.height(Spacing.sm))
+            Spacer(Modifier.height(Spacing.md))
             Text(
                 stringResource(R.string.home_get_started_title),
                 style = MaterialTheme.typography.headlineMedium,

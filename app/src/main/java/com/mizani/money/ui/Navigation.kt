@@ -14,12 +14,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
+import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material3.HorizontalDivider
@@ -69,8 +70,8 @@ private data class Tab(
 
 private val tabs = listOf(
     Tab("home", "Home", Icons.Rounded.Home),
-    Tab("transactions", "Activity", Icons.Rounded.SwapHoriz),
-    Tab("insights", "Insights", Icons.Rounded.Insights),
+    Tab("transactions", "Activity", Icons.AutoMirrored.Rounded.ReceiptLong),
+    Tab("insights", "Insights", Icons.Rounded.BarChart),
     Tab("more", "More", Icons.Rounded.MoreHoriz),
 )
 
@@ -134,13 +135,27 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val isTopLevel = currentRoute == null || currentRoute in topLevelRoutes
+    val hasTransactions = state.snapshot.transactions.any { it.deletedAt == null }
+    val showGlobalAdd = isTopLevel &&
+        (hasTransactions || (currentRoute != "home" && currentRoute != "transactions"))
     var showAddSheet by remember { mutableStateOf(false) }
 
     fun openAdd(type: TransactionType) {
-        navController.navigate("add/${type.name}")
+        showAddSheet = false
+        navController.navigate("add/${type.name}") {
+            launchSingleTop = true
+        }
+    }
+
+    fun openDetail(route: String) {
+        showAddSheet = false
+        navController.navigate(route) {
+            launchSingleTop = true
+        }
     }
 
     fun openTopLevel(route: String) {
+        showAddSheet = false
         navController.navigate(route) {
             popUpTo(navController.graph.findStartDestination().id) { saveState = true }
             launchSingleTop = true
@@ -148,10 +163,15 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
         }
     }
 
+    fun navigateBack() {
+        showAddSheet = false
+        navController.popBackStack()
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         floatingActionButton = {
-            if (isTopLevel) {
+            if (showGlobalAdd) {
                 ExtendedFloatingActionButton(
                     onClick = { showAddSheet = true },
                     icon = { Icon(Icons.Rounded.Add, contentDescription = null) },
@@ -224,7 +244,7 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 TransactionsScreen(
                     vm = vm,
                     state = state,
-                    onEdit = { id -> navController.navigate("edit/$id") },
+                    onEdit = { id -> openDetail("edit/$id") },
                     onAdd = { showAddSheet = true },
                 )
             }
@@ -238,7 +258,7 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 InsightsScreen(
                     vm = vm,
                     state = state,
-                    onExportData = { navController.navigate("export") },
+                    onExportData = { openDetail("export") },
                 )
             }
             composable(
@@ -249,7 +269,7 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popExitTransition = ::navPopExit,
             ) {
                 MoreScreen(
-                    onNavigate = { route -> navController.navigate(route) },
+                    onNavigate = ::openDetail,
                 )
             }
             composable(
@@ -268,8 +288,8 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                     state = state,
                     initialTransactionId = null,
                     initialType = initialType,
-                    onDone = { navController.popBackStack() },
-                    onBack = { navController.popBackStack() },
+                    onDone = ::navigateBack,
+                    onBack = ::navigateBack,
                 )
             }
             composable(
@@ -283,8 +303,8 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                     vm = vm,
                     state = state,
                     initialTransactionId = entry.arguments?.getString("id"),
-                    onDone = { navController.popBackStack() },
-                    onBack = { navController.popBackStack() },
+                    onDone = ::navigateBack,
+                    onBack = ::navigateBack,
                 )
             }
             composable(
@@ -294,7 +314,7 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popEnterTransition = ::navPopEnter,
                 popExitTransition = ::navPopExit,
             ) {
-                WalletsScreen(vm = vm, state = state, onBack = { navController.popBackStack() })
+                WalletsScreen(vm = vm, state = state, onBack = ::navigateBack)
             }
             composable(
                 "categories",
@@ -303,7 +323,7 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popEnterTransition = ::navPopEnter,
                 popExitTransition = ::navPopExit,
             ) {
-                CategoriesScreen(vm = vm, state = state, onBack = { navController.popBackStack() })
+                CategoriesScreen(vm = vm, state = state, onBack = ::navigateBack)
             }
             composable(
                 "settings",
@@ -315,8 +335,7 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 SettingsScreen(
                     vm = vm,
                     state = state,
-                    onBack = { navController.popBackStack() },
-                    onOpenAbout = { navController.navigate("about") },
+                    onBack = ::navigateBack,
                 )
             }
             composable(
@@ -326,7 +345,7 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popEnterTransition = ::navPopEnter,
                 popExitTransition = ::navPopExit,
             ) {
-                AboutScreen(state = state, onBack = { navController.popBackStack() })
+                AboutScreen(state = state, onBack = ::navigateBack)
             }
             composable(
                 "export",
@@ -338,8 +357,8 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 SettingsScreen(
                     vm = vm,
                     state = state,
-                    onBack = { navController.popBackStack() },
-                    exportOnly = true,
+                    onBack = ::navigateBack,
+                    dataToolsOnly = true,
                 )
             }
         }
