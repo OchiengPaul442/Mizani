@@ -18,9 +18,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Shield
+import com.google.android.gms.oss.licenses.v2.OssLicensesMenuActivity
 import com.mizani.money.ui.components.MizaniAlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +42,7 @@ import com.mizani.money.core.model.AppInfo
 import com.mizani.money.data.repo.UpdateCheckResult
 import com.mizani.money.data.repo.UpdateRepository
 import com.mizani.money.feature.legal.LegalDocumentsDialog
+import com.mizani.money.feature.legal.ThirdPartyNoticesDialog
 import com.mizani.money.ui.AppUiState
 import com.mizani.money.ui.components.MizaniCard
 import com.mizani.money.ui.components.MizaniInfoRow
@@ -58,6 +59,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun AboutScreen(state: AppUiState, onBack: () -> Unit) {
     var legalDocument by rememberSaveable { mutableStateOf<LegalDocumentId?>(null) }
+    var showThirdPartyNotices by rememberSaveable { mutableStateOf(false) }
     var isCheckingForUpdate by remember { mutableStateOf(false) }
     var updateMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var releasePageUrl by rememberSaveable { mutableStateOf<String?>(null) }
@@ -105,12 +107,6 @@ fun AboutScreen(state: AppUiState, onBack: () -> Unit) {
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         } catch (_: ActivityNotFoundException) {
             updateMessage = "No browser is available to open the release."
-        }
-    }
-
-    fun openStoryset() {
-        runCatching {
-            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://storyset.com/")))
         }
     }
 
@@ -225,10 +221,19 @@ fun AboutScreen(state: AppUiState, onBack: () -> Unit) {
                 )
                 MizaniSectionDivider()
                 MizaniInfoRow(
-                    icon = Icons.Rounded.Image,
-                    title = "Illustrations by Storyset",
-                    subtitle = "Freepik Company · View the source",
-                    onClick = ::openStoryset,
+                    icon = Icons.Rounded.Description,
+                    title = "Open-source licenses",
+                    subtitle = "Licenses for software used by Mizani",
+                    onClick = {
+                        context.startActivity(Intent(context, OssLicensesMenuActivity::class.java))
+                    },
+                )
+                MizaniSectionDivider()
+                MizaniInfoRow(
+                    icon = Icons.Rounded.Description,
+                    title = "Third-party notices",
+                    subtitle = "Required notices for included software and artwork",
+                    onClick = { showThirdPartyNotices = true },
                 )
             }
 
@@ -236,6 +241,9 @@ fun AboutScreen(state: AppUiState, onBack: () -> Unit) {
     }
     legalDocument?.let { document ->
         LegalDocumentsDialog(initialDocument = document, onClose = { legalDocument = null })
+    }
+    if (showThirdPartyNotices) {
+        ThirdPartyNoticesDialog(onClose = { showThirdPartyNotices = false })
     }
     if (showUpdatePrompt && availableVersionName != null) {
         MizaniAlertDialog(

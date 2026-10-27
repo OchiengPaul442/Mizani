@@ -126,7 +126,8 @@ Set <code>mizaniVersionName</code> in <code>gradle.properties</code> using
 <code>MAJOR.MINOR.PATCH</code>; Gradle derives Android’s <code>versionCode</code> from it. A release
 build is unsigned unless all four <code>MIZANI*RELEASE*\*</code> signing properties are configured.
 Keep signing credentials outside the repository. See [security guidance](docs/SECURITY.md) before
-preparing a release.
+preparing a release. Track pending changes in the [changelog](CHANGELOG.md); during release
+preparation, move them into a dated section matching the Gradle version.
 
 ## Project structure
 
@@ -146,6 +147,10 @@ contract](docs/ARCHITECTURE_CONTRACT.md) when changing the app.
 
 ## Project documentation
 
+- [Changelog](CHANGELOG.md)
+- [Agent instructions](AGENTS.md)
+- [Source code license](LICENSE)
+- [Attribution notice](NOTICE)
 - [Terms of Service](docs/TERMS_OF_SERVICE.md)
 - [Privacy Notice](docs/PRIVACY_NOTICE.md)
 - [Security and data recovery](docs/SECURITY.md)
@@ -155,3 +160,16 @@ contract](docs/ARCHITECTURE_CONTRACT.md) when changing the app.
 - [Third-party notices](docs/THIRD_PARTY_NOTICES.md)
 - [Brand guide](docs/brand/BRAND_GUIDE.md)
 - [Illustration and asset credits](docs/ASSET_CREDITS.md)
+
+## License
+
+Mizani's original source code and executable forms of that code are licensed
+under Apache-2.0. You may fork, modify, and redistribute them under the terms
+in [LICENSE](LICENSE). Preserve the original developer and project attribution
+in [NOTICE](NOTICE), and mark files you modify as required by the license.
+
+The Apache license does not cover third-party libraries or artwork, or grant
+rights to Mizani's name, logo, or other trademarks. Their separate terms are in
+[Third-party notices](docs/THIRD_PARTY_NOTICES.md) and [Asset credits](docs/ASSET_CREDITS.md).
+The [Terms of Service](docs/TERMS_OF_SERVICE.md) govern use of official Mizani
+app releases and do not narrow rights granted by Apache-2.0.

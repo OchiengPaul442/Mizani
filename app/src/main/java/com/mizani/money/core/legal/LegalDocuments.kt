@@ -22,12 +22,13 @@ data class LegalDocument(
  * then asks existing users to accept the revised documents before opening their ledger.
  */
 object LegalDocuments {
-    const val EFFECTIVE_DATE = "26 October 2026"
-    const val TERMS_VERSION = "2026-10-26-1"
-    const val PRIVACY_VERSION = "2026-10-26-1"
+    const val EFFECTIVE_DATE = "27 October 2026"
+    const val TERMS_VERSION = "2026-10-27-3"
+    const val PRIVACY_VERSION = "2026-10-27-1"
     const val PRIVACY_CONTACT = "paul.ochieng.dev@gmail.com"
-    const val PROVIDER_NAME_RELEASE_PLACEHOLDER =
-        "Mizani app publisher (legal name and business address required before public release)"
+    const val PROVIDER_NAME = "Paul Ochieng"
+    const val PROVIDER_ADDRESS_DRAFT =
+        "Kampala, Uganda (provisional; full physical or postal address required before public release)"
 
     val terms = LegalDocument(
         id = LegalDocumentId.TERMS,
@@ -40,7 +41,7 @@ object LegalDocuments {
                 "Read them before proceeding.",
         sections = listOf(
             LegalSection("1. Provider and contact", listOf(
-                "Provider: $PROVIDER_NAME_RELEASE_PLACEHOLDER. Contact: $PRIVACY_CONTACT.",
+                "Provider: $PROVIDER_NAME. Address: $PROVIDER_ADDRESS_DRAFT. Contact: $PRIVACY_CONTACT.",
             )),
             LegalSection("2. Who may use Mizani", listOf(
                 "You must be able to enter a binding agreement under the law where you live. If you are " +
@@ -94,9 +95,11 @@ object LegalDocuments {
                     "if you want to keep a copy.",
             )),
             LegalSection("8. App rights and changes", listOf(
-                "The app and its branding are protected by applicable intellectual-property laws. These Terms " +
-                    "give you a personal, non-exclusive, non-transferable right to use the app for lawful personal " +
-                    "budgeting while you comply with these Terms.",
+                "These Terms govern use of official Mizani app releases. Rights to use, modify, and distribute " +
+                    "Mizani's covered source code and executable forms are granted under the Apache License, " +
+                    "Version 2.0, as described in the repository's LICENSE and NOTICE files; these Terms do not " +
+                    "narrow those rights. That license does not grant rights to the Mizani name, logo, or third-party " +
+                    "materials, which remain subject to their own notices and terms.",
                 "We may update, change, or discontinue app features. If a change materially revises these Terms, " +
                     "the app will show the revised Terms and ask you to accept them before continuing to use " +
                     "the app. You can stop using Mizani and delete your local data at any time.",
@@ -124,7 +127,7 @@ object LegalDocuments {
             "This Notice explains how Mizani stores and shares your information and the choices you have.",
         sections = listOf(
             LegalSection("1. Who is responsible", listOf(
-                "Provider: $PROVIDER_NAME_RELEASE_PLACEHOLDER. Contact: $PRIVACY_CONTACT.",
+                "Provider: $PROVIDER_NAME. Address: $PROVIDER_ADDRESS_DRAFT. Contact: $PRIVACY_CONTACT.",
             )),
             LegalSection("2. Information stored on your device", listOf(
                 "The information you enter can include wallet names and balances; transaction types, dates, " +

@@ -1,15 +1,16 @@
 # Mizani Terms of Service
 
-**Version:** 2026-10-26-1
-**Effective:** 26 October 2026
-**Provider:** Mizani app publisher (legal name and business address required before public release)
+**Version:** 2026-10-27-3
+**Effective:** 27 October 2026
+**Provider:** Paul Ochieng
+**Address:** Kampala, Uganda (provisional; full physical or postal address required before public release)
 **Contact:** paul.ochieng.dev@gmail.com
 
 These Terms apply when you install or use Mizani. By tapping **Agree and continue** during setup, or after accepting a new version in the app, you agree to these Terms. Read them before proceeding.
 
 ## 1. Provider and contact
 
-Provider: Mizani app publisher (legal name and business address required before public release). Contact: paul.ochieng.dev@gmail.com.
+Provider: Paul Ochieng. Address: Kampala, Uganda (provisional; full physical or postal address required before public release). Contact: paul.ochieng.dev@gmail.com.
 
 ## 2. Who may use Mizani
 
@@ -49,7 +50,7 @@ Automatic device backup is disabled. Deleting all local data cannot be undone wi
 
 ## 8. App rights and changes
 
-The app and its branding are protected by applicable intellectual-property laws. These Terms give you a personal, non-exclusive, non-transferable right to use the app for lawful personal budgeting while you comply with these Terms.
+These Terms govern use of official Mizani app releases. Rights to use, modify, and distribute Mizani's covered source code and executable forms are granted under the Apache License, Version 2.0, as described in the repository's LICENSE and NOTICE files; these Terms do not narrow those rights. That license does not grant rights to the Mizani name, logo, or third-party materials, which remain subject to their own notices and terms.
 
 We may update, change, or discontinue app features. If a change materially revises these Terms, the app will show the revised Terms and ask you to accept them before continuing to use the app. You can stop using Mizani and delete your local data at any time.
 

@@ -1,8 +1,8 @@
 # Third-party illustration credits
 
-Mizani uses modified Storyset SVG illustrations from Freepik Company. The app displays the attribution **“Illustrations by Storyset”** in **Settings → About & privacy**; selecting it opens Storyset.
+Mizani uses modified Storyset SVG illustrations from Freepik Company. To keep the main About screen focused, attribution is grouped with other required notices under **Settings > About & privacy > Third-party notices**. The app credits **Illustrations by Storyset (storyset.com), Freepik Company** there.
 
-Storyset's FAQ says free illustrations require attribution and are available as SVG or PNG. Each illustration page displayed a Freepik License summary permitting personal and commercial projects with attribution when these files were obtained. Review the [Storyset FAQ](https://storyset.com/faqs) and [terms](https://storyset.com/terms) before changing distribution or licensing.
+Storyset's [FAQ](https://storyset.com/faqs) requires attribution when free illustrations are used. Its [Terms of Use](https://storyset.com/terms) allow downloading and modifying Storyset content subject to restrictions, including restrictions on transferring, sublicensing, or reselling the artwork. Keep the Storyset credit in the app's user-accessible Third-party notices, do not distribute the illustrations as standalone assets, and confirm that embedding them in the intended app distribution is covered by the license applicable to the original downloads. Retain the download and license evidence.
 
 | Local asset | Storyset source | App use | Adjustments |
 | --- | --- | --- | --- |

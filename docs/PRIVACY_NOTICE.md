@@ -1,15 +1,16 @@
 # Mizani Privacy Notice
 
-**Version:** 2026-10-26-1
-**Effective:** 26 October 2026
-**Provider:** Mizani app publisher (legal name and business address required before public release)
+**Version:** 2026-10-27-1
+**Effective:** 27 October 2026
+**Provider:** Paul Ochieng
+**Address:** Kampala, Uganda (provisional; full physical or postal address required before public release)
 **Contact:** paul.ochieng.dev@gmail.com
 
 This Notice explains how Mizani stores and shares your information and the choices you have.
 
 ## 1. Who is responsible
 
-Provider: Mizani app publisher (legal name and business address required before public release). Contact: paul.ochieng.dev@gmail.com.
+Provider: Paul Ochieng. Address: Kampala, Uganda (provisional; full physical or postal address required before public release). Contact: paul.ochieng.dev@gmail.com.
 
 ## 2. Information stored on your device
 

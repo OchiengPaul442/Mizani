@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.oss.licenses)
 }
 
 val mizaniVersionName = providers.gradleProperty("mizaniVersionName").get()
@@ -147,6 +148,7 @@ dependencies {
 
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.biometric)
+    implementation(libs.play.services.oss.licenses)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.sqlcipher.android)
 
