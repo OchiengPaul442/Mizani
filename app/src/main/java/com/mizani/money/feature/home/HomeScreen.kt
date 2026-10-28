@@ -1,12 +1,13 @@
 package com.mizani.money.feature.home
 
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -16,23 +17,21 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
-import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -152,6 +152,23 @@ fun HomeScreen(
         )
 
         val activeWallets = snapshot.wallets.filter { !it.archived && it.deletedAt == null }
+
+        if (snapshot.transactions.isEmpty()) {
+            GetStartedHero(onAddIncome = onAddIncome, onAddExpense = onAddExpense)
+            if (activeWallets.isNotEmpty()) {
+                WalletShortcutsSection(
+                    vm = vm,
+                    state = state,
+                    wallets = activeWallets,
+                    balances = walletBalances,
+                    currency = currency,
+                    onOpenWallets = onOpenWallets,
+                    onSetupPin = onSetupPin,
+                )
+            }
+            return@Column
+        }
+
         if (activeWallets.isNotEmpty()) {
             WalletShortcutsSection(
                 vm = vm,
@@ -162,11 +179,6 @@ fun HomeScreen(
                 onOpenWallets = onOpenWallets,
                 onSetupPin = onSetupPin,
             )
-        }
-
-        if (snapshot.transactions.isEmpty()) {
-            GetStartedHero(onAddIncome = onAddIncome, onAddExpense = onAddExpense)
-            return@Column
         }
 
         val current = metrics
@@ -292,26 +304,45 @@ private fun WalletShortcutsSection(
     onOpenWallets: () -> Unit,
     onSetupPin: () -> Unit,
 ) {
-    val visibleWallets = wallets.take(5)
+    val visibleWallets = wallets.take(3)
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        SectionHeader(
-            title = "Your wallets",
-            actionLabel = "See all",
-            onAction = onOpenWallets,
-        )
-        WalletBalanceVisibilityControl(vm, state, onSetupPin, showLabel = true)
         BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val cardWidth = if (visibleWallets.size == 1) maxWidth else 208.dp
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                items(visibleWallets, key = WalletEntity::id) { wallet ->
-                    WalletShortcutCard(
-                        wallet = wallet,
-                        balance = balances[wallet.id] ?: 0L,
-                        currency = currency,
-                        balanceVisible = state.walletBalancesVisible,
-                        singleWallet = visibleWallets.size == 1,
-                        modifier = Modifier.width(cardWidth),
-                        onClick = onOpenWallets,
+            val compactHeader = maxWidth < 360.dp || LocalDensity.current.fontScale > 1.15f
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Your wallets",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                WalletBalanceVisibilityControl(vm, state, onSetupPin, showLabel = !compactHeader)
+                TextButton(onClick = onOpenWallets) {
+                    Text("See all", style = MaterialTheme.typography.labelLarge)
+                }
+            }
+        }
+        MizaniCard(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onOpenWallets,
+            contentPadding = PaddingValues(horizontal = Spacing.md, vertical = Spacing.xs),
+        ) {
+            visibleWallets.forEachIndexed { index, wallet ->
+                WalletShortcutRow(
+                    wallet = wallet,
+                    balance = balances[wallet.id] ?: 0L,
+                    currency = currency,
+                    balanceVisible = state.walletBalancesVisible,
+                )
+                if (index < visibleWallets.lastIndex) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(MaterialTheme.colorScheme.outlineVariant),
                     )
                 }
             }
@@ -320,39 +351,27 @@ private fun WalletShortcutsSection(
 }
 
 @Composable
-private fun WalletShortcutCard(
+private fun WalletShortcutRow(
     wallet: WalletEntity,
     balance: Long,
     currency: Currency,
     balanceVisible: Boolean,
-    singleWallet: Boolean,
-    modifier: Modifier,
-    onClick: () -> Unit,
 ) {
-    MizaniCard(modifier = modifier, onClick = onClick) {
-        if (singleWallet) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                WalletShortcutIdentity(wallet, Modifier.weight(1f))
-                Spacer(Modifier.width(Spacing.md))
-                WalletShortcutBalance(
-                    wallet = wallet,
-                    balance = balance,
-                    currency = currency,
-                    visible = balanceVisible,
-                    horizontalAlignment = Alignment.End,
-                )
-            }
-        } else {
-            WalletShortcutIdentity(wallet)
-            Spacer(Modifier.height(Spacing.md))
-            WalletShortcutBalance(
-                wallet = wallet,
-                balance = balance,
-                currency = currency,
-                visible = balanceVisible,
-                horizontalAlignment = Alignment.Start,
-            )
-        }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        WalletShortcutIdentity(wallet, Modifier.weight(1f))
+        Spacer(Modifier.width(Spacing.md))
+        WalletShortcutBalance(
+            wallet = wallet,
+            balance = balance,
+            currency = currency,
+            visible = balanceVisible,
+            horizontalAlignment = Alignment.End,
+        )
     }
 }
 
@@ -388,7 +407,10 @@ private fun WalletShortcutBalance(
     horizontalAlignment: Alignment.Horizontal,
 ) {
     val label = if (wallet.type == WalletType.DEBT) "Amount owed" else "Balance"
-    Column(horizontalAlignment = horizontalAlignment) {
+    Column(
+        modifier = Modifier.widthIn(max = 140.dp),
+        horizontalAlignment = horizontalAlignment,
+    ) {
         Text(
             label,
             style = MaterialTheme.typography.labelSmall,
@@ -404,7 +426,7 @@ private fun WalletShortcutBalance(
             } else {
                 MaterialTheme.colorScheme.onSurface
             },
-            maxLines = 1,
+            maxLines = 2,
             amountLabel = label,
         )
     }

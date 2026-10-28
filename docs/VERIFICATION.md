@@ -19,6 +19,10 @@ On 2026-10-28, all 11 classes passed individually on the API 36.1 QA emulator: A
 AppearanceAndSecurityEndToEndTest, BackupRestoreTest, DatabaseMigrationTest, DemoDataTest,
 GuestJourneyTest, RepositoryIntegrationTest, SettingsAndReminderEndToEndTest, SettingsPersistenceTest,
 SplashScreenTest, and WalletBalancePrivacyEndToEndTest.
+The high-volume `LargeDatasetPerformanceTest` also passed with 10,000 encrypted transaction rows:
+seed 3,774 ms, snapshot 261 ms, export 176 ms, Home ready 3,724 ms, Activity ready 1,103 ms,
+search result 744 ms, and Insights ready 1,275 ms on the same emulator. The test leaves generous
+failure thresholds for slower devices and logs the timings so future regressions are measurable.
 On 2026-10-28, testDebugUnitTest passed all 118 tests across 17 suites. The debug APK and Android test
 APK built successfully, and lintDebug completed with no errors (50 findings: 17 unused resources,
 8 autoboxing allocations, 7 KTX suggestions, 7 Gradle dependency recommendations, 5 newer-version
@@ -79,6 +83,25 @@ isolated user.
 than screenshots. This pass used one emulator size; TalkBack and font scaling were not exercised on a
 physical device.
 
+### Home wallet layout audit (2026-10-28)
+
+The Home flow was reviewed on the disposable API 36.1 emulator before and after the wallet redesign.
+The previous state used a horizontal wallet carousel (bounds `[42,699][1038,997]`) plus a separate
+balance-visibility row (`[42,553][261,679]`). The updated empty-ledger state places the getting-started
+hero first (`[95,458][985,1215]`) and keeps wallets below it in one grouped card. With two wallets,
+both names and balances were visible in the same vertical card; no horizontal carousel was present.
+The privacy action and `See all` remain in the wallet header, and the whole grouped card opens Wallets.
+
+The same flow was checked after temporarily setting the disposable emulator to a compact `720x1600`
+display and `1.3` font scale. The hero actions and both wallet rows remained reachable by scrolling;
+that pass also identified that the three header actions needed a responsive treatment. The final
+header now switches the privacy action to its icon-only accessible variant at compact width or large
+font scale, preserving the title and `See all` action without competing for space. The emulator was
+restored to `1080x2400` and font scale `1.0` afterward. Pixel screenshots remain unavailable because
+the app uses `FLAG_SECURE`; this audit therefore used the user-provided screenshot plus emulator
+hierarchy bounds. TalkBack, a physical device, and extreme long-balance values remain follow-up
+coverage items.
+
 The reminder instrumentation verifies that the UI enables the setting, WorkManager queues a tagged
 request, the worker posts the generic private notification, and a repeated worker run does not post a
 duplicate. A real wall-clock attempt did not run within 240 seconds on this emulator, so exact delivery
@@ -98,6 +121,9 @@ timing under Android's background scheduler remains unverified.
 8. Verify actual scheduled reminder timing on a physical device across app restart, reboot and a
    timezone change. The worker itself is covered deterministically; these system-delivery conditions
    are not.
+9. Repeat the 10,000-row stress scenario at 50,000+ rows on representative low-end physical devices
+   before making a hard capacity claim; the current automated gate covers 10,000 rows on the API 36.1
+   emulator.
 ## Scope and data compatibility
 
 The active app flow includes Home, Activity, Insights, wallets, categories, data export, user-reviewed

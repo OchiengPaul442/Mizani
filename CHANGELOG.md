@@ -6,20 +6,28 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
 
 ## [Unreleased]
 
+### Changed
+
+- Rework the Home wallet area into a compact grouped list with inline balance privacy and a clear
+  `See all` path; show the getting-started action before wallets for empty ledgers and limit quick
+  wallet rows to three to keep the screen scannable.
+
+## [1.4.0] - 2026-10-28
+
 ### Fixed
 
-- Hide Money Outlook coverage estimates while wallet balances are hidden; keep the saved daily target visible.
+- Keep Money Outlook's derived coverage and upcoming-payment amounts masked with wallet balances,
+  while keeping the saved daily target visible.
 
 ### Changed
 
-- Move Bills & commitments into the main navigation and clarify the one-off
-  payment flow for first-time users.
-- Widen the commitment and daily-target dialogs to match the shared mobile layout, and add a
-  direct expense-entry action to the bill payment flow.
-- Simplify Money Outlook by removing the detailed calculation panel. Keep a concise estimate basis
-  and show the saved daily target while wallet balances are hidden.
-- Clean up the Home wallet section: separate privacy controls from navigation, avoid
-  duplicate wallet type labels, and use a full-width summary when there is one wallet.
+- Put Bills & commitments in the primary bottom navigation and make the one-off payment flow clear
+  to new users.
+- Widen the commitment and daily-target dialogs, improve field-level validation, and add a direct
+  route to record or link bill payments without duplicating ledger transactions.
+- Remove the detailed calculation panel from Money Outlook while retaining a short estimate basis.
+- Refine the Home wallet summary so privacy controls are distinct, labels are not duplicated, and a
+  single wallet uses the available width.
 
 ## [1.3.0] - 2026-10-28
 
