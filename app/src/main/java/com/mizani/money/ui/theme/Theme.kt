@@ -18,7 +18,7 @@ import com.mizani.money.core.model.DarkThemeStyle
 import com.mizani.money.core.model.ThemeMode
 
 // The default uses the official Mizani brand kit. User-selected palettes change only the primary
-// accent and hero gradient; financial colors stay emerald, gold, and teal across all themes.
+// accent and hero gradient; financial colors stay emerald, gold, and muted teal across themes.
 private val LightColors = lightColorScheme(
     primary = Emerald,
     onPrimary = Color.White,
@@ -49,7 +49,7 @@ private val LightColors = lightColorScheme(
     onError = Color.White,
     errorContainer = ErrorContainerLight,
     onErrorContainer = OnErrorContainerLight,
-    inverseSurface = DeepTeal,
+    inverseSurface = DarkBackground,
     inverseOnSurface = SoftWhite,
     inversePrimary = Mint,
 )
@@ -75,11 +75,11 @@ private val DarkColors = darkColorScheme(
     onSurfaceVariant = OnSurfaceVariantDark,
     surfaceContainerLowest = SurfaceDarkLowest,
     surfaceContainerLow = SurfaceDarkLow,
-    surfaceContainer = DeepTeal,
-    surfaceContainerHigh = DarkSurface,
+    surfaceContainer = DarkSurface,
+    surfaceContainerHigh = SurfaceDarkHigh,
     surfaceContainerHighest = SurfaceDarkHighest,
     outline = OutlineDark,
-    outlineVariant = SurfaceVariantDark,
+    outlineVariant = OutlineVariantDark,
     error = ErrorRedDark,
     onError = OnErrorDark,
     errorContainer = ErrorContainerDark,
@@ -89,20 +89,20 @@ private val DarkColors = darkColorScheme(
     inversePrimary = Emerald,
 )
 
-private val OledDarkColors = DarkColors.copy(
-    background = OledBackground,
-    surface = OledSurface,
-    surfaceVariant = OledSurfaceVariant,
-    onSurfaceVariant = OledOnSurfaceVariant,
-    surfaceContainerLowest = OledBackground,
-    surfaceContainerLow = OledSurfaceLow,
-    surfaceContainer = OledSurfaceContainer,
-    surfaceContainerHigh = OledSurfaceHigh,
-    surfaceContainerHighest = OledSurfaceHighest,
-    outline = OledOutline,
-    outlineVariant = OledOutlineVariant,
-    inverseSurface = ForegroundDark,
-    inverseOnSurface = OledBackground,
+private val WarmSlateDarkColors = DarkColors.copy(
+    background = DarkBackgroundWarm,
+    surface = DarkSurfaceWarm,
+    surfaceVariant = SurfaceVariantWarmDark,
+    onSurfaceVariant = OnSurfaceVariantWarmDark,
+    tertiaryContainer = SurfaceVariantWarmDark,
+    surfaceContainerLowest = SurfaceDarkWarmLowest,
+    surfaceContainerLow = SurfaceDarkWarmLow,
+    surfaceContainer = DarkSurfaceWarm,
+    surfaceContainerHigh = SurfaceDarkWarmHigh,
+    surfaceContainerHighest = SurfaceDarkWarmHighest,
+    outline = OutlineWarmDark,
+    outlineVariant = OutlineVariantWarmDark,
+    inverseOnSurface = DarkBackgroundWarm,
 )
 
 private data class AccentTokens(
@@ -130,7 +130,7 @@ private fun accentTokens(theme: ColorTheme): AccentTokens = when (theme) {
         darkOnPrimary = EmeraldDeep,
         darkContainer = EmeraldSurface,
         darkOnContainer = EmeraldTint,
-        heroStart = DeepTeal,
+        heroStart = DarkBackground,
         heroEnd = Emerald,
         heroAccent = Mint,
         heroAccentOn = EmeraldDeep,
@@ -247,7 +247,7 @@ data class MizaniThemeTokens(
 
 val LocalMizaniThemeTokens = staticCompositionLocalOf {
     MizaniThemeTokens(
-        heroStart = DeepTeal,
+        heroStart = DarkBackground,
         heroEnd = Emerald,
         heroAccent = Mint,
         heroAccentForeground = EmeraldDeep,
@@ -264,7 +264,7 @@ fun MizaniTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     colorTheme: ColorTheme = ColorTheme.MIZANI,
     customAccentColorHex: String? = null,
-    darkThemeStyle: DarkThemeStyle = DarkThemeStyle.DEEP_TEAL,
+    darkThemeStyle: DarkThemeStyle = DarkThemeStyle.DEFAULT,
     content: @Composable () -> Unit,
 ) {
     val dark = when (themeMode) {
@@ -274,7 +274,7 @@ fun MizaniTheme(
     }
     val accent = customAccentColorHex?.let(::customAccentTokens) ?: accentTokens(colorTheme)
     val baseColors = when {
-        dark && darkThemeStyle == DarkThemeStyle.OLED_BLACK -> OledDarkColors
+        dark && darkThemeStyle == DarkThemeStyle.WARM_SLATE -> WarmSlateDarkColors
         dark -> DarkColors
         else -> LightColors
     }

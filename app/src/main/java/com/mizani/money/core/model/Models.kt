@@ -80,8 +80,16 @@ enum class ColorTheme(val label: String) {
 }
 
 enum class DarkThemeStyle(val label: String) {
-    DEEP_TEAL("Deep teal"),
-    OLED_BLACK("True black"),
+    SOFT_CHARCOAL("Soft charcoal"),
+    WARM_SLATE("Warm slate");
+
+    companion object {
+        val DEFAULT = SOFT_CHARCOAL
+
+        /** Old deep-teal and OLED selections resolve to the current neutral dark palette. */
+        fun fromStoredValue(value: String?): DarkThemeStyle =
+            entries.firstOrNull { it.name == value } ?: DEFAULT
+    }
 }
 
 enum class InsightKind {

@@ -89,12 +89,13 @@ fun CategoriesScreen(
             fixedType = type,
             onDismiss = { showDialog = false; editing = null },
             onSave = { name, icon, color ->
+                val categoryToUpdate = editing
                 scope.launch {
                     runCatching {
-                        if (editing == null) {
+                        if (categoryToUpdate == null) {
                             vm.finance.addCategory(name, type, icon, color)
                         } else {
-                            vm.finance.updateCategory(editing!!.id, name, icon, color)
+                            vm.finance.updateCategory(categoryToUpdate.id, name, icon, color)
                         }
                     }.onSuccess {
                         showDialog = false

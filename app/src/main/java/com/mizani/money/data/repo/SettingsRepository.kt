@@ -36,7 +36,7 @@ data class AppSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val colorTheme: ColorTheme = ColorTheme.MIZANI,
     val customAccentColorHex: String? = null,
-    val darkThemeStyle: DarkThemeStyle = DarkThemeStyle.DEEP_TEAL,
+    val darkThemeStyle: DarkThemeStyle = DarkThemeStyle.DEFAULT,
     val lockEnabled: Boolean = false,
     val biometricEnabled: Boolean = false,
     val hasPin: Boolean = false,
@@ -55,7 +55,8 @@ data class AppSettings(
         get() = LegalDocuments.isCurrentAcceptance(acceptedTermsVersion, acceptedPrivacyVersion)
 }
 
-class SettingsRepository(private val context: Context) {
+class SettingsRepository(context: Context) {
+    private val context = context.applicationContext
 
     private object Keys {
         val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
@@ -94,9 +95,7 @@ class SettingsRepository(private val context: Context) {
                     ColorTheme.valueOf(preferences[Keys.COLOR_THEME] ?: ColorTheme.MIZANI.name)
                 }.getOrDefault(ColorTheme.MIZANI),
                 customAccentColorHex = normalizeAccentColorHex(preferences[Keys.CUSTOM_ACCENT_COLOR]),
-                darkThemeStyle = runCatching {
-                    DarkThemeStyle.valueOf(preferences[Keys.DARK_THEME_STYLE] ?: DarkThemeStyle.DEEP_TEAL.name)
-                }.getOrDefault(DarkThemeStyle.DEEP_TEAL),
+                darkThemeStyle = DarkThemeStyle.fromStoredValue(preferences[Keys.DARK_THEME_STYLE]),
                 lockEnabled = preferences[Keys.LOCK_ENABLED] ?: false,
                 biometricEnabled = preferences[Keys.BIOMETRIC_ENABLED] ?: false,
                 hasPin = preferences[Keys.PIN_HASH] != null && preferences[Keys.PIN_SALT] != null,

@@ -1,12 +1,12 @@
 package com.mizani.money.ui.theme
 
 /**
- * Shared brand swatches for wallet/category/goal colour pickers.
- * Hues match the seeded DefaultCategories palette (fresh-install brand set).
+ * Shared swatches for wallet/category colour pickers. Keep choices distinct and avoid offering
+ * the retired deep-teal app surface as a selectable wallet colour.
  */
 object BrandPalette {
     val swatches: List<String> = listOf(
-        "#102A32", "#087F72", "#0A9C8B", "#2F8F80",
-        "#76D7C2", "#B78331", "#865C19", "#3F6F76",
+        "#087F72", "#0A9C8B", "#3F7C63", "#376D9D",
+        "#7152A0", "#B78331", "#A2445B", "#677681",
     )
 }

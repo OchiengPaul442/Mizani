@@ -54,6 +54,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -61,7 +62,6 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import java.util.Locale
 import com.mizani.money.R
 import com.mizani.money.core.model.CountryPacks
 import com.mizani.money.core.model.WalletType
@@ -88,7 +88,7 @@ fun OnboardingScreen(
         mutableIntStateOf(if (hasAcceptedCurrentLegalDocuments) 2 else 0)
     }
     var acceptedCurrentDocumentsThisSession by remember { mutableStateOf(false) }
-    val suggestedCountry = CountryPacks.forDeviceRegion(Locale.getDefault().country)
+    val suggestedCountry = CountryPacks.forDeviceRegion(LocalLocale.current.platformLocale.country)
     var countryCode by rememberSaveable { mutableStateOf(suggestedCountry.code) }
     var currencyCode by rememberSaveable { mutableStateOf(suggestedCountry.currencyCode) }
     var walletName by rememberSaveable { mutableStateOf("Cash") }

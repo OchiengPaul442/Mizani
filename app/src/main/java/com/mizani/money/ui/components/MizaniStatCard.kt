@@ -11,6 +11,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
@@ -27,6 +29,7 @@ fun MizaniStatCard(
     caption: String? = null,
     icon: ImageVector? = null,
     onClick: (() -> Unit)? = null,
+    valueContentDescription: String? = null,
 ) {
     MizaniCard(
         modifier = modifier,
@@ -49,6 +52,9 @@ fun MizaniStatCard(
         )
         Text(
             value,
+            modifier = if (valueContentDescription == null) Modifier else Modifier.semantics {
+                contentDescription = valueContentDescription
+            },
             style = MaterialTheme.typography.titleSmall,
             color = accent,
             maxLines = 2,

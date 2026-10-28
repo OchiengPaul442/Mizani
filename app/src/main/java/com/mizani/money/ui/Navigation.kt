@@ -39,6 +39,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -145,6 +146,10 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
         (hasTransactions || (currentRoute != "home" && currentRoute != "transactions"))
     var showAddSheet by remember { mutableStateOf(false) }
 
+    LaunchedEffect(currentRoute) {
+        vm.hideWalletBalances()
+    }
+
     fun openAdd(type: TransactionType) {
         showAddSheet = false
         navController.navigate("add/${type.name}") {
@@ -243,6 +248,8 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                     onOpenTransactions = { openTopLevel("transactions") },
                     onEditTransaction = { id -> openDetail("edit/$id") },
                     onOpenInsights = { openTopLevel("insights") },
+                    onOpenWallets = { openDetail("wallets") },
+                    onSetupPin = { openDetail("settings") },
                     onAdd = { showAddSheet = true },
                     onAddIncome = { openAdd(TransactionType.INCOME) },
                     onAddExpense = { openAdd(TransactionType.EXPENSE) },
@@ -328,7 +335,12 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popEnterTransition = ::navPopEnter,
                 popExitTransition = ::navPopExit,
             ) {
-                WalletsScreen(vm = vm, state = state, onBack = ::navigateBack)
+                WalletsScreen(
+                    vm = vm,
+                    state = state,
+                    onBack = ::navigateBack,
+                    onSetupPin = { openDetail("settings") },
+                )
             }
             composable(
                 "categories",

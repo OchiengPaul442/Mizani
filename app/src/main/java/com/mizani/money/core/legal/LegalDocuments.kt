@@ -18,8 +18,9 @@ data class LegalDocument(
 
 /**
  * User-facing legal drafts. Keep the matching Markdown copies in docs/ aligned with these
- * sections. Increment the applicable version whenever its user-facing meaning changes; the app
- * then asks existing users to accept the revised documents before opening their ledger.
+ * sections. Versions identify legal-document revisions and are independent of app releases.
+ * Increment one only when that document's user-facing legal meaning changes; existing users then
+ * accept the revised document once before opening their ledger.
  */
 object LegalDocuments {
     const val EFFECTIVE_DATE = "28 October 2026"

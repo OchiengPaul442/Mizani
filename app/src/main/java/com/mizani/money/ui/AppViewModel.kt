@@ -42,6 +42,7 @@ data class AppUiState(
     val settings: AppSettings = AppSettings(),
     val snapshot: LedgerSnapshot = LedgerSnapshot(),
     val locked: Boolean = false,
+    val walletBalancesVisible: Boolean = false,
 ) {
     val currency: Currency
         get() = Currencies.byCode(snapshot.currencyCode.ifBlank { settings.currencyCode })
@@ -80,6 +81,7 @@ class AppViewModel(private val container: AppContainer) : ViewModel() {
     private val startupError = MutableStateFlow(false)
     private val startupAttempt = MutableStateFlow(0)
     private val unlocked = MutableStateFlow(false)
+    private val _walletBalancesVisible = MutableStateFlow(false)
 
     /** Timestamp of the last backgrounding; null while foregrounded. */
     var backgroundedAt: Long? = null
@@ -96,7 +98,8 @@ class AppViewModel(private val container: AppContainer) : ViewModel() {
         snapshotFlow,
         unlocked,
         startupError,
-    ) { settingsState, snapshot, isUnlocked, hasStartupError ->
+        _walletBalancesVisible,
+    ) { settingsState, snapshot, isUnlocked, hasStartupError, showWalletBalances ->
         if (hasStartupError || settingsState is SettingsReadState.Failed) {
             AppUiState(loading = false, startupError = true)
         } else if (settingsState !is SettingsReadState.Ready || snapshot == null) {
@@ -108,6 +111,7 @@ class AppViewModel(private val container: AppContainer) : ViewModel() {
                 settings = settings,
                 snapshot = snapshot,
                 locked = settings.lockEnabled && settings.hasPin && !isUnlocked,
+                walletBalancesVisible = showWalletBalances && !(settings.lockEnabled && settings.hasPin && !isUnlocked),
             )
         }
     }.flowOn(Dispatchers.Default)
@@ -255,6 +259,7 @@ class AppViewModel(private val container: AppContainer) : ViewModel() {
 
     fun onBackgrounded() {
         backgroundedAt = System.currentTimeMillis()
+        hideWalletBalances()
     }
 
     /** Re-entering the foreground keeps the session only within the grace period. */
@@ -269,6 +274,16 @@ class AppViewModel(private val container: AppContainer) : ViewModel() {
     fun lockNow() {
         backgroundedAt = null
         unlocked.value = false
+        hideWalletBalances()
+    }
+
+    fun revealWalletBalances() {
+        val currentSettings = (settingsReadState.value as? SettingsReadState.Ready)?.settings
+        if (currentSettings?.hasPin == true) _walletBalancesVisible.value = true
+    }
+
+    fun hideWalletBalances() {
+        _walletBalancesVisible.value = false
     }
 
     suspend fun enableLock(pin: String): Result<Unit> = runCatching {

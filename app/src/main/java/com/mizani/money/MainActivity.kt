@@ -109,7 +109,7 @@ fun MizaniRoot(vm: AppViewModel, state: AppUiState) {
     val scope = rememberCoroutineScope()
     // Wrap in a Surface so non-Scaffold screens (splash, onboarding, lock) inherit the
     // theme's contentColor. Without this, LocalContentColor defaults to black in dark mode,
-    // which fails contrast on the dark page (1.25:1 on #0B2028).
+    // which fails contrast on the dark page background.
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,

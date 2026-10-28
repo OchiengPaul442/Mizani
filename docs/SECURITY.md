@@ -12,6 +12,7 @@ Mizani stores personal financial records. Its protections are designed to reduce
 - Encrypted backups use AES-GCM and a passphrase-derived key. New backups use the versioned `MZNB2` envelope with PBKDF2-HMAC-SHA256 at 600,000 iterations; `MZNB1` files remain readable for compatibility. This iteration count follows current OWASP PBKDF2 guidance ([Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)). Backup input is size-bounded, decoded values are validated, and replacement happens in one Room transaction.
 - CSV and Excel exports are intentionally unencrypted for analysis. After fresh identity confirmation, the app warns before export and uses Android's document picker; save those files only in a location you trust.
 - Network requests use HTTPS. Exchange-rate requests send currency codes, not transaction records. Update checks fetch public release metadata. Daily reminders contain no balances or transaction details and use private notification visibility.
+- Wallet balances are concealed on Home and Wallets by default. Revealing them requires a fresh app PIN confirmation, or biometrics when the user enabled them. The reveal lasts only while the app stays on that screen and in the foreground.
 
 ## Recovery and data-loss precautions
 
@@ -20,6 +21,12 @@ Mizani stores personal financial records. Its protections are designed to reduce
 3. Restore replaces the current local ledger. Confirm only after checking that the summary is for the intended backup. The restore validates the records before applying them in a database transaction.
 4. Keep periodic backups if the records matter. Mizani has no cloud sync or server-side recovery. If the device and Keystore key are lost, the encrypted database cannot be recovered without a usable encrypted backup and its passphrase.
 5. Protect CSV and Excel exports separately; they are not encrypted by Mizani.
+
+An in-place app update preserves private app data only when Android can update the existing package
+with the same application ID and signing identity. Uninstalling, clearing app storage, or installing
+a differently signed build creates a fresh app-data area; Mizani cannot recover the old PIN or
+preferences from it. Because automatic backup is disabled and the database key is Keystore-bound,
+use an encrypted Mizani backup before moving to another device or reinstalling.
 
 ## Limits
 

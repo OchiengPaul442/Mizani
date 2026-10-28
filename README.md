@@ -28,6 +28,8 @@ Mizani is an Android budgeting app designed to work offline. It needs no account
   category; search and filter activity.
 - **Understand your cash flow.** Review income, spending, category breakdowns, wallet balances and
   trends in Insights. Charts include accessible text summaries.
+- **Check wallets quickly.** Active wallets appear on Home. Their balances stay hidden until you
+  confirm with your app PIN or enabled biometrics.
 - **Record different currencies.** Enter income or expenses in another supported currency. When
   online, Mizani fetches the latest available daily reference rate and saves the source amount,
   converted amount, rate and rate date. Reference rates can differ from bank, card or mobile money
@@ -45,12 +47,15 @@ mark and restrained palette:
 
 | Color      | Hex                  | Use                                      |
 | ---------- | -------------------- | ---------------------------------------- |
-| Deep Teal  | <code>#102A32</code> | Brand mark and dark surfaces             |
+| Deep Teal  | <code>#102A32</code> | Brand mark and small brand details       |
 | Emerald    | <code>#087F72</code> | Primary actions and selected states      |
 | Mint       | <code>#76D7C2</code> | Dark-theme emphasis and positive accents |
 | Warm Gold  | <code>#E8BF6A</code> | Small highlights                         |
 | Soft White | <code>#F7FAF8</code> | Light background                         |
 | Ink        | <code>#17353D</code> | Primary text                             |
+
+Dark app surfaces use layered charcoal or warm-slate tones; theme mode and accent remain separately
+customizable.
 
 See the [brand guide](docs/brand/BRAND_GUIDE.md) and [design system](docs/DESIGN_SYSTEM.md) for logo use, color, typography, spacing and component guidance.
 

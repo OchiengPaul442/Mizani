@@ -53,6 +53,8 @@ import com.mizani.money.R
 import com.mizani.money.core.model.WalletType
 import com.mizani.money.core.money.Currency
 import com.mizani.money.core.money.MoneyFormat
+import com.mizani.money.feature.lock.ProtectedBalanceValue
+import com.mizani.money.feature.lock.WalletBalanceVisibilityControl
 import com.mizani.money.data.local.WalletEntity
 import com.mizani.money.ui.AppUiState
 import com.mizani.money.ui.AppViewModel
@@ -75,6 +77,7 @@ fun WalletsScreen(
     vm: AppViewModel,
     state: AppUiState,
     onBack: () -> Unit,
+    onSetupPin: () -> Unit,
 ) {
     val snapshot = state.snapshot
     val currency = state.currency
@@ -93,15 +96,17 @@ fun WalletsScreen(
         WalletDialog(
             initial = editing,
             currency = currency,
+            balanceVisible = state.walletBalancesVisible,
             canArchive = active.size > 1,
             onDismiss = { showDialog = false; editing = null },
             onSave = { name, type, opening, color, icon ->
+                val walletToUpdate = editing
                 scope.launch {
                     runCatching {
-                        if (editing == null) {
+                        if (walletToUpdate == null) {
                             vm.finance.addWallet(name, type, opening, color, icon)
                         } else {
-                            vm.finance.updateWallet(editing!!.id, name, type, opening, color, icon)
+                            vm.finance.updateWallet(walletToUpdate.id, name, type, opening, color, icon)
                         }
                     }.onSuccess {
                         showDialog = false
@@ -126,6 +131,7 @@ fun WalletsScreen(
             subtitle = "${active.size} active",
             onBack = onBack,
             actions = {
+                WalletBalanceVisibilityControl(vm, state, onSetupPin)
                 IconButton(onClick = { editing = null; showDialog = true }) {
                     Icon(Icons.Rounded.Add, contentDescription = "Add wallet")
                 }
@@ -150,14 +156,24 @@ fun WalletsScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 MizaniStatCard(
                     label = "Across wallets",
-                    value = MoneyFormat.format(total, currency),
+                    value = if (state.walletBalancesVisible) MoneyFormat.format(total, currency) else "••••••",
                     modifier = Modifier.weight(1f),
+                    valueContentDescription = if (state.walletBalancesVisible) {
+                        "Across wallets ${MoneyFormat.format(total, currency)}"
+                    } else {
+                        "Across wallet balances hidden"
+                    },
                 )
                 MizaniStatCard(
                     label = "Liquid",
-                    value = MoneyFormat.format(liquid, currency),
+                    value = if (state.walletBalancesVisible) MoneyFormat.format(liquid, currency) else "••••••",
                     modifier = Modifier.weight(1f),
                     accent = MaterialTheme.colorScheme.primary,
+                    valueContentDescription = if (state.walletBalancesVisible) {
+                        "Liquid balance ${MoneyFormat.format(liquid, currency)}"
+                    } else {
+                        "Liquid balance hidden"
+                    },
                 )
             }
 
@@ -181,6 +197,7 @@ fun WalletsScreen(
                         wallet = wallet,
                         balance = balances[wallet.id] ?: 0L,
                         currency = currency,
+                        balanceVisible = state.walletBalancesVisible,
                         onClick = { editing = wallet; showDialog = true },
                     )
                 }
@@ -206,7 +223,18 @@ fun WalletsScreen(
                             Spacer(Modifier.width(Spacing.md))
                             Text(wallet.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
                             Text(
-                                MoneyFormat.format(balances[wallet.id] ?: 0, currency),
+                                text = if (state.walletBalancesVisible) {
+                                    MoneyFormat.format(balances[wallet.id] ?: 0, currency)
+                                } else {
+                                    "••••••"
+                                },
+                                modifier = Modifier.semantics {
+                                    contentDescription = if (state.walletBalancesVisible) {
+                                        "Balance ${MoneyFormat.format(balances[wallet.id] ?: 0, currency)}"
+                                    } else {
+                                        "Balance hidden"
+                                    }
+                                },
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -230,6 +258,7 @@ private fun WalletCard(
     wallet: WalletEntity,
     balance: Long,
     currency: Currency,
+    balanceVisible: Boolean,
     onClick: () -> Unit,
 ) {
     val color = parseHexColor(wallet.colorHex)
@@ -244,8 +273,10 @@ private fun WalletCard(
                 }
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    MoneyFormat.format(balance, currency),
+                ProtectedBalanceValue(
+                    amountMinor = balance,
+                    currency = currency,
+                    visible = balanceVisible,
                     style = MaterialTheme.typography.titleSmall,
                     color = if (balance < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
@@ -263,6 +294,7 @@ private fun WalletCard(
 private fun WalletDialog(
     initial: WalletEntity?,
     currency: Currency,
+    balanceVisible: Boolean,
     canArchive: Boolean,
     onDismiss: () -> Unit,
     onSave: (String, WalletType, Long, String, String) -> Unit,
@@ -276,11 +308,17 @@ private fun WalletDialog(
     var colorHex by rememberSaveable { mutableStateOf(initial?.colorHex ?: "#087F72") }
     var iconKey by rememberSaveable { mutableStateOf(initial?.icon ?: "wallet") }
     var error by remember { mutableStateOf<String?>(null) }
-    val colors = BrandPalette.swatches
+    val colors = remember(initial?.colorHex) {
+        (BrandPalette.swatches + listOfNotNull(initial?.colorHex)).distinct()
+    }
     val typeOptions = WalletType.entries.filter {
         it != WalletType.DEBT || initial?.type == WalletType.DEBT
     }
-    val opening = MoneyFormat.parse(openingText, currency) ?: 0L
+    val opening = if (initial != null && !balanceVisible) {
+        kotlin.math.abs(initial.openingBalanceMinor)
+    } else {
+        MoneyFormat.parse(openingText, currency) ?: 0L
+    }
 
     MizaniAlertDialog(
         onDismissRequest = onDismiss,
@@ -308,12 +346,20 @@ private fun WalletDialog(
                     onSelect = { id -> type = WalletType.valueOf(id) },
                     modifier = Modifier.fillMaxWidth(),
                 )
-                MizaniAmountField(
-                    value = openingText,
-                    onValueChange = { openingText = it },
-                    label = if (type == WalletType.DEBT) "Amount owed (opening)" else "Opening balance",
-                    currency = currency,
-                )
+                if (initial != null && !balanceVisible) {
+                    Text(
+                        "Opening balance hidden. Confirm with your PIN before viewing or changing it.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    MizaniAmountField(
+                        value = openingText,
+                        onValueChange = { openingText = it },
+                        label = if (type == WalletType.DEBT) "Amount owed (opening)" else "Opening balance",
+                        currency = currency,
+                    )
+                }
                 Text(
                     if (type == WalletType.DEBT) {
                         "A debt wallet is stored as a negative balance and excluded from liquid money."

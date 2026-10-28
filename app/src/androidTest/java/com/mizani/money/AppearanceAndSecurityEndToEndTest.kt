@@ -88,13 +88,13 @@ class AppearanceAndSecurityEndToEndTest {
         }
 
         compose.onNodeWithText(ThemeMode.DARK.label).performClick()
-        compose.onNodeWithText(DarkThemeStyle.OLED_BLACK.label).performClick()
+        compose.onNodeWithText(DarkThemeStyle.WARM_SLATE.label).performClick()
         compose.waitUntil(timeoutMillis = 5_000) {
             runBlocking {
                 val settings = app.container.settingsRepository.settings.first()
                 settings.themeMode == ThemeMode.DARK &&
                     settings.customAccentColorHex == "#6B55D4" &&
-                    settings.darkThemeStyle == DarkThemeStyle.OLED_BLACK
+                    settings.darkThemeStyle == DarkThemeStyle.WARM_SLATE
             }
         }
 
@@ -105,7 +105,7 @@ class AppearanceAndSecurityEndToEndTest {
         compose.onNodeWithText(ThemeMode.DARK.label).assertIsSelected()
         compose.onNodeWithText("#6B55D4").assertExists()
         check(compose.onAllNodesWithText("Ocean").fetchSemanticsNodes().isEmpty())
-        compose.onNodeWithText(DarkThemeStyle.OLED_BLACK.label).assertIsSelected()
+        compose.onNodeWithText(DarkThemeStyle.WARM_SLATE.label).assertIsSelected()
     }
 
     @Test

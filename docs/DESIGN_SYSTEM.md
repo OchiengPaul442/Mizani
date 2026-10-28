@@ -19,9 +19,10 @@ References consulted:
 
 ## Colour
 
-Canonical brand tokens: Deep Teal `#102A32`, Emerald `#087F72`, Mint `#76D7C2`, Warm Gold `#E8BF6A`,
-Soft White `#F7FAF8`, Body Text `#17353D`, Muted `#61777A`, Dark Background `#0B2028`,
-Dark Surface `#12323A`.
+Canonical logo and accent tokens remain Deep Teal `#102A32`, Emerald `#087F72`, Mint `#76D7C2`,
+Warm Gold `#E8BF6A`, Soft White `#F7FAF8`, Body Text `#17353D`, and Muted `#61777A`. App dark
+surfaces use neutral charcoal shades so the page background and cards do not become true black or
+deep teal.
 
 **Light**
 | Role | Hex | Use |
@@ -46,9 +47,9 @@ Dark Surface `#12323A`.
 
 **Dark**
 Mizani Primary `#76D7C2` mint, on-primary `#073E38`, container `#13594F`; secondary `#E8BF6A`,
-on-secondary `#46310B`, container `#61471B`; tertiary `#9CC4C8`, container `#29464D`;
-background `#0B2028`; surface `#12323A`; on-surface `#EAF4F1`; surface variant `#29464D`,
-on-surface variant `#C4D7D4`; containers `#07161C`–`#1A3D45`; outline `#3D5A60`;
+on-secondary `#46310B`, container `#61471B`; tertiary `#9CC4C8`; background `#171A1C` and surface
+`#222629` for soft charcoal, or background `#211F1D` and surface `#2A2825` for warm slate;
+on-surface `#F0F3F3`; neutral containers provide visible separation between page, cards and controls;
 error `#FFB4AB`, on-error `#690005`.
 
 The default accent is emerald. Users can pick a custom accent with hue, saturation and brightness
@@ -61,7 +62,9 @@ appears only for real errors, overspend warnings and destructive actions.
 ### Personal appearance
 
 - Appearance can follow the device or be set to light or dark mode.
-- Dark mode offers standard deep-teal surfaces or true-black page and card surfaces.
+- Dark mode offers soft-charcoal or warm-slate surfaces; neither uses true-black or deep-teal page
+  backgrounds. Older saved dark-surface choices map to soft charcoal without changing the user's
+  light/dark mode or accent selection.
 - Shared cards and the bottom bar use a thin decorative edge: a quiet neutral outline in light mode
   and a low-opacity tint of the selected accent in dark mode. Surface tones still provide hierarchy;
   form controls keep the stronger outline role for legibility.
@@ -121,7 +124,7 @@ System sans with tabular figures enabled for money. No custom font is bundled (o
 
 ## Components
 
-- **Hero card**: selected deep/accent gradient with warm-gold accents, large watermarked
+- **Hero card**: selected neutral/accent gradient with warm-gold accents, large watermarked
   mark, currency symbol small, amount large, thin mint progress bar.
 - **Safe-to-spend**: white card with warm-gold icon tile; amount and a one-line basis statement;
   expandable calculation.

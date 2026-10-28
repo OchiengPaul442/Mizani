@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -50,12 +52,16 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mizani.money.R
 import com.mizani.money.core.model.InsightKind
+import com.mizani.money.core.model.WalletType
 import com.mizani.money.core.money.Currency
 import com.mizani.money.core.money.MoneyFormat
 import com.mizani.money.core.time.DateRange
 import com.mizani.money.core.time.DateText
 import com.mizani.money.core.time.Periods
 import com.mizani.money.domain.analytics.DashboardMetrics
+import com.mizani.money.data.local.WalletEntity
+import com.mizani.money.feature.lock.ProtectedBalanceValue
+import com.mizani.money.feature.lock.WalletBalanceVisibilityControl
 import com.mizani.money.ui.AppUiState
 import com.mizani.money.ui.AppViewModel
 import com.mizani.money.ui.components.DateRangePickerDialog
@@ -69,6 +75,7 @@ import com.mizani.money.ui.components.SectionHeader
 import com.mizani.money.ui.components.Spacing
 import com.mizani.money.ui.components.StorysetIllustration
 import com.mizani.money.ui.components.TransactionRow
+import com.mizani.money.ui.components.WalletAvatar
 import com.mizani.money.ui.components.parseHexColor
 import com.mizani.money.ui.theme.LocalMizaniThemeTokens
 import java.time.LocalTime
@@ -81,6 +88,8 @@ fun HomeScreen(
     onOpenTransactions: () -> Unit,
     onEditTransaction: (String) -> Unit,
     onOpenInsights: () -> Unit,
+    onOpenWallets: () -> Unit,
+    onSetupPin: () -> Unit,
     onAdd: () -> Unit,
     onAddIncome: () -> Unit,
     onAddExpense: () -> Unit,
@@ -92,6 +101,7 @@ fun HomeScreen(
     val periodRange by vm.periodRange.collectAsStateWithLifecycle()
     val snapshot = state.snapshot
     val currency = state.currency
+    val walletBalances = remember(snapshot) { snapshot.walletBalances() }
     val today = vm.today
     var showRangePicker by remember { mutableStateOf(false) }
 
@@ -139,6 +149,19 @@ fun HomeScreen(
             onSelect = { preset -> vm.selectPreset(preset) },
             onCustom = { showRangePicker = true },
         )
+
+        val activeWallets = snapshot.wallets.filter { !it.archived && it.deletedAt == null }
+        if (activeWallets.isNotEmpty()) {
+            WalletShortcutsSection(
+                vm = vm,
+                state = state,
+                wallets = activeWallets,
+                balances = walletBalances,
+                currency = currency,
+                onOpenWallets = onOpenWallets,
+                onSetupPin = onSetupPin,
+            )
+        }
 
         if (snapshot.transactions.isEmpty()) {
             GetStartedHero(onAddIncome = onAddIncome, onAddExpense = onAddExpense)
@@ -255,6 +278,75 @@ fun HomeScreen(
             }
         }
 
+    }
+}
+
+@Composable
+private fun WalletShortcutsSection(
+    vm: AppViewModel,
+    state: AppUiState,
+    wallets: List<WalletEntity>,
+    balances: Map<String, Long>,
+    currency: Currency,
+    onOpenWallets: () -> Unit,
+    onSetupPin: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "Your wallets",
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            WalletBalanceVisibilityControl(vm, state, onSetupPin)
+            androidx.compose.material3.TextButton(onClick = onOpenWallets) {
+                Text("See all")
+            }
+        }
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            items(wallets.take(5), key = WalletEntity::id) { wallet ->
+                MizaniCard(
+                    modifier = Modifier.width(208.dp),
+                    onClick = onOpenWallets,
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        WalletAvatar(wallet.type, wallet.colorHex, size = 38)
+                        Spacer(Modifier.width(Spacing.sm))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                wallet.name,
+                                style = MaterialTheme.typography.titleSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                wallet.type.label,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(Spacing.md))
+                    Text(
+                        if (wallet.type == WalletType.DEBT) "Amount owed" else "Balance",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    ProtectedBalanceValue(
+                        amountMinor = balances[wallet.id] ?: 0L,
+                        currency = currency,
+                        visible = state.walletBalancesVisible,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = if (state.walletBalancesVisible && (balances[wallet.id] ?: 0L) < 0L) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        },
+                        maxLines = 1,
+                    )
+                }
+            }
+        }
     }
 }
 

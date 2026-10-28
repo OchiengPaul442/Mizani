@@ -127,6 +127,10 @@ fun SettingsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val settings = state.settings
+    val reminderScheduleError = stringResource(R.string.settings_reminder_schedule_error)
+    val reminderPermissionDenied = stringResource(R.string.settings_reminder_permission_denied)
+    val reminderNotificationsDisabled = stringResource(R.string.settings_reminder_notifications_disabled)
+    val dailyReminderTitle = stringResource(R.string.settings_daily_reminder_title)
 
     var message by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -228,7 +232,7 @@ fun SettingsScreen(
                     showReminderNotificationSettings = false
                 }
                 .onFailure {
-                    reminderStatus = context.getString(R.string.settings_reminder_schedule_error)
+                    reminderStatus = reminderScheduleError
                 }
         }
     }
@@ -239,7 +243,7 @@ fun SettingsScreen(
         if (granted) {
             enableDailyReminder()
         } else {
-            reminderStatus = context.getString(R.string.settings_reminder_permission_denied)
+            reminderStatus = reminderPermissionDenied
             showReminderNotificationSettings = true
         }
     }
@@ -261,7 +265,7 @@ fun SettingsScreen(
         if (!enabled) {
             scope.launch {
                 vm.setDailyReminderEnabled(false)
-                    .onFailure { reminderStatus = context.getString(R.string.settings_reminder_schedule_error) }
+                    .onFailure { reminderStatus = reminderScheduleError }
             }
         } else {
             DailyReminderNotifications.ensureChannel(context)
@@ -271,7 +275,7 @@ fun SettingsScreen(
             ) {
                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             } else if (!DailyReminderNotifications.canPost(context)) {
-                reminderStatus = context.getString(R.string.settings_reminder_notifications_disabled)
+                reminderStatus = reminderNotificationsDisabled
                 showReminderNotificationSettings = true
             } else {
                 enableDailyReminder()
@@ -949,7 +953,7 @@ fun SettingsScreen(
                 Text("Dark appearance", style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.height(Spacing.sm))
                 Text(
-                    "Choose the surface style used whenever dark mode is active.",
+                    "Choose a softer neutral surface used whenever dark mode is active.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1064,7 +1068,7 @@ fun SettingsScreen(
                         checked = settings.dailyReminderEnabled,
                         onCheckedChange = onDailyReminderChanged,
                         modifier = Modifier.semantics {
-                            contentDescription = context.getString(R.string.settings_daily_reminder_title)
+                            contentDescription = dailyReminderTitle
                         },
                     )
                 }
@@ -1085,7 +1089,7 @@ fun SettingsScreen(
                                             vm.setDailyReminderMinuteOfDay(hour * 60 + minute)
                                                 .onSuccess { reminderStatus = null }
                                                 .onFailure {
-                                                    reminderStatus = context.getString(R.string.settings_reminder_schedule_error)
+                                                    reminderStatus = reminderScheduleError
                                                 }
                                         }
                                     },

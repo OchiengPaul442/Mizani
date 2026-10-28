@@ -9,9 +9,12 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
 ### Security
 
 - Require fresh PIN or enabled biometric confirmation before exporting financial records or creating encrypted backups.
+- Keep Home and Wallets balances concealed until the user confirms with their app PIN or enabled biometrics.
 
 ### Changed
 
+- Replace deep-teal and true-black dark surfaces with soft-charcoal and warm-slate choices; keep saved theme mode and accent preferences.
+- Add active wallet shortcuts to Home, including for a new ledger with no transactions.
 - Replace cramped preset accent chips with a spaced custom color picker; saved accents apply across the app.
 - Add subtle accent-tinted edges to shared cards and the bottom bar, with stronger definition in dark mode.
 - Replace the post-splash loader copy and progress bar with a centered logo and radiating pulse rings.

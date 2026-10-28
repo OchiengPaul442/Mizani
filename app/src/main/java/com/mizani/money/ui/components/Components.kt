@@ -171,8 +171,8 @@ fun MizaniTopBar(
 @Composable
 fun MizaniCard(
     modifier: Modifier = Modifier,
-    // Default card surface is the theme surface: white in light, brand dark surface
-    // (#12323A) in dark, so cards read as raised on the dark page (#0B2028).
+    // Default card surface follows the selected scheme: white in light mode and layered
+    // charcoal in dark mode, so cards remain distinct from the page background.
     containerColor: Color = MaterialTheme.colorScheme.surface,
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
     onClick: (() -> Unit)? = null,
