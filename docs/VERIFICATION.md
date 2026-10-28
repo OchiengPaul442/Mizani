@@ -14,19 +14,17 @@ Results: 93 JVM tests passed; Android test sources compiled; `GuestJourneyTest` 
 `app/build/outputs/apk/debug/app-debug.apk` was produced (30,489,483 bytes). `git diff --check`
 also passed; Git reported only the repository's existing LF-to-CRLF working-copy warnings.
 
-A diagnostic run of all instrumented classes in one Gradle invocation was not green; it reported
-cross-test state failures. This project requires one class per invocation because each class resets
-its test database. Isolated runs passed for `GuestJourneyTest` (1 test), `RepositoryIntegrationTest`
-(2 tests), `BackupRestoreTest` (1 test), and `DemoDataTest` (1 test). `AppLockTest` still times out
-waiting for `Welcome back` when run alone and remains unresolved.
-
-On 2026-10-28, `:app:testDebugUnitTest` passed all 118 tests across 17 suites. The debug APK and
-Android test APK built successfully, and `:app:lintDebug` completed with no errors (41 warnings,
-mostly dependency-version, unused-resource, and existing style findings). The new migration, backup,
-and repository instrumentation tests compiled, but were not run during this verification because no
-ADB-ready disposable emulator was available. The existing emulator remained offline, and the fresh
-workspace AVD was unauthorized by ADB despite a restart with the local host key; no app state was
-cleared or reinstalled on either device.
+Each instrumentation class runs in a separate Gradle invocation because the classes reset local app state.
+On 2026-10-28, all 11 classes passed individually on the API 36.1 QA emulator: AppLockTest,
+AppearanceAndSecurityEndToEndTest, BackupRestoreTest, DatabaseMigrationTest, DemoDataTest,
+GuestJourneyTest, RepositoryIntegrationTest, SettingsAndReminderEndToEndTest, SettingsPersistenceTest,
+SplashScreenTest, and WalletBalancePrivacyEndToEndTest.
+On 2026-10-28, testDebugUnitTest passed all 118 tests across 17 suites. The debug APK and Android test
+APK built successfully, and lintDebug completed with no errors (50 findings: 17 unused resources,
+8 autoboxing allocations, 7 KTX suggestions, 7 Gradle dependency recommendations, 5 newer-version
+notices, and 6 smaller style/resource findings). The migration tests use the checked-in v1-v3 Room
+schema snapshots as test assets; a debug-only serialization BOM keeps Room 2.8.5 migration parsing
+compatible with its runtime.
 
 ## Manual emulator acceptance
 
@@ -53,25 +51,53 @@ without showing the Terms page. The repository version and normal debug artifact
 UI assertions and the resumed system activity were used instead of screenshot review; pixel-level
 visual contrast was not assessed.
 
-The broader manual checklist below remains unverified:
+### Hands-on exploratory run (2026-10-28)
 
-1. Set up a fresh local workspace and try the app offline.
-2. Record income and expenses in the workspace currency; confirm Home totals, Activity rows and
-   category analysis update together.
-3. Record foreign-currency income and expenses. Check the converted amount, original amount,
-   reference-rate date, and exported values. Rates are daily reference rates and may differ from a
-   bank, card or mobile-money provider's settlement rate.
-4. Review the six-month cash-flow chart and income trends across multiple reporting periods.
-5. Export CSV and Excel, then create and restore an encrypted backup.
-6. Check app lock, larger text, TalkBack labels, and navigation transitions on a physical device or
-   emulator.
-7. Share or paste an MTN MoMo or Airtel Money confirmation, review and edit the suggestion, save it,
-   then retry the same reference and confirm it is rejected. Confirm no SMS permission is requested.
-8. Create a one-off commitment, link multiple recorded expenses as partial payments, then unlink one
-   and confirm the ledger expense remains. Check the due reminder shows no name or amount on the lock screen.
-9. Review Money Outlook with less than seven days of activity, with a saved daily target, and with
-   enough history. Confirm expected income does not raise the estimate and linked payments are not reserved twice.
+A first-use and returning-user walkthrough ran on the API 36.1 `Medium_Phone_API_36.1` emulator,
+Android user 10, using the read-only AVD image. Sample records and the disposable PIN stayed in that
+isolated user.
 
+- Completed consent and setup with Uganda, UGX and a cash wallet. Home exposed Add expense, Add income,
+  masked balance, PIN setup and Bills in bottom navigation.
+- Recorded UGX 600,000 income and UGX 250,000 expense. Home totals updated and Activity showed exactly
+  two rows.
+- Opened Bills from bottom navigation, confirmed the one-off bill guidance, exercised empty-name
+  validation, opened the category and due-date controls, and saved a UGX 500,000 bill. Recorded and
+  linked the UGX 250,000 expense; Bills showed UGX 250,000 paid and the Activity list still contained
+  two transactions, so linking did not create a duplicate.
+- Measured the commitment and daily-target dialogs at about 94% of the emulator's 1080 px width
+  (bounds 32-1047 px). The controls reflowed with the keyboard; secure-screen capture prevented a
+  pixel-level visual check of keyboard overlap.
+- Set a UGX 35,000 daily target. Insights kept the target visible while masking estimated coverage and
+  upcoming-payment amounts with wallet balances hidden. Activity search for Fuel returned one row.
+- More exposed Wallets, Categories, Export or back up data, Settings, and About and privacy. Bills
+  remained a first-level bottom tab.
+- Set up a six-digit PIN from the Home prompt, used Lock now, unlocked, revealed balances after another
+  PIN confirmation, then hid them again.
+
+`FLAG_SECURE` blanks app screenshots, so labels and bounds were checked through the UI hierarchy rather
+than screenshots. This pass used one emulator size; TalkBack and font scaling were not exercised on a
+physical device.
+
+The reminder instrumentation verifies that the UI enables the setting, WorkManager queues a tagged
+request, the worker posts the generic private notification, and a repeated worker run does not post a
+duplicate. A real wall-clock attempt did not run within 240 seconds on this emulator, so exact delivery
+timing under Android's background scheduler remains unverified.
+
+### Remaining manual acceptance
+
+1. Start a fresh workspace offline and check that core ledger actions remain available.
+2. Record foreign-currency transactions and validate conversion, original values, rate date and exports.
+3. Check cash-flow trends across multiple months and Money Outlook with more than seven days of history.
+4. Validate CSV and Excel file contents, and test backup restore against a real exported file.
+5. Use TalkBack, larger text, and small-screen/landscape layouts on a physical device.
+6. Share or paste an MTN MoMo or Airtel Money confirmation, review the suggestion, save it, and retry
+   the same reference to verify duplicate rejection and no SMS permission request.
+7. Link multiple partial bill payments, unlink one while preserving the ledger expense, and confirm
+   commitment reminders reveal no name or amount on the lock screen.
+8. Verify actual scheduled reminder timing on a physical device across app restart, reboot and a
+   timezone change. The worker itself is covered deterministically; these system-delivery conditions
+   are not.
 ## Scope and data compatibility
 
 The active app flow includes Home, Activity, Insights, wallets, categories, data export, user-reviewed

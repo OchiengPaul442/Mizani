@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -58,6 +59,7 @@ fun MizaniPicker(
     onSelectNone: (() -> Unit)? = null,
     searchable: Boolean = false,
     searchHint: String = "Search",
+    fieldLabel: String? = null,
 ) {
     var expanded by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
@@ -72,7 +74,9 @@ fun MizaniPicker(
                 query = ""
                 expanded = true
             },
-            modifier = Modifier.fillMaxWidth().height(Spacing.fieldHeight),
+            modifier = Modifier.fillMaxWidth().height(Spacing.fieldHeight).semantics {
+                fieldLabel?.let { contentDescription = "$it: $selectedText" }
+            },
             enabled = enabled,
             shape = MaterialTheme.shapes.small,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),

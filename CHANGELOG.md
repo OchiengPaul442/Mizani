@@ -6,6 +6,21 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
 
 ## [Unreleased]
 
+### Fixed
+
+- Hide Money Outlook coverage estimates while wallet balances are hidden; keep the saved daily target visible.
+
+### Changed
+
+- Move Bills & commitments into the main navigation and clarify the one-off
+  payment flow for first-time users.
+- Widen the commitment and daily-target dialogs to match the shared mobile layout, and add a
+  direct expense-entry action to the bill payment flow.
+- Simplify Money Outlook by removing the detailed calculation panel. Keep a concise estimate basis
+  and show the saved daily target while wallet balances are hidden.
+- Clean up the Home wallet section: separate privacy controls from navigation, avoid
+  duplicate wallet type labels, and use a full-width summary when there is one wallet.
+
 ## [1.3.0] - 2026-10-28
 
 ### Added
