@@ -67,8 +67,7 @@ import com.mizani.money.ui.components.PeriodMenu
 import com.mizani.money.ui.components.ProgressBar
 import com.mizani.money.ui.components.Spacing
 import com.mizani.money.ui.components.parseHexColor
-import com.mizani.money.ui.theme.DeepTeal
-import com.mizani.money.ui.theme.Emerald
+import com.mizani.money.ui.theme.LocalMizaniThemeTokens
 import java.time.YearMonth
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -505,6 +504,7 @@ private fun CashFlowHero(
     previousLabel: String,
     currency: Currency,
 ) {
+    val themeTokens = LocalMizaniThemeTokens.current
     val hasIncomePrevious = metrics.previousIncomeMinor > 0
     val hasExpensePrevious = metrics.previousExpenseMinor > 0
     // Percent change is only an apples-to-apples claim when both periods cover the same
@@ -514,7 +514,7 @@ private fun CashFlowHero(
         modifier = Modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.extraLarge)
-            .background(Brush.linearGradient(listOf(DeepTeal, Emerald)))
+            .background(Brush.linearGradient(listOf(themeTokens.heroStart, themeTokens.heroEnd)))
             .padding(20.dp),
     ) {
         Text(

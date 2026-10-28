@@ -31,10 +31,12 @@
     <string name="onboarding_setup_subtitle">Choose your country, the currency for your totals, and a place to start tracking.</string>
     <string name="onboarding_currency_explainer">Your totals and charts will use %1$s. You can also record money in other currencies.</string>
     <string name="onboarding_wallet_title">Where do you keep your money?</string>
-    <string name="onboarding_wallet_subtitle">Choose cash, mobile money or a bank wallet. You can add more later.</string>
+    <string name="onboarding_wallet_subtitle">Choose a wallet type, then name it. You can add more wallets later.</string>
     <string name="onboarding_wallet_name_label">Wallet name</string>
-    <string name="onboarding_wallet_type_label">Type</string>
+    <string name="onboarding_wallet_type_label">Wallet type</string>
+    <string name="onboarding_wallet_name_ideas">Name ideas</string>
     <string name="onboarding_ready_title">Add your current balance</string>
+    <string name="onboarding_ready_illustration_description">A person saving money in a savings jar.</string>
     <string name="onboarding_ready_subtitle">Enter what is already in this wallet so your balance starts accurately. Leave it blank to start from today.</string>
     <string name="onboarding_ready_balance_label">Current balance (optional)</string>
     <string name="onboarding_ready_start">Start using Mizani</string>

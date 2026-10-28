@@ -55,6 +55,7 @@ import com.mizani.money.ui.components.MizaniTopBar
 import com.mizani.money.ui.components.PickerOption
 import com.mizani.money.ui.components.Spacing
 import com.mizani.money.ui.components.TransactionRow
+import com.mizani.money.ui.theme.LocalMizaniThemeTokens
 import java.time.LocalDate
 
 private enum class DateFilter(val label: String) {
@@ -332,11 +333,12 @@ private fun SummaryRow(
     expenseMinor: Long,
     currency: Currency,
 ) {
+    val themeTokens = LocalMizaniThemeTokens.current
     MizaniCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(Spacing.md)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Income", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(MoneyFormat.format(incomeMinor, currency), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                Text(MoneyFormat.format(incomeMinor, currency), style = MaterialTheme.typography.titleSmall, color = themeTokens.income)
             }
             Column(Modifier.weight(1f)) {
                 Text("Net spending", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

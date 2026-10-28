@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.mizani.money.di.AppContainer
 import com.mizani.money.core.time.PeriodPreset
 import com.mizani.money.core.model.WalletType
+import com.mizani.money.core.model.ColorTheme
+import com.mizani.money.core.model.DarkThemeStyle
 import com.mizani.money.core.money.Currencies
 import com.mizani.money.core.money.Currency
 import com.mizani.money.core.legal.LegalDocuments
@@ -280,6 +282,14 @@ class AppViewModel(private val container: AppContainer) : ViewModel() {
 
     suspend fun setTheme(mode: com.mizani.money.core.model.ThemeMode) {
         settingsRepository.setTheme(mode)
+    }
+
+    suspend fun setColorTheme(theme: ColorTheme) {
+        settingsRepository.setColorTheme(theme)
+    }
+
+    suspend fun setDarkThemeStyle(style: DarkThemeStyle) {
+        settingsRepository.setDarkThemeStyle(style)
     }
 
     suspend fun setCountry(countryCode: String, currencyCode: String) {

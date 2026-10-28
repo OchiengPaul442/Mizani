@@ -5,7 +5,7 @@ import androidx.compose.ui.graphics.Color
 // Official Mizani brand palette (canonical source: docs/brand/BRAND_GUIDE.md, tokens in
 // docs/brand/brand-tokens.json). Brand idea: balance — an M-shaped mark with a warm-gold focal dot.
 // Emerald carries primary actions, gold is reserved for accents and emphasis, red only for errors.
-// All hex values below come from the brand kit; nothing is invented here.
+// Brand colors follow the guide. Neutral OLED surface tokens below support a true-black option.
 
 // Core brand colours
 val DeepTeal = Color(0xFF102A32)
@@ -19,6 +19,19 @@ val Ink = Color(0xFF17353D)
 val Muted = Color(0xFF61777A)
 val DarkBackground = Color(0xFF0B2028)
 val DarkSurface = Color(0xFF12323A)
+
+// Optional true-black dark appearance. Keep text, selection, and outlines readable while
+// lowering the amount of light emitted by large surfaces on OLED displays.
+val OledBackground = Color(0xFF000000)
+val OledSurface = Color(0xFF0D0D0D)
+val OledSurfaceVariant = Color(0xFF171717)
+val OledOnSurfaceVariant = Color(0xFFBDBDBD)
+val OledSurfaceLow = Color(0xFF111111)
+val OledSurfaceContainer = Color(0xFF171717)
+val OledSurfaceHigh = Color(0xFF1F1F1F)
+val OledSurfaceHighest = Color(0xFF282828)
+val OledOutline = Color(0xFF777777)
+val OledOutlineVariant = Color(0xFF484848)
 
 // Tertiary support colour for transfers: a muted deep teal, never an unrelated blue.
 val TransferTeal = Color(0xFF3F6F76)

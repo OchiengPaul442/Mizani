@@ -53,8 +53,7 @@ import com.mizani.money.ui.AppViewModel
 import com.mizani.money.ui.MizaniNavHost
 import com.mizani.money.ui.components.MizaniMark
 import com.mizani.money.ui.components.Spacing
-import com.mizani.money.ui.theme.DeepTeal
-import com.mizani.money.ui.theme.Emerald
+import com.mizani.money.ui.theme.LocalMizaniThemeTokens
 import com.mizani.money.ui.theme.MizaniTheme
 import kotlinx.coroutines.launch
 
@@ -71,7 +70,11 @@ class MainActivity : FragmentActivity() {
         enableEdgeToEdge()
         setContent {
             val state by appViewModel.uiState.collectAsStateWithLifecycle()
-            MizaniTheme(themeMode = state.settings.themeMode) {
+            MizaniTheme(
+                themeMode = state.settings.themeMode,
+                colorTheme = state.settings.colorTheme,
+                darkThemeStyle = state.settings.darkThemeStyle,
+            ) {
                 MizaniRoot(appViewModel, state)
             }
         }
@@ -120,7 +123,10 @@ fun MizaniRoot(vm: AppViewModel, state: AppUiState) {
             state.loading -> SplashScreen()
             state.startupError -> StartupErrorScreen(onRetry = vm::retryStartup)
             !state.settings.onboardingComplete || state.snapshot.workspace == null -> {
-                OnboardingScreen(vm)
+                OnboardingScreen(
+                    vm = vm,
+                    hasAcceptedCurrentLegalDocuments = state.settings.hasAcceptedCurrentLegalDocuments,
+                )
             }
             state.locked -> LockScreen(vm, state.settings.biometricEnabled)
             !state.settings.hasAcceptedCurrentLegalDocuments -> {
@@ -197,11 +203,12 @@ private fun SplashScreen() {
         label = "splash-shimmer",
     )
     val loadingLabel = stringResource(R.string.splash_loading)
+    val themeTokens = LocalMizaniThemeTokens.current
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(DeepTeal, Emerald))),
+            .background(Brush.verticalGradient(listOf(themeTokens.heroStart, themeTokens.heroEnd))),
         contentAlignment = Alignment.Center,
     ) {
         Column(

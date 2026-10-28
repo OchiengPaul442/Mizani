@@ -2,6 +2,7 @@ package com.mizani.money.ui.components
 
 import android.graphics.Picture
 import android.graphics.RectF
+import android.util.LruCache
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.produceState
@@ -15,6 +16,10 @@ import com.caverock.androidsvg.SVG
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+// Keep the three bundled illustrations available after navigation so revisiting a screen does not
+// read, parse, and render the same SVG again. The entry limit bounds retained Picture memory.
+private val renderedIllustrations = LruCache<String, Picture>(3)
+
 /** Renders a bundled Storyset SVG as vector artwork without network access. */
 @Composable
 fun StorysetIllustration(
@@ -25,9 +30,9 @@ fun StorysetIllustration(
     val context = LocalContext.current
     val picture = produceState<Picture?>(initialValue = null, assetName) {
         value = withContext(Dispatchers.IO) {
-            runCatching {
+            renderedIllustrations[assetName] ?: runCatching {
                 SVG.getFromAsset(context.assets, "storyset/$assetName").renderToPicture()
-            }.getOrNull()
+            }.getOrNull()?.also { renderedIllustrations.put(assetName, it) }
         }
     }.value
     val imageModifier = if (contentDescription == null) {

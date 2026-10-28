@@ -33,6 +33,7 @@ import com.github.mikephil.charting.data.BarEntry
 import com.github.mikephil.charting.formatter.ValueFormatter
 import com.mizani.money.core.money.Currency
 import com.mizani.money.core.money.MoneyFormat
+import com.mizani.money.ui.theme.LocalMizaniThemeTokens
 import kotlin.math.abs
 import kotlin.math.round
 import kotlin.math.roundToInt
@@ -47,8 +48,8 @@ data class MonthBar(val label: String, val incomeMinor: Long, val expenseMinor: 
  * (legend, month amounts, accessibility description) is rendered with Compose, so it
  * follows the theme, font scaling and localization.
  *
- * Brand roles: income = emerald (`colorScheme.primary`), expenses = warm gold
- * (`colorScheme.secondary`, darkened in light mode). Values are plotted in major
+ * Financial roles stay stable across user-selected accent themes: income = emerald,
+ * expenses = warm gold. Values are plotted in major
  * currency units (`minor / scaleFactor`) so large balances never overflow a Float.
  *
  * Each month group is exactly one x-unit wide and centred on its integer index, with the
@@ -62,8 +63,9 @@ fun MizaniCashFlowBars(
     currency: Currency,
     modifier: Modifier = Modifier,
 ) {
-    val incomeColor = MaterialTheme.colorScheme.primary
-    val expenseColor = MaterialTheme.colorScheme.secondary
+    val themeTokens = LocalMizaniThemeTokens.current
+    val incomeColor = themeTokens.income
+    val expenseColor = themeTokens.expense
     val axisTextColor = MaterialTheme.colorScheme.onSurfaceVariant
     val gridColor = MaterialTheme.colorScheme.outlineVariant
     // ComponentBase.setTextSize(...) expects dp; scale by fontScale so axis text

@@ -13,6 +13,8 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.mizani.money.core.money.Currency
 import com.mizani.money.core.model.ThemeMode
+import com.mizani.money.core.model.ColorTheme
+import com.mizani.money.core.model.DarkThemeStyle
 import com.mizani.money.core.legal.LegalDocuments
 import com.mizani.money.core.security.PinDefaults
 import com.mizani.money.core.security.PinHasher
@@ -32,6 +34,8 @@ data class AppSettings(
     val countryCode: String = "UG",
     val currencyCode: String = "UGX",
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val colorTheme: ColorTheme = ColorTheme.MIZANI,
+    val darkThemeStyle: DarkThemeStyle = DarkThemeStyle.DEEP_TEAL,
     val lockEnabled: Boolean = false,
     val biometricEnabled: Boolean = false,
     val hasPin: Boolean = false,
@@ -57,6 +61,8 @@ class SettingsRepository(private val context: Context) {
         val COUNTRY = stringPreferencesKey("country_code")
         val CURRENCY = stringPreferencesKey("currency_code")
         val THEME = stringPreferencesKey("theme_mode")
+        val COLOR_THEME = stringPreferencesKey("color_theme")
+        val DARK_THEME_STYLE = stringPreferencesKey("dark_theme_style")
         val LOCK_ENABLED = booleanPreferencesKey("lock_enabled")
         val BIOMETRIC_ENABLED = booleanPreferencesKey("biometric_enabled")
         val PIN_HASH = stringPreferencesKey("pin_hash")
@@ -82,6 +88,12 @@ class SettingsRepository(private val context: Context) {
                 themeMode = runCatching {
                     ThemeMode.valueOf(preferences[Keys.THEME] ?: ThemeMode.SYSTEM.name)
                 }.getOrDefault(ThemeMode.SYSTEM),
+                colorTheme = runCatching {
+                    ColorTheme.valueOf(preferences[Keys.COLOR_THEME] ?: ColorTheme.MIZANI.name)
+                }.getOrDefault(ColorTheme.MIZANI),
+                darkThemeStyle = runCatching {
+                    DarkThemeStyle.valueOf(preferences[Keys.DARK_THEME_STYLE] ?: DarkThemeStyle.DEEP_TEAL.name)
+                }.getOrDefault(DarkThemeStyle.DEEP_TEAL),
                 lockEnabled = preferences[Keys.LOCK_ENABLED] ?: false,
                 biometricEnabled = preferences[Keys.BIOMETRIC_ENABLED] ?: false,
                 hasPin = preferences[Keys.PIN_HASH] != null && preferences[Keys.PIN_SALT] != null,
@@ -115,6 +127,14 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setTheme(mode: ThemeMode) {
         context.mizaniSettings.edit { it[Keys.THEME] = mode.name }
+    }
+
+    suspend fun setColorTheme(theme: ColorTheme) {
+        context.mizaniSettings.edit { it[Keys.COLOR_THEME] = theme.name }
+    }
+
+    suspend fun setDarkThemeStyle(style: DarkThemeStyle) {
+        context.mizaniSettings.edit { it[Keys.DARK_THEME_STYLE] = style.name }
     }
 
     suspend fun setDailyReminderEnabled(enabled: Boolean) {

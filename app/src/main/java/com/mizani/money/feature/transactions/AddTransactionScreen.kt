@@ -93,9 +93,7 @@ import com.mizani.money.ui.components.Spacing
 import com.mizani.money.ui.components.StatusBanner
 import com.mizani.money.ui.components.WalletAvatar
 import com.mizani.money.ui.components.parseHexColor
-import com.mizani.money.ui.theme.DeepTeal
-import com.mizani.money.ui.theme.Emerald
-import com.mizani.money.ui.theme.Mint
+import com.mizani.money.ui.theme.LocalMizaniThemeTokens
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -112,6 +110,7 @@ fun AddTransactionScreen(
     onDone: () -> Unit,
     onBack: () -> Unit,
 ) {
+    val themeTokens = LocalMizaniThemeTokens.current
     val snapshot = state.snapshot
     val currency = state.currency
     val existing = remember(initialTransactionId, snapshot.transactions) {
@@ -540,7 +539,7 @@ fun AddTransactionScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(MaterialTheme.shapes.extraLarge)
-                    .background(Brush.linearGradient(listOf(DeepTeal, Emerald)))
+                    .background(Brush.linearGradient(listOf(themeTokens.heroStart, themeTokens.heroEnd)))
                     .padding(20.dp),
             ) {
                 Column {
@@ -591,7 +590,7 @@ fun AddTransactionScreen(
                                     Text(
                                         "Tap to enter",
                                         style = MaterialTheme.typography.labelMedium,
-                                        color = Mint,
+                                        color = Color.White,
                                     )
                                 }
                             }
@@ -602,7 +601,7 @@ fun AddTransactionScreen(
                                     error = null
                                 },
                                 textStyle = MaterialTheme.typography.displayMedium.copy(color = Color.White),
-                                cursorBrush = SolidColor(Mint),
+                                cursorBrush = SolidColor(themeTokens.heroAccent),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                 singleLine = true,
                                 modifier = Modifier
@@ -634,8 +633,8 @@ fun AddTransactionScreen(
                                 colors = FilterChipDefaults.filterChipColors(
                                     containerColor = Color.White.copy(alpha = 0.12f),
                                     labelColor = Color.White,
-                                    selectedContainerColor = Mint,
-                                    selectedLabelColor = DeepTeal,
+                                    selectedContainerColor = themeTokens.heroAccent,
+                                    selectedLabelColor = themeTokens.heroAccentForeground,
                                 ),
                             )
                             FilterChip(
@@ -645,8 +644,8 @@ fun AddTransactionScreen(
                                 colors = FilterChipDefaults.filterChipColors(
                                     containerColor = Color.White.copy(alpha = 0.12f),
                                     labelColor = Color.White,
-                                    selectedContainerColor = Mint,
-                                    selectedLabelColor = DeepTeal,
+                                    selectedContainerColor = themeTokens.heroAccent,
+                                    selectedLabelColor = themeTokens.heroAccentForeground,
                                 ),
                             )
                         }

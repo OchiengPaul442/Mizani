@@ -4,8 +4,11 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -62,10 +65,20 @@ class GuestJourneyTest {
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithText("Set up your money").fetchSemanticsNodes().isNotEmpty()
         }
+        compose.onNodeWithText("Where do you keep your money?").assertExists()
+        compose.onNodeWithText("Wallet type").assertExists()
+        compose.onNodeWithText("Wallet name").assertExists()
+        compose.onAllNodesWithContentDescription("Open options").onLast().performClick()
+        compose.onNodeWithText("Mobile money").performClick()
+        compose.onNodeWithText("MTN MoMo").assertExists()
+        compose.onNodeWithText("Airtel Money").assertExists()
+        compose.onNodeWithText("MTN MoMo").performClick()
         compose.onNodeWithText("Continue").performClick()
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodesWithText("Add your current balance").fetchSemanticsNodes().isNotEmpty()
         }
+        compose.onNodeWithContentDescription("A person saving money in a savings jar.").assertExists()
+        compose.onNodeWithText("MTN MoMo").assertExists()
         compose.onNodeWithText("Start using Mizani").performClick()
 
         compose.waitUntil(timeoutMillis = 20_000) {

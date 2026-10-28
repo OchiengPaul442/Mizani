@@ -23,8 +23,9 @@ data class LegalDocument(
  */
 object LegalDocuments {
     const val EFFECTIVE_DATE = "27 October 2026"
+    const val PRIVACY_EFFECTIVE_DATE = "28 October 2026"
     const val TERMS_VERSION = "2026-10-27-3"
-    const val PRIVACY_VERSION = "2026-10-27-1"
+    const val PRIVACY_VERSION = "2026-10-28-1"
     const val PRIVACY_CONTACT = "paul.ochieng.dev@gmail.com"
     const val PROVIDER_NAME = "Paul Ochieng"
     const val PROVIDER_ADDRESS_DRAFT =
@@ -122,7 +123,7 @@ object LegalDocuments {
         id = LegalDocumentId.PRIVACY,
         title = "Privacy Notice",
         version = PRIVACY_VERSION,
-        effectiveDate = EFFECTIVE_DATE,
+        effectiveDate = PRIVACY_EFFECTIVE_DATE,
         introduction =
             "This Notice explains how Mizani stores and shares your information and the choices you have.",
         sections = listOf(
@@ -176,6 +177,9 @@ object LegalDocuments {
                     "passphrase you choose. When you save, share, or restore a file, Android’s file picker and any " +
                     "destination service you select may process or store it under their own terms and privacy " +
                     "notice. Mizani cannot delete those external copies for you.",
+                "If you choose to share a budget, Mizani sends a plain-text summary of its name, period, category " +
+                    "names and planned limits to the app you select. It excludes transactions and wallet balances. " +
+                    "The receiving app may process or store the message under its own terms and privacy notice.",
             )),
             LegalSection("7. Sharing and other services", listOf(
                 "The provider does not receive or sell an online copy of your ledger, or use it for advertising. " +

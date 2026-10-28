@@ -10,7 +10,6 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -23,13 +22,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -53,10 +53,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -65,7 +64,6 @@ import androidx.compose.ui.unit.dp
 import java.util.Locale
 import com.mizani.money.R
 import com.mizani.money.core.model.CountryPacks
-import com.mizani.money.core.model.WalletSuggestion
 import com.mizani.money.core.model.WalletType
 import com.mizani.money.core.legal.LegalDocumentId
 import com.mizani.money.core.money.Currencies
@@ -79,14 +77,17 @@ import com.mizani.money.ui.components.PickerOption
 import com.mizani.money.ui.components.Spacing
 import com.mizani.money.ui.components.StorysetIllustration
 import com.mizani.money.feature.legal.LegalDocumentsDialog
-import com.mizani.money.ui.theme.DeepTeal
-import com.mizani.money.ui.theme.Emerald
-import com.mizani.money.ui.theme.Mint
 import kotlinx.coroutines.launch
 
 @Composable
-fun OnboardingScreen(vm: AppViewModel) {
-    var step by rememberSaveable { mutableIntStateOf(0) }
+fun OnboardingScreen(
+    vm: AppViewModel,
+    hasAcceptedCurrentLegalDocuments: Boolean,
+) {
+    var step by rememberSaveable(hasAcceptedCurrentLegalDocuments) {
+        mutableIntStateOf(if (hasAcceptedCurrentLegalDocuments) 2 else 0)
+    }
+    var acceptedCurrentDocumentsThisSession by remember { mutableStateOf(false) }
     val suggestedCountry = CountryPacks.forDeviceRegion(Locale.getDefault().country)
     var countryCode by rememberSaveable { mutableStateOf(suggestedCountry.code) }
     var currencyCode by rememberSaveable { mutableStateOf(suggestedCountry.currencyCode) }
@@ -101,6 +102,8 @@ fun OnboardingScreen(vm: AppViewModel) {
     val scope = rememberCoroutineScope()
     val pack = CountryPacks.byCode(countryCode)
     val currency = Currencies.byCode(currencyCode)
+    val currentDocumentsAccepted = hasAcceptedCurrentLegalDocuments || acceptedCurrentDocumentsThisSession
+    val activeStep = if (currentDocumentsAccepted) step.coerceAtLeast(2) else step.coerceIn(0, 1)
     val balanceErrorText = stringResource(R.string.onboarding_error_balance)
     val walletNameErrorText = stringResource(R.string.onboarding_error_wallet_name)
     val workspaceErrorText = stringResource(R.string.onboarding_error_workspace)
@@ -113,7 +116,10 @@ fun OnboardingScreen(vm: AppViewModel) {
             val result = vm.acceptCurrentLegalDocuments()
             acceptingLegal = false
             result.exceptionOrNull()?.let { legalError = "Could not save your agreement. Please try again." }
-                ?: run { step = 2 }
+                ?: run {
+                    acceptedCurrentDocumentsThisSession = true
+                    step = 2
+                }
         }
     }
 
@@ -160,13 +166,17 @@ fun OnboardingScreen(vm: AppViewModel) {
                 modifier = Modifier.fillMaxWidth().widthIn(max = 560.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (step > 0) {
-                    IconButton(onClick = { step-- }, cd = stringResource(R.string.common_back))
+                val showBack = activeStep > 0 && (!currentDocumentsAccepted || activeStep > 2)
+                if (showBack) {
+                    IconButton(onClick = { step = activeStep - 1 }, cd = stringResource(R.string.common_back))
                 } else {
                     Spacer(Modifier.size(48.dp))
                 }
                 Spacer(Modifier.weight(1f))
-                StepDots(current = step, total = 4)
+                StepDots(
+                    current = if (currentDocumentsAccepted) activeStep - 2 else activeStep,
+                    total = if (currentDocumentsAccepted) 2 else 4,
+                )
                 Spacer(Modifier.weight(1f))
                 Spacer(Modifier.size(48.dp))
             }
@@ -180,7 +190,7 @@ fun OnboardingScreen(vm: AppViewModel) {
                 // plus fixed-height page containers, keep form content from jumping between steps.
                 AnimatedContent(
                     modifier = Modifier.fillMaxSize(),
-                    targetState = step,
+                    targetState = activeStep,
                     contentAlignment = Alignment.TopCenter,
                     transitionSpec = {
                         val direction = if (targetState > initialState) 1 else -1
@@ -220,10 +230,7 @@ fun OnboardingScreen(vm: AppViewModel) {
                                 onCurrencyChange = { currencyCode = it },
                                 onNameChange = { walletName = it.take(40) },
                                 onTypeChange = { walletType = it },
-                                onPickSuggestion = { suggestion ->
-                                    walletName = suggestion.name
-                                    walletType = suggestion.type
-                                },
+                                onPickSuggestion = { name -> walletName = name },
                                 onContinue = {
                                     if (walletName.isBlank()) {
                                         error = walletNameErrorText
@@ -298,65 +305,6 @@ private fun OnboardingStepViewport(
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally,
             content = content,
-        )
-    }
-}
-
-// A static decorative illustration keeps setup calm and avoids motion competing with form input.
-@Composable
-private fun IllustrationArt(
-    modifier: Modifier = Modifier,
-    size: androidx.compose.ui.unit.Dp = 200.dp,
-    primaryRes: Int,
-    secondaryRes: Int,
-    tertiaryRes: Int,
-    tint: Color = MaterialTheme.colorScheme.onPrimaryContainer,
-) {
-    val scale = size.value / 200f
-
-    Box(modifier = modifier.size(size), contentAlignment = Alignment.Center) {
-        Box(
-            modifier = Modifier
-                .size(size)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)),
-        )
-        Box(
-            modifier = Modifier
-                .size(size * 0.75f)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)),
-        )
-        Icon(
-            painter = painterResource(primaryRes),
-            contentDescription = null,
-            tint = tint,
-            modifier = Modifier.size(size * 0.46f),
-        )
-        FloatingChip(res = secondaryRes, size = (44 * scale).toInt(), offsetX = -70 * scale, offsetY = -48 * scale, tint = tint)
-        FloatingChip(res = tertiaryRes, size = (40 * scale).toInt(), offsetX = 72 * scale, offsetY = 44 * scale, tint = tint)
-    }
-}
-
-@Composable
-private fun FloatingChip(res: Int, size: Int, offsetX: Float, offsetY: Float, tint: Color) {
-    val density = androidx.compose.ui.platform.LocalDensity.current
-    Box(
-        modifier = Modifier
-            .graphicsLayer {
-                translationX = with(density) { offsetX.dp.toPx() }
-                translationY = with(density) { offsetY.dp.toPx() }
-            }
-            .size((size + 18).dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            painter = painterResource(res),
-            contentDescription = null,
-            tint = tint,
-            modifier = Modifier.size(size.dp),
         )
     }
 }
@@ -492,7 +440,7 @@ private fun MoneySetupStep(
     onCurrencyChange: (String) -> Unit,
     onNameChange: (String) -> Unit,
     onTypeChange: (WalletType) -> Unit,
-    onPickSuggestion: (WalletSuggestion) -> Unit,
+    onPickSuggestion: (String) -> Unit,
     onContinue: () -> Unit,
 ) {
     val country = CountryPacks.byCode(countryCode)
@@ -539,53 +487,14 @@ private fun MoneySetupStep(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(Spacing.md))
-        Text(stringResource(R.string.suggestions), style = MaterialTheme.typography.labelLarge)
-        Spacer(Modifier.height(Spacing.sm))
-        pack.walletSuggestions.chunked(2).forEach { suggestionsRow ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                suggestionsRow.forEach { suggestion ->
-                    val selected = walletName == suggestion.name && walletType == suggestion.type
-                    Surface(
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = 56.dp)
-                            .clip(MaterialTheme.shapes.medium)
-                            .clickable { onPickSuggestion(suggestion) },
-                        color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
-                        shape = MaterialTheme.shapes.medium,
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = Spacing.sm, vertical = Spacing.sm),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                        ) {
-                            Icon(
-                                MizaniIcons.wallet(suggestion.type),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp),
-                            )
-                            Text(
-                                suggestion.name,
-                                style = MaterialTheme.typography.labelLarge,
-                                maxLines = 2,
-                                modifier = Modifier.weight(1f),
-                            )
-                            if (selected) Icon(
-                                Icons.Rounded.Check,
-                                contentDescription = stringResource(R.string.common_ok),
-                                modifier = Modifier.size(18.dp),
-                            )
-                        }
-                    }
-                }
-                if (suggestionsRow.size == 1) Spacer(Modifier.weight(1f))
-            }
-            Spacer(Modifier.height(Spacing.xs))
-        }
+        Text(stringResource(R.string.onboarding_wallet_type_label), style = MaterialTheme.typography.labelLarge)
+        Spacer(Modifier.height(6.dp))
+        MizaniPicker(
+            selectedText = walletType.label,
+            options = WalletType.entries.map { PickerOption(it.name, it.label) },
+            onSelect = { id -> onTypeChange(WalletType.valueOf(id)) },
+            modifier = Modifier.fillMaxWidth(),
+        )
         Spacer(Modifier.height(Spacing.md))
         androidx.compose.material3.OutlinedTextField(
             value = walletName,
@@ -595,13 +504,56 @@ private fun MoneySetupStep(
             shape = MaterialTheme.shapes.small,
             modifier = Modifier.fillMaxWidth(),
         )
-        Spacer(Modifier.height(Spacing.md))
-        MizaniPicker(
-            selectedText = "${stringResource(R.string.onboarding_wallet_type_label)} | ${walletType.label}",
-            options = WalletType.entries.map { PickerOption(it.name, it.label) },
-            onSelect = { id -> onTypeChange(WalletType.valueOf(id)) },
-            modifier = Modifier.fillMaxWidth(),
-        )
+        val nameIdeas = pack.walletSuggestions.filter { it.type == walletType }
+        if (nameIdeas.isNotEmpty()) {
+            Spacer(Modifier.height(Spacing.sm))
+            Text(stringResource(R.string.onboarding_wallet_name_ideas), style = MaterialTheme.typography.labelLarge)
+            Spacer(Modifier.height(Spacing.xs))
+            Column(Modifier.selectableGroup()) {
+                nameIdeas.chunked(2).forEach { suggestionsRow ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    ) {
+                        suggestionsRow.forEach { suggestion ->
+                            val selected = walletName == suggestion.name
+                            Surface(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .heightIn(min = 56.dp)
+                                    .clip(MaterialTheme.shapes.medium)
+                                    .selectable(
+                                        selected = selected,
+                                        role = Role.RadioButton,
+                                        onClick = { onPickSuggestion(suggestion.name) },
+                                    ),
+                                color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+                                shape = MaterialTheme.shapes.medium,
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = Spacing.sm, vertical = Spacing.sm),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        suggestion.name,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        maxLines = 2,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    if (selected) Icon(
+                                        Icons.Rounded.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                }
+                            }
+                        }
+                        if (suggestionsRow.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                    Spacer(Modifier.height(Spacing.xs))
+                }
+            }
+        }
         if (error != null) {
             Spacer(Modifier.height(Spacing.md))
             Text(
@@ -630,12 +582,21 @@ private fun ReadyStep(
     onFinish: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        IllustrationArt(
-            size = 176.dp,
-            primaryRes = R.drawable.ic_ph_shield_check,
-            secondaryRes = R.drawable.ic_ph_check_circle,
-            tertiaryRes = R.drawable.ic_ph_sparkle,
-        )
+        Box(Modifier.size(224.dp), contentAlignment = Alignment.Center) {
+            Box(
+                Modifier.size(212.dp).clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.78f)),
+            )
+            Box(
+                Modifier.size(164.dp).clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.72f)),
+            )
+            StorysetIllustration(
+                assetName = "saving_money_cuate.svg",
+                modifier = Modifier.fillMaxSize().padding(Spacing.xs),
+                contentDescription = stringResource(R.string.onboarding_ready_illustration_description),
+            )
+        }
         Spacer(Modifier.height(Spacing.lg))
         Text(stringResource(R.string.onboarding_ready_title), style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
         Spacer(Modifier.height(Spacing.xs))

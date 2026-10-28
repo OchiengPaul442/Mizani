@@ -70,8 +70,7 @@ import com.mizani.money.ui.components.Spacing
 import com.mizani.money.ui.components.StorysetIllustration
 import com.mizani.money.ui.components.TransactionRow
 import com.mizani.money.ui.components.parseHexColor
-import com.mizani.money.ui.theme.DeepTeal
-import com.mizani.money.ui.theme.Emerald
+import com.mizani.money.ui.theme.LocalMizaniThemeTokens
 import java.time.LocalTime
 import kotlin.math.roundToInt
 
@@ -277,13 +276,12 @@ private fun SectionBlock(
 /** A compact empty-ledger introduction with direct income and expense actions. */
 @Composable
 private fun GetStartedHero(onAddIncome: () -> Unit, onAddExpense: () -> Unit) {
-    // Gradient capped at Emerald: opaque white reads at >=4.79:1, comfortably clearing
-    // the 4.5:1 threshold for normal text on the lightest stop.
+    val themeTokens = LocalMizaniThemeTokens.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.extraLarge)
-            .background(Brush.linearGradient(listOf(DeepTeal, Emerald)))
+            .background(Brush.linearGradient(listOf(themeTokens.heroStart, themeTokens.heroEnd)))
             .padding(20.dp),
     ) {
         Column {
@@ -326,9 +324,10 @@ private fun QuickAddActions(
     onAddExpense: () -> Unit,
     onDarkBackground: Boolean = false,
 ) {
+    val themeTokens = LocalMizaniThemeTokens.current
     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         val colors = if (onDarkBackground) {
-            ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = DeepTeal)
+            ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = themeTokens.heroStart)
         } else {
             ButtonDefaults.buttonColors()
         }
@@ -359,6 +358,7 @@ private fun QuickAddActions(
 
 @Composable
 private fun SummaryCard(metrics: DashboardMetrics, currency: Currency) {
+    val themeTokens = LocalMizaniThemeTokens.current
     MizaniCard {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -367,7 +367,7 @@ private fun SummaryCard(metrics: DashboardMetrics, currency: Currency) {
             SummaryColumn(
                 label = "Income",
                 value = MoneyFormat.format(metrics.incomeMinor, currency),
-                valueColor = MaterialTheme.colorScheme.primary,
+                valueColor = themeTokens.income,
                 modifier = Modifier.weight(1f),
             )
             SummaryDivider()
@@ -382,7 +382,7 @@ private fun SummaryCard(metrics: DashboardMetrics, currency: Currency) {
                 label = "Net",
                 value = MoneyFormat.format(metrics.netMinor, currency),
                 valueColor = if (metrics.netMinor >= 0) {
-                    MaterialTheme.colorScheme.primary
+                    themeTokens.income
                 } else {
                     MaterialTheme.colorScheme.error
                 },

@@ -26,7 +26,7 @@ Dark Surface `#12323A`.
 **Light**
 | Role | Hex | Use |
 |---|---|---|
-| Primary | `#087F72` emerald | primary actions, income, selected states |
+| Primary | `#087F72` emerald | default accent for actions and selected states; user accent is configurable |
 | On primary | `#FFFFFF` | text/icons on emerald |
 | Primary container | `#D8F3EA` | tinted surfaces, selected chips |
 | On primary container | `#073E38` | text/icons on the emerald container |
@@ -45,16 +45,25 @@ Dark Surface `#12323A`.
 | Error | `#B3261E` | errors only |
 
 **Dark**
-Primary `#76D7C2` mint, on-primary `#073E38`, container `#13594F`; secondary `#E8BF6A`,
+Mizani Primary `#76D7C2` mint, on-primary `#073E38`, container `#13594F`; secondary `#E8BF6A`,
 on-secondary `#46310B`, container `#61471B`; tertiary `#9CC4C8`, container `#29464D`;
 background `#0B2028`; surface `#12323A`; on-surface `#EAF4F1`; surface variant `#29464D`,
 on-surface variant `#C4D7D4`; containers `#07161C`–`#1A3D45`; outline `#3D5A60`;
 error `#FFB4AB`, on-error `#690005`.
 
-Income uses the emerald primary. Ordinary expenses use on-surface ink, **not red**. Transfers use the
-muted deep-teal tertiary — never an unrelated blue. Warm gold is reserved for accents and emphasis
-(never small text on white). Red appears only for real errors, overspend warnings and
-destructive actions.
+The default accent is emerald; users can choose Mizani, Ocean, Violet, Forest or Rose accents.
+Their selection affects primary actions, selected states and hero treatments. Income stays emerald,
+expenses keep warm-gold emphasis, and transfers stay muted teal across all accent choices. Ordinary
+expenses use on-surface ink, **not red**. Warm gold is reserved for accents and emphasis (never small
+text on white). Red appears only for real errors, overspend warnings and destructive actions.
+
+### Personal appearance
+
+- Appearance can follow the device or be set to light or dark mode.
+- Dark mode offers standard deep-teal surfaces or true-black page and card surfaces.
+- Accent choices are stored in DataStore and apply to controls and decorative highlights throughout
+  the app. Financial status and error colors remain semantic and do not change with the accent.
+- Keep text and control contrast accessible for every palette in both light and dark modes.
 
 ## Shape
 
@@ -106,7 +115,7 @@ System sans with tabular figures enabled for money. No custom font is bundled (o
 
 ## Components
 
-- **Hero card**: Deep Teal → Emerald → Emerald Bright gradient with warm-gold accents, large watermarked
+- **Hero card**: selected deep/accent gradient with warm-gold accents, large watermarked
   mark, currency symbol small, amount large, thin mint progress bar.
 - **Safe-to-spend**: white card with warm-gold icon tile; amount and a one-line basis statement;
   expandable calculation.

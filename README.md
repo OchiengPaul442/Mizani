@@ -28,6 +28,8 @@ Mizani is an Android budgeting app designed to work offline. It needs no account
   category; search and filter activity.
 - **Understand your cash flow.** Review income, spending, category breakdowns, wallet balances and
   trends in Insights. Charts include accessible text summaries.
+- **Share deliberately.** Send the official project link or preview a budget summary before sharing
+  its planned category limits through Android's share sheet.
 - **Record different currencies.** Enter income or expenses in another supported currency. When
   online, Mizani fetches the latest available daily reference rate and saves the source amount,
   converted amount, rate and rate date. Reference rates can differ from bank, card or mobile money
@@ -121,6 +123,18 @@ To run the Android instrumentation suite, connect a disposable emulator and use:
 > need to keep.
 
 ### Release builds
+
+To measure the distribution build instead of the larger development APK, run:
+
+```powershell
+.\gradlew.bat :app:assembleRelease
+```
+
+The output is <code>app/build/outputs/apk/release/app-release-unsigned.apk</code>. Release builds
+shrink code and resources and package only ARM native libraries; debug builds also include emulator
+ABIs and development code. The release APK must be signed before Android can install or distribute
+it. For this repository, release signing is configured with the four
+<code>MIZANI_RELEASE_*</code> Gradle properties.
 
 Set <code>mizaniVersionName</code> in <code>gradle.properties</code> using
 <code>MAJOR.MINOR.PATCH</code>; Gradle derives Android’s <code>versionCode</code> from it. A release

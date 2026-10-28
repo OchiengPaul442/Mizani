@@ -22,7 +22,29 @@ waiting for `Welcome back` when run alone and remains unresolved.
 
 ## Manual emulator acceptance
 
-Only the guest onboarding and income/expense journey was verified through Compose instrumentation.
+On 2026-10-28, the new flows were exercised on a fresh, disposable API 36 x86_64 Google Play AVD
+(`Mizani_QA_API_36_1`) created inside the workspace. Each instrumentation class ran in its own
+Gradle invocation because tests clear their local app state.
+
+```powershell
+.\gradlew.bat --% :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.mizani.money.GuestJourneyTest --no-daemon
+.\gradlew.bat --% :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.mizani.money.PersonalizationSharingEndToEndTest --no-daemon
+```
+
+Results: `GuestJourneyTest` passed (1 test), including type-specific wallet suggestions and the
+final Storyset illustration's accessible description. `PersonalizationSharingEndToEndTest` passed
+(3 tests), covering all theme modes, accent themes and dark surface styles, preference persistence
+after activity restart, the plan-only budget preview, and opening/dismissing Android's share sheet
+for the app and a saved budget.
+
+The APK update issue was checked separately on that disposable AVD: after accepting the current
+legal documents with setup unfinished on 1.2.0, a temporary 1.2.1 debug APK was built with a
+command-line version override and installed in place. After force-stop and relaunch, setup resumed
+without showing the Terms page. The repository version and normal debug artifact were restored to
+1.2.0 afterward. No share recipient was selected. `FLAG_SECURE` blanks app-window screenshots, so
+UI assertions and the resumed system activity were used instead of screenshot review; pixel-level
+visual contrast was not assessed.
+
 The broader manual checklist below remains unverified:
 
 1. Set up a fresh local workspace and try the app offline.

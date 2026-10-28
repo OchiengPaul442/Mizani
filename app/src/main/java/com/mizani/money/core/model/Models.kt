@@ -71,6 +71,19 @@ enum class ThemeMode(val label: String) {
     DARK("Dark"),
 }
 
+enum class ColorTheme(val label: String) {
+    MIZANI("Mizani"),
+    OCEAN("Ocean"),
+    VIOLET("Violet"),
+    FOREST("Forest"),
+    ROSE("Rose"),
+}
+
+enum class DarkThemeStyle(val label: String) {
+    DEEP_TEAL("Deep teal"),
+    OLED_BLACK("True black"),
+}
+
 enum class InsightKind {
     FEE_TREND,
     INCOME_CONCENTRATION,
@@ -277,5 +290,6 @@ object Ids {
 object AppInfo {
     const val NAME = "Mizani"
     const val TAGLINE = "Your money, in balance."
+    const val REPOSITORY_URL = "https://github.com/OchiengPaul442/budgeting-application"
     val VERSION: String = BuildConfig.VERSION_NAME
 }

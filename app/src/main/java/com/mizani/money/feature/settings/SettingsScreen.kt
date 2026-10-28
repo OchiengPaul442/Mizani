@@ -1,6 +1,7 @@
 package com.mizani.money.feature.settings
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -13,17 +14,21 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricManager
 import androidx.core.content.ContextCompat
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Backup
@@ -35,6 +40,7 @@ import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.Share
 import com.mizani.money.ui.components.MizaniAlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -47,6 +53,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,6 +65,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -65,13 +73,19 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.mizani.money.core.model.CountryPacks
+import com.mizani.money.core.model.ColorTheme
+import com.mizani.money.core.model.DarkThemeStyle
 import com.mizani.money.core.model.ThemeMode
+import com.mizani.money.core.money.MoneyFormat
 import com.mizani.money.R
 import com.mizani.money.core.time.DateText
+import com.mizani.money.data.local.BudgetEntity
 import com.mizani.money.domain.export.BackupSummary
 import com.mizani.money.domain.export.BackupFileReader
+import com.mizani.money.domain.export.BudgetShareText
 import com.mizani.money.feature.lock.PinSetupDialog
 import com.mizani.money.feature.lock.PinVerifyDialog
+import com.mizani.money.feature.lock.SensitiveActionConfirmationDialog
 import com.mizani.money.ui.AppUiState
 import com.mizani.money.ui.AppViewModel
 import com.mizani.money.ui.PIN_RETRY_MESSAGE
@@ -85,6 +99,7 @@ import com.mizani.money.ui.components.MizaniTopBar
 import com.mizani.money.ui.components.PickerOption
 import com.mizani.money.ui.components.Spacing
 import com.mizani.money.ui.components.StatusBanner
+import com.mizani.money.ui.theme.colorThemePreviewColor
 import com.mizani.money.reminder.DailyReminderNotifications
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
@@ -94,6 +109,13 @@ import java.io.IOException
 import java.time.Instant
 import java.time.ZoneId
 import java.util.Calendar
+
+private enum class SensitiveDataAction(val description: String) {
+    CSV_EXPORT("export transactions as a CSV file"),
+    EXCEL_EXPORT("export an Excel workbook"),
+    ENCRYPTED_BACKUP("create an encrypted backup"),
+    BUDGET_SHARE("share this budget"),
+}
 
 @Composable
 fun SettingsScreen(
@@ -105,9 +127,19 @@ fun SettingsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val settings = state.settings
+    val shareableBudgets = state.snapshot.budgets
+        .filter { it.deletedAt == null }
+        .sortedByDescending { it.startEpochDay }
 
     var message by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    var budgetToShare by remember { mutableStateOf<BudgetEntity?>(null) }
+    var pendingSensitiveAction by remember { mutableStateOf<SensitiveDataAction?>(null) }
+    var pendingSensitiveBudget by remember { mutableStateOf<BudgetEntity?>(null) }
+    var authorizedBudgetToShare by remember { mutableStateOf<BudgetEntity?>(null) }
+    var showSensitiveActionConfirmation by remember { mutableStateOf(false) }
+    var showPinRequiredForSensitiveAction by remember { mutableStateOf(false) }
+    var settingUpPinForSensitiveAction by remember { mutableStateOf(false) }
     var showPinSetup by remember { mutableStateOf(false) }
     var showDisablePin by remember { mutableStateOf(false) }
     var showVerifyForChange by remember { mutableStateOf(false) }
@@ -130,6 +162,71 @@ fun SettingsScreen(
     var reminderStatus by rememberSaveable { mutableStateOf<String?>(null) }
     var showReminderNotificationSettings by rememberSaveable { mutableStateOf(false) }
     var notificationSettingsRevision by remember { mutableStateOf(0) }
+
+    fun requestSensitiveAction(action: SensitiveDataAction, budget: BudgetEntity? = null) {
+        error = null
+        if (!settings.hasPin) {
+            if (budget != null) budgetToShare = null
+            showPinRequiredForSensitiveAction = true
+            return
+        }
+        if (budget != null) budgetToShare = null
+        pendingSensitiveAction = action
+        pendingSensitiveBudget = budget
+        showSensitiveActionConfirmation = true
+    }
+
+    fun shareBudget(budget: BudgetEntity) {
+        val shareText = BudgetShareText.build(budget, state.snapshot, state.currency)
+        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "Mizani budget plan")
+            putExtra(Intent.EXTRA_TEXT, shareText)
+        }
+        try {
+            context.startActivity(Intent.createChooser(sendIntent, "Share budget"))
+        } catch (_: ActivityNotFoundException) {
+            error = "No app is available to share this budget."
+        }
+        budgetToShare = null
+    }
+
+    fun clearSensitiveActionConfirmation(restoreBudgetPreview: Boolean = false) {
+        val action = pendingSensitiveAction
+        val budget = pendingSensitiveBudget
+        showSensitiveActionConfirmation = false
+        pendingSensitiveAction = null
+        pendingSensitiveBudget = null
+        if (restoreBudgetPreview && action == SensitiveDataAction.BUDGET_SHARE) {
+            budgetToShare = budget
+        }
+    }
+
+    fun authorizeSensitiveAction() {
+        val action = pendingSensitiveAction
+        val budget = pendingSensitiveBudget
+        clearSensitiveActionConfirmation()
+        when (action) {
+            SensitiveDataAction.CSV_EXPORT -> showCsvWarning = true
+            SensitiveDataAction.EXCEL_EXPORT -> showExcelWarning = true
+            SensitiveDataAction.ENCRYPTED_BACKUP -> showBackupPassphrase = true
+            SensitiveDataAction.BUDGET_SHARE -> {
+                if (budget != null && shareableBudgets.any { it.id == budget.id }) {
+                    authorizedBudgetToShare = budget
+                } else {
+                    error = "This budget is no longer available to share."
+                }
+            }
+            null -> Unit
+        }
+    }
+
+    LaunchedEffect(authorizedBudgetToShare) {
+        authorizedBudgetToShare?.let { budget ->
+            shareBudget(budget)
+            authorizedBudgetToShare = null
+        }
+    }
 
     fun discardBackupPassphrase() {
         showBackupPassphrase = false
@@ -327,9 +424,51 @@ fun SettingsScreen(
         }
     }
 
+    if (showSensitiveActionConfirmation) {
+        val action = pendingSensitiveAction
+        if (action != null) {
+            SensitiveActionConfirmationDialog(
+                actionDescription = action.description,
+                allowBiometrics = settings.biometricEnabled && canBiometric,
+                verifyPin = { pin -> vm.settingsRepository.verifyPin(pin) },
+                pinBackoffRemainingMs = { vm.settingsRepository.pinBackoffRemainingMs() },
+                onAuthorized = ::authorizeSensitiveAction,
+                onDismiss = { clearSensitiveActionConfirmation(restoreBudgetPreview = true) },
+            )
+        }
+    }
+
+    if (showPinRequiredForSensitiveAction) {
+        MizaniAlertDialog(
+            onDismissRequest = { showPinRequiredForSensitiveAction = false },
+            shape = MaterialTheme.shapes.large,
+            title = { Text("Set up a PIN first") },
+            text = {
+                Text(
+                    "A 6-digit app PIN is required to confirm exports, encrypted backup creation and budget sharing. " +
+                        "Setting one up also turns on app lock when you reopen Mizani. " +
+                        "After setup, choose the action again and confirm with your PIN or enabled biometrics.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showPinRequiredForSensitiveAction = false
+                    settingUpPinForSensitiveAction = true
+                    showPinSetup = true
+                }) { Text("Set up PIN") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPinRequiredForSensitiveAction = false }) { Text("Cancel") }
+            },
+        )
+    }
+
     if (showPinSetup) {
         PinSetupDialog(
-            onDismiss = { showPinSetup = false },
+            onDismiss = {
+                showPinSetup = false
+                settingUpPinForSensitiveAction = false
+            },
             onConfirm = { pin ->
                 scope.launch {
                     // enableLock returns a Result rather than throwing, so handle it directly:
@@ -337,13 +476,19 @@ fun SettingsScreen(
                     vm.enableLock(pin)
                         .onSuccess {
                             showPinSetup = false
-                            message = "App lock is on."
+                            message = if (settingUpPinForSensitiveAction) {
+                                "PIN set up. Choose the export, backup or budget share again and confirm your identity."
+                            } else {
+                                "App lock is on."
+                            }
+                            settingUpPinForSensitiveAction = false
                             error = null
                         }
                         .onFailure {
                             // Close the dialog so the banner behind it is visible, and keep the
                             // message user-safe (no raw exception details).
                             showPinSetup = false
+                            settingUpPinForSensitiveAction = false
                             error = "App lock could not be turned on. Your data is unchanged — try again."
                         }
                 }
@@ -695,21 +840,23 @@ fun SettingsScreen(
                         icon = Icons.Rounded.Download,
                         title = "Download transactions (CSV)",
                         subtitle = "Open in a spreadsheet or analysis app",
-                        onClick = { showCsvWarning = true },
+                        onClick = { requestSensitiveAction(SensitiveDataAction.CSV_EXPORT) },
                     )
                     MizaniSectionDivider()
                     MizaniInfoRow(
                         icon = Icons.Rounded.Download,
                         title = "Download Excel workbook",
                         subtitle = "Transactions and related records in sheets",
-                        onClick = { showExcelWarning = true },
+                        onClick = { requestSensitiveAction(SensitiveDataAction.EXCEL_EXPORT) },
                     )
                     MizaniSectionDivider()
                     MizaniInfoRow(
                         icon = Icons.Rounded.Backup,
                         title = if (creatingBackup) "Creating encrypted backup…" else "Create encrypted backup",
                         subtitle = if (creatingBackup) "Keep Mizani open while the backup is saved" else "Protect the file with a passphrase",
-                        onClick = { if (!creatingBackup) showBackupPassphrase = true },
+                        onClick = {
+                            if (!creatingBackup) requestSensitiveAction(SensitiveDataAction.ENCRYPTED_BACKUP)
+                        },
                     )
                     MizaniSectionDivider()
                     MizaniInfoRow(
@@ -720,6 +867,74 @@ fun SettingsScreen(
                             discardPendingRestore()
                             error = null
                             openRestore.launch(arrayOf("application/octet-stream", "application/zip", "*/*"))
+                        },
+                    )
+                }
+
+                Text("Share budgets", style = MaterialTheme.typography.titleMedium)
+                MizaniSectionCard {
+                    if (shareableBudgets.isEmpty()) {
+                        Text(
+                            "No saved budgets are available to share yet.",
+                            modifier = Modifier.padding(Spacing.md),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        Text(
+                            "Share one budget as text. The preview shows its name, dates, category names and planned limits. Transactions and wallet balances are not included.",
+                            modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        shareableBudgets.forEachIndexed { index, budget ->
+                            if (index > 0) MizaniSectionDivider()
+                            val plannedMinor = state.snapshot.budgetLinesFor(budget.id)
+                                .sumOf { it.plannedMinor }
+                            MizaniInfoRow(
+                                icon = Icons.Rounded.Share,
+                                title = budget.name,
+                                subtitle = "${DateText.medium(java.time.LocalDate.ofEpochDay(budget.startEpochDay))} to " +
+                                    "${DateText.medium(java.time.LocalDate.ofEpochDay(budget.endEpochDay))} · " +
+                                    "${MoneyFormat.format(plannedMinor, state.currency)} planned",
+                                onClick = { budgetToShare = budget },
+                            )
+                        }
+                    }
+                }
+
+                budgetToShare?.let { budget ->
+                    val shareText = remember(budget, state.snapshot, state.currency) {
+                        BudgetShareText.build(budget, state.snapshot, state.currency)
+                    }
+                    MizaniAlertDialog(
+                        onDismissRequest = { budgetToShare = null },
+                        shape = MaterialTheme.shapes.large,
+                        title = { Text("Review before sharing") },
+                        text = {
+                            Column(
+                                modifier = Modifier
+                                    .heightIn(max = 320.dp)
+                                    .verticalScroll(rememberScrollState()),
+                                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                            ) {
+                                Text(
+                                    "This text goes only to the app you choose. It contains planned budget details, not transactions or wallet balances.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Text(shareText, style = MaterialTheme.typography.bodySmall)
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    requestSensitiveAction(SensitiveDataAction.BUDGET_SHARE, budget)
+                                },
+                            ) { Text("Share") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { budgetToShare = null }) { Text("Cancel") }
                         },
                     )
                 }
@@ -760,14 +975,75 @@ fun SettingsScreen(
                             selected = settings.themeMode == mode,
                             onClick = { scope.launch { vm.setTheme(mode) } },
                             label = { Text(mode.label) },
+                            modifier = Modifier.heightIn(min = 48.dp),
                         )
                     }
                 }
                 Text(
-                    "Choose light or dark mode, or follow your device setting.",
+                    "Follow your device, or choose light or dark mode.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+
+                Spacer(Modifier.height(Spacing.lg))
+                Text("Color theme", style = MaterialTheme.typography.titleSmall)
+                Spacer(Modifier.height(Spacing.xs))
+                Text(
+                    "Choose the accent used for buttons, selections and highlights. Income, spending and transfer colors keep their meaning in every theme.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(Spacing.sm))
+                ColorTheme.entries.chunked(3).forEach { themes ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    ) {
+                        themes.forEach { theme ->
+                            FilterChip(
+                                selected = settings.colorTheme == theme,
+                                onClick = { scope.launch { vm.setColorTheme(theme) } },
+                                label = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            Modifier
+                                                .size(14.dp)
+                                                .clip(CircleShape)
+                                                .background(colorThemePreviewColor(theme)),
+                                        )
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(theme.label, maxLines = 1)
+                                    }
+                                },
+                                modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                            )
+                        }
+                        repeat(3 - themes.size) { Spacer(Modifier.weight(1f)) }
+                    }
+                }
+
+                Spacer(Modifier.height(Spacing.lg))
+                Text("Dark appearance", style = MaterialTheme.typography.titleSmall)
+                Spacer(Modifier.height(Spacing.xs))
+                Text(
+                    "Choose the surface style used whenever dark mode is active.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(Spacing.sm))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    DarkThemeStyle.entries.forEach { style ->
+                        FilterChip(
+                            selected = settings.darkThemeStyle == style,
+                            onClick = { scope.launch { vm.setDarkThemeStyle(style) } },
+                            label = { Text(style.label, maxLines = 1) },
+                            modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                        )
+                    }
+                }
             }
 
             Text(

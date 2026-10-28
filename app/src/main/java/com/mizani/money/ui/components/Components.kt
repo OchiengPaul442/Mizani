@@ -75,6 +75,7 @@ import com.mizani.money.core.money.MoneyFormat
 import com.mizani.money.core.time.DateText
 import com.mizani.money.data.local.TransactionEntity
 import com.mizani.money.data.repo.LedgerSnapshot
+import com.mizani.money.ui.theme.LocalMizaniThemeTokens
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -381,6 +382,7 @@ fun MizaniCelebration(
     }
     val showVisual = animatorScale != 0f
     val haptics = LocalHapticFeedback.current
+    val themeTokens = LocalMizaniThemeTokens.current
 
     LaunchedEffect(Unit) {
         if (showVisual) {
@@ -442,11 +444,11 @@ fun MizaniCelebration(
                 )
                 // Confetti chips: deterministic offsets so layout is stable across devices.
                 val confetti = listOf(
-                    Offset(-1.4f, -0.6f) to Color(0xFF0A9C8B),
-                    Offset(1.3f, -0.9f) to Color(0xFF2ECC71),
-                    Offset(-1.1f, 1.2f) to Color(0xFF3F6F76),
-                    Offset(1.5f, 1.0f) to Color(0xFF76D7C2),
-                    Offset(0.2f, -1.5f) to Color(0xFF087F72),
+                    Offset(-1.4f, -0.6f) to themeTokens.heroEnd,
+                    Offset(1.3f, -0.9f) to themeTokens.income,
+                    Offset(-1.1f, 1.2f) to themeTokens.transfer,
+                    Offset(1.5f, 1.0f) to themeTokens.heroAccent,
+                    Offset(0.2f, -1.5f) to themeTokens.expense,
                 )
                 val pop = progress.coerceIn(0f, 1f)
                 confetti.forEach { (frac, color) ->
@@ -548,14 +550,15 @@ fun InsightCard(
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
 ) {
+    val themeTokens = LocalMizaniThemeTokens.current
     val container = when (tone) {
         InsightTone.ATTENTION -> MaterialTheme.colorScheme.secondaryContainer
-        InsightTone.POSITIVE -> MaterialTheme.colorScheme.primaryContainer
+        InsightTone.POSITIVE -> themeTokens.positiveContainer
         InsightTone.NEUTRAL -> MaterialTheme.colorScheme.surfaceContainerHigh
     }
     val onContainer = when (tone) {
         InsightTone.ATTENTION -> MaterialTheme.colorScheme.onSecondaryContainer
-        InsightTone.POSITIVE -> MaterialTheme.colorScheme.onPrimaryContainer
+        InsightTone.POSITIVE -> themeTokens.onPositiveContainer
         InsightTone.NEUTRAL -> MaterialTheme.colorScheme.onSurface
     }
     Surface(
@@ -600,9 +603,10 @@ fun TransactionRow(
             "${snapshot.walletName(transaction.walletId)} · ${DateText.short(date)}"
         }
     }
+    val themeTokens = LocalMizaniThemeTokens.current
     val amountColor = when (transaction.type) {
-        TransactionType.INCOME, TransactionType.REFUND -> MaterialTheme.colorScheme.primary
-        TransactionType.TRANSFER -> MaterialTheme.colorScheme.tertiary
+        TransactionType.INCOME, TransactionType.REFUND -> themeTokens.income
+        TransactionType.TRANSFER -> themeTokens.transfer
         TransactionType.ADJUSTMENT -> MaterialTheme.colorScheme.onSurfaceVariant
         TransactionType.EXPENSE -> MaterialTheme.colorScheme.onSurface
     }
