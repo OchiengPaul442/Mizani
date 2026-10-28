@@ -51,19 +51,25 @@ background `#0B2028`; surface `#12323A`; on-surface `#EAF4F1`; surface variant `
 on-surface variant `#C4D7D4`; containers `#07161C`–`#1A3D45`; outline `#3D5A60`;
 error `#FFB4AB`, on-error `#690005`.
 
-The default accent is emerald; users can choose Mizani, Ocean, Violet, Forest or Rose accents.
-Their selection affects primary actions, selected states and hero treatments. Income stays emerald,
-expenses keep warm-gold emphasis, and transfers stay muted teal across all accent choices. Ordinary
-expenses use on-surface ink, **not red**. Warm gold is reserved for accents and emphasis (never small
-text on white). Red appears only for real errors, overspend warnings and destructive actions.
+The default accent is emerald. Users can pick a custom accent with hue, saturation and brightness
+controls or enter a six-digit hex value. The app derives light and dark tones with a contrasting
+foreground, and the choice is stored in DataStore. Income stays emerald, expenses keep warm-gold
+emphasis, and transfers stay muted teal across all accent choices. Ordinary expenses use on-surface
+ink, **not red**. Warm gold is reserved for accents and emphasis (never small text on white). Red
+appears only for real errors, overspend warnings and destructive actions.
 
 ### Personal appearance
 
 - Appearance can follow the device or be set to light or dark mode.
 - Dark mode offers standard deep-teal surfaces or true-black page and card surfaces.
+- Shared cards and the bottom bar use a thin decorative edge: a quiet neutral outline in light mode
+  and a low-opacity tint of the selected accent in dark mode. Surface tones still provide hierarchy;
+  form controls keep the stronger outline role for legibility.
 - Accent choices are stored in DataStore and apply to controls and decorative highlights throughout
-  the app. Financial status and error colors remain semantic and do not change with the accent.
-- Keep text and control contrast accessible for every palette in both light and dark modes.
+  the app. Reset restores the Mizani emerald accent. Financial status and error colors remain
+  semantic and do not change with the accent.
+- Derive light and dark accent tones from the chosen color and select a contrasting foreground for
+  controls in both modes.
 
 ## Shape
 

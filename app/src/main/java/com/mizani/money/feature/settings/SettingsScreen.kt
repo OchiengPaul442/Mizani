@@ -1,7 +1,6 @@
 package com.mizani.money.feature.settings
 
 import android.Manifest
-import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -9,6 +8,7 @@ import android.os.Build
 import android.provider.Settings as AndroidSettings
 import android.text.format.DateFormat
 import android.app.TimePickerDialog
+import android.graphics.Color as AndroidColor
 import android.view.WindowManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,6 +18,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -40,9 +41,10 @@ import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.Security
-import androidx.compose.material.icons.rounded.Share
 import com.mizani.money.ui.components.MizaniAlertDialog
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -53,7 +55,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -66,6 +67,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color as ComposeColor
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -76,13 +79,10 @@ import com.mizani.money.core.model.CountryPacks
 import com.mizani.money.core.model.ColorTheme
 import com.mizani.money.core.model.DarkThemeStyle
 import com.mizani.money.core.model.ThemeMode
-import com.mizani.money.core.money.MoneyFormat
 import com.mizani.money.R
 import com.mizani.money.core.time.DateText
-import com.mizani.money.data.local.BudgetEntity
 import com.mizani.money.domain.export.BackupSummary
 import com.mizani.money.domain.export.BackupFileReader
-import com.mizani.money.domain.export.BudgetShareText
 import com.mizani.money.feature.lock.PinSetupDialog
 import com.mizani.money.feature.lock.PinVerifyDialog
 import com.mizani.money.feature.lock.SensitiveActionConfirmationDialog
@@ -109,12 +109,12 @@ import java.io.IOException
 import java.time.Instant
 import java.time.ZoneId
 import java.util.Calendar
+import java.util.Locale
 
 private enum class SensitiveDataAction(val description: String) {
     CSV_EXPORT("export transactions as a CSV file"),
     EXCEL_EXPORT("export an Excel workbook"),
     ENCRYPTED_BACKUP("create an encrypted backup"),
-    BUDGET_SHARE("share this budget"),
 }
 
 @Composable
@@ -127,16 +127,10 @@ fun SettingsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val settings = state.settings
-    val shareableBudgets = state.snapshot.budgets
-        .filter { it.deletedAt == null }
-        .sortedByDescending { it.startEpochDay }
 
     var message by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
-    var budgetToShare by remember { mutableStateOf<BudgetEntity?>(null) }
     var pendingSensitiveAction by remember { mutableStateOf<SensitiveDataAction?>(null) }
-    var pendingSensitiveBudget by remember { mutableStateOf<BudgetEntity?>(null) }
-    var authorizedBudgetToShare by remember { mutableStateOf<BudgetEntity?>(null) }
     var showSensitiveActionConfirmation by remember { mutableStateOf(false) }
     var showPinRequiredForSensitiveAction by remember { mutableStateOf(false) }
     var settingUpPinForSensitiveAction by remember { mutableStateOf(false) }
@@ -144,6 +138,7 @@ fun SettingsScreen(
     var showDisablePin by remember { mutableStateOf(false) }
     var showVerifyForChange by remember { mutableStateOf(false) }
     var showCountryDialog by remember { mutableStateOf(false) }
+    var showAccentColorPicker by rememberSaveable { mutableStateOf(false) }
     var showCsvWarning by remember { mutableStateOf(false) }
     var showExcelWarning by remember { mutableStateOf(false) }
     var showBackupPassphrase by remember { mutableStateOf(false) }
@@ -163,68 +158,29 @@ fun SettingsScreen(
     var showReminderNotificationSettings by rememberSaveable { mutableStateOf(false) }
     var notificationSettingsRevision by remember { mutableStateOf(0) }
 
-    fun requestSensitiveAction(action: SensitiveDataAction, budget: BudgetEntity? = null) {
+    fun requestSensitiveAction(action: SensitiveDataAction) {
         error = null
         if (!settings.hasPin) {
-            if (budget != null) budgetToShare = null
             showPinRequiredForSensitiveAction = true
             return
         }
-        if (budget != null) budgetToShare = null
         pendingSensitiveAction = action
-        pendingSensitiveBudget = budget
         showSensitiveActionConfirmation = true
     }
 
-    fun shareBudget(budget: BudgetEntity) {
-        val shareText = BudgetShareText.build(budget, state.snapshot, state.currency)
-        val sendIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_SUBJECT, "Mizani budget plan")
-            putExtra(Intent.EXTRA_TEXT, shareText)
-        }
-        try {
-            context.startActivity(Intent.createChooser(sendIntent, "Share budget"))
-        } catch (_: ActivityNotFoundException) {
-            error = "No app is available to share this budget."
-        }
-        budgetToShare = null
-    }
-
-    fun clearSensitiveActionConfirmation(restoreBudgetPreview: Boolean = false) {
-        val action = pendingSensitiveAction
-        val budget = pendingSensitiveBudget
+    fun clearSensitiveActionConfirmation() {
         showSensitiveActionConfirmation = false
         pendingSensitiveAction = null
-        pendingSensitiveBudget = null
-        if (restoreBudgetPreview && action == SensitiveDataAction.BUDGET_SHARE) {
-            budgetToShare = budget
-        }
     }
 
     fun authorizeSensitiveAction() {
         val action = pendingSensitiveAction
-        val budget = pendingSensitiveBudget
         clearSensitiveActionConfirmation()
         when (action) {
             SensitiveDataAction.CSV_EXPORT -> showCsvWarning = true
             SensitiveDataAction.EXCEL_EXPORT -> showExcelWarning = true
             SensitiveDataAction.ENCRYPTED_BACKUP -> showBackupPassphrase = true
-            SensitiveDataAction.BUDGET_SHARE -> {
-                if (budget != null && shareableBudgets.any { it.id == budget.id }) {
-                    authorizedBudgetToShare = budget
-                } else {
-                    error = "This budget is no longer available to share."
-                }
-            }
             null -> Unit
-        }
-    }
-
-    LaunchedEffect(authorizedBudgetToShare) {
-        authorizedBudgetToShare?.let { budget ->
-            shareBudget(budget)
-            authorizedBudgetToShare = null
         }
     }
 
@@ -433,7 +389,7 @@ fun SettingsScreen(
                 verifyPin = { pin -> vm.settingsRepository.verifyPin(pin) },
                 pinBackoffRemainingMs = { vm.settingsRepository.pinBackoffRemainingMs() },
                 onAuthorized = ::authorizeSensitiveAction,
-                onDismiss = { clearSensitiveActionConfirmation(restoreBudgetPreview = true) },
+                onDismiss = ::clearSensitiveActionConfirmation,
             )
         }
     }
@@ -445,7 +401,7 @@ fun SettingsScreen(
             title = { Text("Set up a PIN first") },
             text = {
                 Text(
-                    "A 6-digit app PIN is required to confirm exports, encrypted backup creation and budget sharing. " +
+                    "A 6-digit app PIN is required to confirm exports and encrypted backup creation. " +
                         "Setting one up also turns on app lock when you reopen Mizani. " +
                         "After setup, choose the action again and confirm with your PIN or enabled biometrics.",
                 )
@@ -477,7 +433,7 @@ fun SettingsScreen(
                         .onSuccess {
                             showPinSetup = false
                             message = if (settingUpPinForSensitiveAction) {
-                                "PIN set up. Choose the export, backup or budget share again and confirm your identity."
+                                "PIN set up. Choose the export or backup again and confirm your identity."
                             } else {
                                 "App lock is on."
                             }
@@ -871,73 +827,6 @@ fun SettingsScreen(
                     )
                 }
 
-                Text("Share budgets", style = MaterialTheme.typography.titleMedium)
-                MizaniSectionCard {
-                    if (shareableBudgets.isEmpty()) {
-                        Text(
-                            "No saved budgets are available to share yet.",
-                            modifier = Modifier.padding(Spacing.md),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    } else {
-                        Text(
-                            "Share one budget as text. The preview shows its name, dates, category names and planned limits. Transactions and wallet balances are not included.",
-                            modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        shareableBudgets.forEachIndexed { index, budget ->
-                            if (index > 0) MizaniSectionDivider()
-                            val plannedMinor = state.snapshot.budgetLinesFor(budget.id)
-                                .sumOf { it.plannedMinor }
-                            MizaniInfoRow(
-                                icon = Icons.Rounded.Share,
-                                title = budget.name,
-                                subtitle = "${DateText.medium(java.time.LocalDate.ofEpochDay(budget.startEpochDay))} to " +
-                                    "${DateText.medium(java.time.LocalDate.ofEpochDay(budget.endEpochDay))} · " +
-                                    "${MoneyFormat.format(plannedMinor, state.currency)} planned",
-                                onClick = { budgetToShare = budget },
-                            )
-                        }
-                    }
-                }
-
-                budgetToShare?.let { budget ->
-                    val shareText = remember(budget, state.snapshot, state.currency) {
-                        BudgetShareText.build(budget, state.snapshot, state.currency)
-                    }
-                    MizaniAlertDialog(
-                        onDismissRequest = { budgetToShare = null },
-                        shape = MaterialTheme.shapes.large,
-                        title = { Text("Review before sharing") },
-                        text = {
-                            Column(
-                                modifier = Modifier
-                                    .heightIn(max = 320.dp)
-                                    .verticalScroll(rememberScrollState()),
-                                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-                            ) {
-                                Text(
-                                    "This text goes only to the app you choose. It contains planned budget details, not transactions or wallet balances.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Text(shareText, style = MaterialTheme.typography.bodySmall)
-                            }
-                        },
-                        confirmButton = {
-                            TextButton(
-                                onClick = {
-                                    requestSensitiveAction(SensitiveDataAction.BUDGET_SHARE, budget)
-                                },
-                            ) { Text("Share") }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = { budgetToShare = null }) { Text("Cancel") }
-                        },
-                    )
-                }
             }
         }
         return
@@ -967,70 +856,104 @@ fun SettingsScreen(
                 modifier = Modifier.padding(top = Spacing.xs),
             )
             MizaniCard {
-                Text("Theme", style = MaterialTheme.typography.titleSmall)
-                Spacer(Modifier.height(Spacing.sm))
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    ThemeMode.entries.forEach { mode ->
-                        FilterChip(
-                            selected = settings.themeMode == mode,
-                            onClick = { scope.launch { vm.setTheme(mode) } },
-                            label = { Text(mode.label) },
-                            modifier = Modifier.heightIn(min = 48.dp),
-                        )
-                    }
-                }
-                Text(
-                    "Follow your device, or choose light or dark mode.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-
-                Spacer(Modifier.height(Spacing.lg))
-                Text("Color theme", style = MaterialTheme.typography.titleSmall)
-                Spacer(Modifier.height(Spacing.xs))
-                Text(
-                    "Choose the accent used for buttons, selections and highlights. Income, spending and transfer colors keep their meaning in every theme.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(Spacing.sm))
-                ColorTheme.entries.chunked(3).forEach { themes ->
-                    Row(
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    Text("Theme", style = MaterialTheme.typography.titleSmall)
+                    FlowRow(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
-                        themes.forEach { theme ->
+                        ThemeMode.entries.forEach { mode ->
                             FilterChip(
-                                selected = settings.colorTheme == theme,
-                                onClick = { scope.launch { vm.setColorTheme(theme) } },
-                                label = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Box(
-                                            Modifier
-                                                .size(14.dp)
-                                                .clip(CircleShape)
-                                                .background(colorThemePreviewColor(theme)),
-                                        )
-                                        Spacer(Modifier.width(6.dp))
-                                        Text(theme.label, maxLines = 1)
-                                    }
-                                },
-                                modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                                selected = settings.themeMode == mode,
+                                onClick = { scope.launch { vm.setTheme(mode) } },
+                                label = { Text(mode.label, maxLines = 1) },
+                                modifier = Modifier.heightIn(min = 48.dp),
                             )
                         }
-                        repeat(3 - themes.size) { Spacer(Modifier.weight(1f)) }
+                    }
+                    Text(
+                        "Follow your device, or choose light or dark mode.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                Spacer(Modifier.height(Spacing.xl))
+                Text("Accent color", style = MaterialTheme.typography.titleSmall)
+                Spacer(Modifier.height(Spacing.sm))
+                Text(
+                    "Choose the color used for buttons, selections and highlights. Income, spending and transfer colors keep their meaning.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(Spacing.sm))
+                val accentHex = settings.customAccentColorHex
+                    ?: colorThemePreviewColor(settings.colorTheme).toHexString()
+                val accentColor = ComposeColor(AndroidColor.parseColor(accentHex))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    OutlinedButton(
+                        onClick = { showAccentColorPicker = true },
+                        modifier = Modifier.weight(1f).heightIn(min = 60.dp),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Box(
+                                Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(accentColor),
+                            )
+                            Column(Modifier.weight(1f)) {
+                                Text("Choose color", maxLines = 1)
+                                Text(
+                                    accentHex,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                    if (
+                        settings.customAccentColorHex != null ||
+                        settings.colorTheme != ColorTheme.MIZANI
+                    ) {
+                        TextButton(
+                            onClick = { scope.launch { vm.resetAccentColor() } },
+                            modifier = Modifier.heightIn(min = 48.dp),
+                        ) { Text("Reset") }
                     }
                 }
 
-                Spacer(Modifier.height(Spacing.lg))
+                if (showAccentColorPicker) {
+                    AccentColorPickerDialog(
+                        initialColorHex = accentHex,
+                        onDismiss = { showAccentColorPicker = false },
+                        onApply = { hex ->
+                            scope.launch {
+                                vm.setCustomAccentColor(hex)
+                                showAccentColorPicker = false
+                            }
+                        },
+                    )
+                }
+
+                Spacer(Modifier.height(Spacing.xl))
                 Text("Dark appearance", style = MaterialTheme.typography.titleSmall)
-                Spacer(Modifier.height(Spacing.xs))
+                Spacer(Modifier.height(Spacing.sm))
                 Text(
                     "Choose the surface style used whenever dark mode is active.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(Modifier.height(Spacing.sm))
+                Spacer(Modifier.height(Spacing.md))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -1237,6 +1160,132 @@ fun SettingsScreen(
         }
     }
 }
+
+@Composable
+private fun AccentColorPickerDialog(
+    initialColorHex: String,
+    onDismiss: () -> Unit,
+    onApply: (String) -> Unit,
+) {
+    val initialHsv = remember(initialColorHex) {
+        FloatArray(3).also { AndroidColor.colorToHSV(AndroidColor.parseColor(initialColorHex), it) }
+    }
+    var hue by rememberSaveable(initialColorHex) { mutableStateOf(initialHsv[0]) }
+    var saturation by rememberSaveable(initialColorHex) { mutableStateOf(initialHsv[1]) }
+    var brightness by rememberSaveable(initialColorHex) { mutableStateOf(initialHsv[2]) }
+    var hexText by rememberSaveable(initialColorHex) { mutableStateOf(initialColorHex) }
+    val selectedColor = remember(hue, saturation, brightness) {
+        ComposeColor(AndroidColor.HSVToColor(floatArrayOf(hue, saturation, brightness)))
+    }
+    val selectedHex = selectedColor.toHexString()
+
+    fun setHsv(newHue: Float = hue, newSaturation: Float = saturation, newBrightness: Float = brightness) {
+        hue = newHue
+        saturation = newSaturation
+        brightness = newBrightness
+        hexText = ComposeColor(AndroidColor.HSVToColor(floatArrayOf(newHue, newSaturation, newBrightness)))
+            .toHexString()
+    }
+
+    MizaniAlertDialog(
+        onDismissRequest = onDismiss,
+        shape = MaterialTheme.shapes.large,
+        title = { Text("Choose an accent color") },
+        text = {
+            Column(
+                modifier = Modifier.heightIn(max = 440.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    Box(
+                        Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(selectedColor)
+                            .semantics { contentDescription = "Selected accent color $selectedHex" },
+                    )
+                    Text(selectedHex, style = MaterialTheme.typography.titleSmall)
+                }
+
+                Text("Hue", style = MaterialTheme.typography.labelMedium)
+                Slider(
+                    value = hue,
+                    onValueChange = { setHsv(newHue = it) },
+                    valueRange = 0f..360f,
+                    colors = SliderDefaults.colors(
+                        thumbColor = selectedColor,
+                        activeTrackColor = selectedColor,
+                    ),
+                )
+
+                Text("Saturation", style = MaterialTheme.typography.labelMedium)
+                Slider(
+                    value = saturation,
+                    onValueChange = { setHsv(newSaturation = it) },
+                    valueRange = 0f..1f,
+                    colors = SliderDefaults.colors(
+                        thumbColor = selectedColor,
+                        activeTrackColor = selectedColor,
+                    ),
+                )
+
+                Text("Brightness", style = MaterialTheme.typography.labelMedium)
+                Slider(
+                    value = brightness,
+                    onValueChange = { setHsv(newBrightness = it) },
+                    valueRange = 0f..1f,
+                    colors = SliderDefaults.colors(
+                        thumbColor = selectedColor,
+                        activeTrackColor = selectedColor,
+                    ),
+                )
+
+                OutlinedTextField(
+                    value = hexText,
+                    onValueChange = { value ->
+                        if (value.length <= 7) {
+                            hexText = value
+                            normalizedPickerHex(value)?.let { normalized ->
+                                val hsv = FloatArray(3)
+                                AndroidColor.colorToHSV(AndroidColor.parseColor(normalized), hsv)
+                                hue = hsv[0]
+                                saturation = hsv[1]
+                                brightness = hsv[2]
+                            }
+                        }
+                    },
+                    label = { Text("Hex color") },
+                    supportingText = { Text("Enter any six-digit color value.") },
+                    singleLine = true,
+                    isError = normalizedPickerHex(hexText) == null,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { normalizedPickerHex(hexText)?.let(onApply) },
+                enabled = normalizedPickerHex(hexText) != null,
+            ) { Text("Apply color") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+private fun normalizedPickerHex(value: String): String? {
+    val digits = value.trim().removePrefix("#")
+    if (
+        digits.length != 6 ||
+        digits.any { it !in '0'..'9' && it.lowercaseChar() !in 'a'..'f' }
+    ) return null
+    return "#${digits.uppercase(Locale.ROOT)}"
+}
+
+private fun ComposeColor.toHexString(): String =
+    String.format(Locale.ROOT, "#%06X", 0xFFFFFF and toArgb())
 
 private fun formatReminderTime(context: Context, minuteOfDay: Int): String {
     val time = Calendar.getInstance().apply {

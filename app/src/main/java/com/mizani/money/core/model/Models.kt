@@ -290,6 +290,5 @@ object Ids {
 object AppInfo {
     const val NAME = "Mizani"
     const val TAGLINE = "Your money, in balance."
-    const val REPOSITORY_URL = "https://github.com/OchiengPaul442/budgeting-application"
     val VERSION: String = BuildConfig.VERSION_NAME
 }

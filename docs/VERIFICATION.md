@@ -28,20 +28,20 @@ Gradle invocation because tests clear their local app state.
 
 ```powershell
 .\gradlew.bat --% :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.mizani.money.GuestJourneyTest --no-daemon
-.\gradlew.bat --% :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.mizani.money.PersonalizationSharingEndToEndTest --no-daemon
+.\gradlew.bat --% :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.mizani.money.AppearanceAndSecurityEndToEndTest --no-daemon
 ```
 
-Results: `GuestJourneyTest` passed (1 test), including type-specific wallet suggestions and the
-final Storyset illustration's accessible description. `PersonalizationSharingEndToEndTest` passed
-(3 tests), covering all theme modes, accent themes and dark surface styles, preference persistence
-after activity restart, the plan-only budget preview, and opening/dismissing Android's share sheet
-for the app and a saved budget.
+Results: `GuestJourneyTest` passed (1 test), including type-specific wallet suggestions, the final
+Storyset illustration's accessible description, and tapping a recent expense to open that
+transaction's edit screen from Home. `AppearanceAndSecurityEndToEndTest` passed
+(3 tests), covering saved appearance options and persistence, absence of the app and budget sharing
+entry points, and fresh PIN confirmation for financial exports and encrypted backup creation.
 
 The APK update issue was checked separately on that disposable AVD: after accepting the current
 legal documents with setup unfinished on 1.2.0, a temporary 1.2.1 debug APK was built with a
 command-line version override and installed in place. After force-stop and relaunch, setup resumed
 without showing the Terms page. The repository version and normal debug artifact were restored to
-1.2.0 afterward. No share recipient was selected. `FLAG_SECURE` blanks app-window screenshots, so
+1.2.0 afterward. `FLAG_SECURE` blanks app-window screenshots, so
 UI assertions and the resumed system activity were used instead of screenshot review; pixel-level
 visual contrast was not assessed.
 

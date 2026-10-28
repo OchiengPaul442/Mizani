@@ -53,6 +53,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
@@ -119,6 +120,17 @@ object Spacing {
     val buttonHeight = 52.dp
 }
 
+/** A restrained edge tint: semantic outlines stay strong while container edges follow the accent. */
+@Composable
+fun mizaniSurfaceBorderColor(): Color {
+    val colors = MaterialTheme.colorScheme
+    return if (colors.background.luminance() < 0.5f) {
+        colors.primary.copy(alpha = 0.26f)
+    } else {
+        colors.outlineVariant.copy(alpha = 0.56f)
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MizaniTopBar(
@@ -170,7 +182,12 @@ fun MizaniCard(
     val colors = CardDefaults.cardColors(containerColor = containerColor, contentColor = contentColor)
     val shape = MaterialTheme.shapes.medium
     val clickModifier = if (onClick != null) Modifier.clickable { onClick() } else Modifier
-    Card(modifier = modifier.then(clickModifier), colors = colors, shape = shape) {
+    Card(
+        modifier = modifier.then(clickModifier),
+        colors = colors,
+        shape = shape,
+        border = BorderStroke(1.dp, mizaniSurfaceBorderColor()),
+    ) {
         Column(modifier = Modifier.padding(contentPadding), content = content)
     }
 }
@@ -566,6 +583,7 @@ fun InsightCard(
         color = container,
         contentColor = onContainer,
         shape = MaterialTheme.shapes.medium,
+        border = BorderStroke(1.dp, mizaniSurfaceBorderColor()),
     ) {
         Column(modifier = Modifier.padding(Spacing.card)) {
             Text(title, style = MaterialTheme.typography.titleMedium, color = onContainer)

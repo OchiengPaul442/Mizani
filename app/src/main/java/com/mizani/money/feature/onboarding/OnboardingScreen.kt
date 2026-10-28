@@ -302,7 +302,7 @@ private fun OnboardingStepViewport(
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Column(
             modifier = Modifier.fillMaxWidth().heightIn(min = height),
-            verticalArrangement = Arrangement.Top,
+            verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
             content = content,
         )
@@ -322,53 +322,59 @@ private fun WelcomeStep(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Box(
-                modifier = Modifier.size(224.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Box(
-                    Modifier.size(212.dp).clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.78f)),
-                )
-                Box(
-                    Modifier.size(164.dp).clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.72f)),
-                )
-                StorysetIllustration(
-                    assetName = if (page == 0) "finance_cuate.svg" else "financial_data_cuate.svg",
-                    modifier = Modifier.fillMaxSize().padding(Spacing.xs),
-                )
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth().weight(1f)) {
+            val viewportHeight = maxHeight
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = viewportHeight),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Box(
+                        modifier = Modifier.size(224.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Box(
+                            Modifier.size(212.dp).clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.78f)),
+                        )
+                        Box(
+                            Modifier.size(164.dp).clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.72f)),
+                        )
+                        StorysetIllustration(
+                            assetName = if (page == 0) "finance_cuate.svg" else "financial_data_cuate.svg",
+                            modifier = Modifier.fillMaxSize().padding(Spacing.xs),
+                        )
+                    }
+                    Spacer(Modifier.height(Spacing.md))
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(72.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            stringResource(
+                                if (page == 0) R.string.onboarding_welcome_title
+                                else R.string.onboarding_analysis_title,
+                            ),
+                            style = MaterialTheme.typography.headlineMedium,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    Spacer(Modifier.height(Spacing.sm))
+                    Text(
+                        stringResource(
+                            if (page == 0) R.string.onboarding_welcome_subtitle
+                            else R.string.onboarding_analysis_subtitle,
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
-            Spacer(Modifier.height(Spacing.md))
-            Box(
-                modifier = Modifier.fillMaxWidth().height(72.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    stringResource(
-                        if (page == 0) R.string.onboarding_welcome_title
-                        else R.string.onboarding_analysis_title,
-                    ),
-                    style = MaterialTheme.typography.headlineMedium,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            Spacer(Modifier.height(Spacing.sm))
-            Text(
-                stringResource(
-                    if (page == 0) R.string.onboarding_welcome_subtitle
-                    else R.string.onboarding_analysis_subtitle,
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
         }
         Spacer(Modifier.height(Spacing.sm))
         Box(
@@ -446,12 +452,19 @@ private fun MoneySetupStep(
     val country = CountryPacks.byCode(countryCode)
     val currency = Currencies.byCode(currencyCode)
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(stringResource(R.string.onboarding_setup_title), style = MaterialTheme.typography.headlineMedium)
+        Text(
+            stringResource(R.string.onboarding_setup_title),
+            style = MaterialTheme.typography.headlineMedium,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
         Spacer(Modifier.height(Spacing.xs))
         Text(
             stringResource(R.string.onboarding_setup_subtitle),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(Spacing.lg))
         Text(stringResource(R.string.country), style = MaterialTheme.typography.labelLarge)
@@ -480,11 +493,18 @@ private fun MoneySetupStep(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(Spacing.lg))
-        Text(stringResource(R.string.onboarding_wallet_title), style = MaterialTheme.typography.titleMedium)
+        Text(
+            stringResource(R.string.onboarding_wallet_title),
+            style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
         Text(
             stringResource(R.string.onboarding_wallet_subtitle),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(Spacing.md))
         Text(stringResource(R.string.onboarding_wallet_type_label), style = MaterialTheme.typography.labelLarge)

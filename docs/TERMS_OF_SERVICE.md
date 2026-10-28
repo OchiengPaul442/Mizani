@@ -1,7 +1,7 @@
 # Mizani Terms of Service
 
-**Version:** 2026-10-27-3
-**Effective:** 27 October 2026
+**Version:** 2026-10-28-4
+**Effective:** 28 October 2026
 **Provider:** Paul Ochieng
 **Address:** Kampala, Uganda (provisional; full physical or postal address required before public release)
 **Contact:** paul.ochieng.dev@gmail.com
@@ -44,7 +44,7 @@ You are responsible for the accuracy and lawful use of information you enter, fo
 
 ## 7. Exports and backups
 
-A CSV export and an Excel workbook are human-readable and are not encrypted. The workbook contains multiple sheets of your financial records for analysis. A Mizani backup is encrypted with the passphrase you choose; if you lose that passphrase, the backup cannot be restored. Files you save or share may be copied, backed up, or processed by the storage or sharing service you choose. The app cannot remove copies outside its private storage.
+A CSV export and an Excel workbook are human-readable and are not encrypted. The workbook contains multiple sheets of your financial records for analysis. A Mizani backup is encrypted with the passphrase you choose; if you lose that passphrase, the backup cannot be restored. Files you save outside Mizani may be copied, backed up, or processed by the destination service under its own terms. The app cannot remove copies outside its private storage.
 
 Automatic device backup is disabled. Deleting all local data cannot be undone without a backup. Uninstalling Mizani can permanently remove your records. Export a backup first if you want to keep a copy.
 

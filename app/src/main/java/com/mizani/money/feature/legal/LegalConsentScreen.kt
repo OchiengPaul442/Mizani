@@ -97,7 +97,7 @@ fun LegalConsentScreen(
                     LegalLinkRow(
                         icon = Icons.Rounded.PrivacyTip,
                         title = "Privacy Notice",
-                        subtitle = "What stays on your device and what is shared",
+                        subtitle = "What stays on your device and what leaves it",
                         onClick = { openedDocument = LegalDocumentId.PRIVACY },
                     )
                 }

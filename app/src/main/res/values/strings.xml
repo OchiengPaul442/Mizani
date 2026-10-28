@@ -1,6 +1,5 @@
 <resources>
     <string name="app_name">Mizani</string>
-    <string name="app_tagline">Your money, in balance.</string>
 
     <!-- Shared action / status copy -->
     <string name="common_back">Back</string>
@@ -9,9 +8,6 @@
     <string name="country">Country</string>
     <string name="primary_currency">Primary currency</string>
     <string name="suggestions">Suggestions</string>
-
-    <!-- Splash -->
-    <string name="splash_loading">Loading your data…</string>
 
     <!-- Onboarding -->
     <string name="onboarding_step_of">Step %1$d of %2$d</string>

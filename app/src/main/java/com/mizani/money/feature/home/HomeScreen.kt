@@ -79,6 +79,7 @@ fun HomeScreen(
     vm: AppViewModel,
     state: AppUiState,
     onOpenTransactions: () -> Unit,
+    onEditTransaction: (String) -> Unit,
     onOpenInsights: () -> Unit,
     onAdd: () -> Unit,
     onAddIncome: () -> Unit,
@@ -166,7 +167,12 @@ fun HomeScreen(
 
         SectionBlock(title = "Recent activity", actionLabel = "See all", onAction = onOpenTransactions) {
             snapshot.transactions.take(4).forEach { transaction ->
-                TransactionRow(transaction = transaction, snapshot = snapshot, currency = currency)
+                TransactionRow(
+                    transaction = transaction,
+                    snapshot = snapshot,
+                    currency = currency,
+                    onClick = { onEditTransaction(transaction.id) },
+                )
             }
         }
 

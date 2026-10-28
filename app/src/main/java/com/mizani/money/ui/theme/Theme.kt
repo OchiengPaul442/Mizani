@@ -9,7 +9,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.WindowCompat
 import com.mizani.money.core.model.ColorTheme
 import com.mizani.money.core.model.DarkThemeStyle
@@ -105,6 +107,7 @@ private val OledDarkColors = DarkColors.copy(
 
 private data class AccentTokens(
     val lightPrimary: Color,
+    val lightOnPrimary: Color,
     val lightContainer: Color,
     val lightOnContainer: Color,
     val darkPrimary: Color,
@@ -120,6 +123,7 @@ private data class AccentTokens(
 private fun accentTokens(theme: ColorTheme): AccentTokens = when (theme) {
     ColorTheme.MIZANI -> AccentTokens(
         lightPrimary = Emerald,
+        lightOnPrimary = Color.White,
         lightContainer = EmeraldTint,
         lightOnContainer = EmeraldDeep,
         darkPrimary = Mint,
@@ -133,6 +137,7 @@ private fun accentTokens(theme: ColorTheme): AccentTokens = when (theme) {
     )
     ColorTheme.OCEAN -> AccentTokens(
         lightPrimary = Color(0xFF215B9E),
+        lightOnPrimary = Color.White,
         lightContainer = Color(0xFFDCE9FF),
         lightOnContainer = Color(0xFF102C5C),
         darkPrimary = Color(0xFFA6C8FF),
@@ -146,6 +151,7 @@ private fun accentTokens(theme: ColorTheme): AccentTokens = when (theme) {
     )
     ColorTheme.VIOLET -> AccentTokens(
         lightPrimary = Color(0xFF6E42A1),
+        lightOnPrimary = Color.White,
         lightContainer = Color(0xFFEEDFFF),
         lightOnContainer = Color(0xFF2B1346),
         darkPrimary = Color(0xFFD0B3F3),
@@ -159,6 +165,7 @@ private fun accentTokens(theme: ColorTheme): AccentTokens = when (theme) {
     )
     ColorTheme.FOREST -> AccentTokens(
         lightPrimary = Color(0xFF2B7048),
+        lightOnPrimary = Color.White,
         lightContainer = Color(0xFFDDF1E2),
         lightOnContainer = Color(0xFF183B26),
         darkPrimary = Color(0xFF9FD5AF),
@@ -172,6 +179,7 @@ private fun accentTokens(theme: ColorTheme): AccentTokens = when (theme) {
     )
     ColorTheme.ROSE -> AccentTokens(
         lightPrimary = Color(0xFFA7374F),
+        lightOnPrimary = Color.White,
         lightContainer = Color(0xFFFADDE3),
         lightOnContainer = Color(0xFF4D1524),
         darkPrimary = Color(0xFFFFB3C2),
@@ -183,6 +191,44 @@ private fun accentTokens(theme: ColorTheme): AccentTokens = when (theme) {
         heroAccent = Color(0xFFFFB3C2),
         heroAccentOn = Color(0xFF4D1524),
     )
+}
+
+private fun customAccentTokens(hex: String): AccentTokens {
+    val seed = Color(android.graphics.Color.parseColor(hex))
+    val lightPrimary = withHslLightness(seed, 0.40f)
+    val darkPrimary = withHslLightness(seed, 0.78f)
+    val lightContainer = withHslLightness(seed, 0.94f)
+    val darkContainer = withHslLightness(seed, 0.28f)
+    val lightOnContainer = withHslLightness(seed, 0.20f)
+    val darkOnContainer = withHslLightness(seed, 0.92f)
+    return AccentTokens(
+        lightPrimary = lightPrimary,
+        lightOnPrimary = contrastingForeground(lightPrimary),
+        lightContainer = lightContainer,
+        lightOnContainer = contrastingForeground(lightContainer),
+        darkPrimary = darkPrimary,
+        darkOnPrimary = contrastingForeground(darkPrimary),
+        darkContainer = darkContainer,
+        darkOnContainer = contrastingForeground(darkContainer),
+        heroStart = withHslLightness(seed, 0.18f),
+        heroEnd = lightPrimary,
+        heroAccent = darkPrimary,
+        heroAccentOn = contrastingForeground(darkPrimary),
+    )
+}
+
+private fun withHslLightness(color: Color, lightness: Float): Color {
+    val hsl = FloatArray(3)
+    ColorUtils.colorToHSL(color.toArgb(), hsl)
+    hsl[2] = lightness
+    return Color(ColorUtils.HSLToColor(hsl))
+}
+
+private fun contrastingForeground(background: Color): Color {
+    val backgroundArgb = background.toArgb()
+    val blackContrast = ColorUtils.calculateContrast(Color.Black.toArgb(), backgroundArgb)
+    val whiteContrast = ColorUtils.calculateContrast(Color.White.toArgb(), backgroundArgb)
+    return if (blackContrast >= whiteContrast) Color.Black else Color.White
 }
 
 fun colorThemePreviewColor(theme: ColorTheme): Color = accentTokens(theme).lightPrimary
@@ -217,6 +263,7 @@ val LocalMizaniThemeTokens = staticCompositionLocalOf {
 fun MizaniTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     colorTheme: ColorTheme = ColorTheme.MIZANI,
+    customAccentColorHex: String? = null,
     darkThemeStyle: DarkThemeStyle = DarkThemeStyle.DEEP_TEAL,
     content: @Composable () -> Unit,
 ) {
@@ -225,7 +272,7 @@ fun MizaniTheme(
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
     }
-    val accent = accentTokens(colorTheme)
+    val accent = customAccentColorHex?.let(::customAccentTokens) ?: accentTokens(colorTheme)
     val baseColors = when {
         dark && darkThemeStyle == DarkThemeStyle.OLED_BLACK -> OledDarkColors
         dark -> DarkColors
@@ -242,7 +289,7 @@ fun MizaniTheme(
     } else {
         baseColors.copy(
             primary = accent.lightPrimary,
-            onPrimary = Color.White,
+            onPrimary = accent.lightOnPrimary,
             primaryContainer = accent.lightContainer,
             onPrimaryContainer = accent.lightOnContainer,
             inversePrimary = accent.darkPrimary,

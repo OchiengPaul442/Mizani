@@ -28,8 +28,6 @@ Mizani is an Android budgeting app designed to work offline. It needs no account
   category; search and filter activity.
 - **Understand your cash flow.** Review income, spending, category breakdowns, wallet balances and
   trends in Insights. Charts include accessible text summaries.
-- **Share deliberately.** Send the official project link or preview a budget summary before sharing
-  its planned category limits through Android's share sheet.
 - **Record different currencies.** Enter income or expenses in another supported currency. When
   online, Mizani fetches the latest available daily reference rate and saves the source amount,
   converted amount, rate and rate date. Reference rates can differ from bank, card or mobile money
@@ -66,7 +64,7 @@ send currency codes only, not transaction amounts or details. Update checks show
 page; Mizani does not silently download or install updates.
 
 Encrypted backups are intended for recovery and moving to another device. CSV and Excel exports are
-readable files, so choose a trusted place to save or share them. See the [security and recovery
+readable files, so choose a trusted place to save them. See the [security and recovery
 guide](docs/SECURITY.md) and [privacy notice](docs/PRIVACY_NOTICE.md).
 
 ## Build and run

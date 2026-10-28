@@ -35,6 +35,7 @@ data class AppSettings(
     val currencyCode: String = "UGX",
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val colorTheme: ColorTheme = ColorTheme.MIZANI,
+    val customAccentColorHex: String? = null,
     val darkThemeStyle: DarkThemeStyle = DarkThemeStyle.DEEP_TEAL,
     val lockEnabled: Boolean = false,
     val biometricEnabled: Boolean = false,
@@ -62,6 +63,7 @@ class SettingsRepository(private val context: Context) {
         val CURRENCY = stringPreferencesKey("currency_code")
         val THEME = stringPreferencesKey("theme_mode")
         val COLOR_THEME = stringPreferencesKey("color_theme")
+        val CUSTOM_ACCENT_COLOR = stringPreferencesKey("custom_accent_color")
         val DARK_THEME_STYLE = stringPreferencesKey("dark_theme_style")
         val LOCK_ENABLED = booleanPreferencesKey("lock_enabled")
         val BIOMETRIC_ENABLED = booleanPreferencesKey("biometric_enabled")
@@ -91,6 +93,7 @@ class SettingsRepository(private val context: Context) {
                 colorTheme = runCatching {
                     ColorTheme.valueOf(preferences[Keys.COLOR_THEME] ?: ColorTheme.MIZANI.name)
                 }.getOrDefault(ColorTheme.MIZANI),
+                customAccentColorHex = normalizeAccentColorHex(preferences[Keys.CUSTOM_ACCENT_COLOR]),
                 darkThemeStyle = runCatching {
                     DarkThemeStyle.valueOf(preferences[Keys.DARK_THEME_STYLE] ?: DarkThemeStyle.DEEP_TEAL.name)
                 }.getOrDefault(DarkThemeStyle.DEEP_TEAL),
@@ -130,7 +133,26 @@ class SettingsRepository(private val context: Context) {
     }
 
     suspend fun setColorTheme(theme: ColorTheme) {
-        context.mizaniSettings.edit { it[Keys.COLOR_THEME] = theme.name }
+        context.mizaniSettings.edit { preferences ->
+            preferences[Keys.COLOR_THEME] = theme.name
+            preferences.remove(Keys.CUSTOM_ACCENT_COLOR)
+        }
+    }
+
+    suspend fun setCustomAccentColor(hex: String?) {
+        val normalized = normalizeAccentColorHex(hex)
+        require(hex == null || normalized != null) { "Accent color must be a six-digit hex value" }
+        context.mizaniSettings.edit { preferences ->
+            if (normalized == null) preferences.remove(Keys.CUSTOM_ACCENT_COLOR)
+            else preferences[Keys.CUSTOM_ACCENT_COLOR] = normalized
+        }
+    }
+
+    suspend fun resetAccentColor() {
+        context.mizaniSettings.edit { preferences ->
+            preferences[Keys.COLOR_THEME] = ColorTheme.MIZANI.name
+            preferences.remove(Keys.CUSTOM_ACCENT_COLOR)
+        }
     }
 
     suspend fun setDarkThemeStyle(style: DarkThemeStyle) {
@@ -251,4 +273,13 @@ class SettingsRepository(private val context: Context) {
     suspend fun resetAll() {
         context.mizaniSettings.edit { it.clear() }
     }
+}
+
+private fun normalizeAccentColorHex(value: String?): String? {
+    val digits = value?.trim()?.removePrefix("#") ?: return null
+    if (
+        digits.length != 6 ||
+        digits.any { it !in '0'..'9' && it.lowercaseChar() !in 'a'..'f' }
+    ) return null
+    return "#${digits.uppercase()}"
 }

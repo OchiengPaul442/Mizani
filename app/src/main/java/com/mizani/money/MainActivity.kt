@@ -11,13 +11,13 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -33,11 +33,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -53,7 +49,6 @@ import com.mizani.money.ui.AppViewModel
 import com.mizani.money.ui.MizaniNavHost
 import com.mizani.money.ui.components.MizaniMark
 import com.mizani.money.ui.components.Spacing
-import com.mizani.money.ui.theme.LocalMizaniThemeTokens
 import com.mizani.money.ui.theme.MizaniTheme
 import kotlinx.coroutines.launch
 
@@ -73,6 +68,7 @@ class MainActivity : FragmentActivity() {
             MizaniTheme(
                 themeMode = state.settings.themeMode,
                 colorTheme = state.settings.colorTheme,
+                customAccentColorHex = state.settings.customAccentColorHex,
                 darkThemeStyle = state.settings.darkThemeStyle,
             ) {
                 MizaniRoot(appViewModel, state)
@@ -180,84 +176,62 @@ private fun StartupErrorScreen(onRetry: () -> Unit) {
 }
 
 @Composable
-private fun SplashScreen() {
-    // A brand gradient backdrop with a breathing mark, name, tagline and a thin progress bar.
-    // No artificial delay: the splash is dismissed the moment the ViewModel's state is ready.
-    val transition = rememberInfiniteTransition(label = "splash-pulse")
-    val pulse by transition.animateFloat(
-        initialValue = 0.85f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1100, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "splash-pulse",
-    )
-    val shimmer by transition.animateFloat(
+internal fun SplashScreen() {
+    // Stay visible only while storage initializes; never delay app entry for the animation.
+    val transition = rememberInfiniteTransition(label = "splash-rings")
+    val firstRing by transition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1400, easing = LinearEasing),
+            animation = tween(durationMillis = 1800, easing = LinearEasing),
             repeatMode = RepeatMode.Restart,
         ),
-        label = "splash-shimmer",
+        label = "splash-ring-one",
     )
-    val loadingLabel = stringResource(R.string.splash_loading)
-    val themeTokens = LocalMizaniThemeTokens.current
+    val secondRing by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1800, delayMillis = 600, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "splash-ring-two",
+    )
+    val thirdRing by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1800, delayMillis = 1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "splash-ring-three",
+    )
+    val ringColor = MaterialTheme.colorScheme.primary
+    val brandName = stringResource(R.string.app_name)
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(themeTokens.heroStart, themeTokens.heroEnd))),
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center,
     ) {
-        Column(
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.xl),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+                .size(240.dp)
+                .semantics { contentDescription = brandName },
+            contentAlignment = Alignment.Center,
         ) {
-            MizaniMark(size = 96).let { mark ->
-                // Overlay a subtle pulse via a wrapper that scales/alpha-animates the mark.
-                Box(
-                    modifier = Modifier
-                        .scale(pulse)
-                        .alpha(0.6f + 0.4f * pulse),
-                ) { mark }
+            Canvas(Modifier.fillMaxSize()) {
+                val baseRadius = 50.dp.toPx()
+                val expansion = 65.dp.toPx()
+                val ringStroke = Stroke(width = 1.5.dp.toPx())
+                listOf(firstRing, secondRing, thirdRing).forEach { progress ->
+                    drawCircle(
+                        color = ringColor.copy(alpha = 0.28f * (1f - progress)),
+                        radius = baseRadius + expansion * progress,
+                        style = ringStroke,
+                    )
+                }
             }
-            Spacer(Modifier.height(Spacing.xl))
-            Text(
-                stringResource(R.string.app_name),
-                style = MaterialTheme.typography.displaySmall,
-                color = Color.White,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(Spacing.sm))
-            Text(
-                stringResource(R.string.app_tagline),
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(Spacing.xxl))
-            // Thin brand progress bar with a travelling highlight; reads as loading to screen readers.
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(0.5f)
-                    .height(3.dp)
-                    .clip(MaterialTheme.shapes.small)
-                    .background(Color.White.copy(alpha = 0.25f))
-                    .semantics { contentDescription = loadingLabel },
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(shimmer)
-                        .height(3.dp)
-                        .clip(MaterialTheme.shapes.small)
-                        .background(Color.White),
-                )
-            }
+            MizaniMark(size = 88)
         }
     }
 }

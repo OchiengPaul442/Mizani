@@ -125,5 +125,17 @@ class GuestJourneyTest {
         val balance = runBlocking { app.container.financeRepository.snapshot.first() }.walletBalances()[bundle.wallets.single().id]
         assertEquals(75_000L, balance)
         assertTrue(bundle.categories.isNotEmpty())
+
+        compose.onNodeWithText("Home").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithText("Recent activity").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onAllNodesWithContentDescription(
+            "Expense, Housing & rent, −UGX 25,000",
+            substring = true,
+        ).onFirst().performClick()
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodesWithText("Edit transaction").fetchSemanticsNodes().isNotEmpty()
+        }
     }
 }

@@ -20,7 +20,6 @@ import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Shield
-import androidx.compose.material.icons.rounded.Share
 import com.google.android.gms.oss.licenses.v2.OssLicensesMenuActivity
 import com.mizani.money.ui.components.MizaniAlertDialog
 import androidx.compose.material3.Icon
@@ -111,17 +110,6 @@ fun AboutScreen(state: AppUiState, onBack: () -> Unit) {
         }
     }
 
-    fun shareMizani() {
-        val text = "Mizani — Your money, in balance.\n" +
-            "Learn more and find official project updates: ${AppInfo.REPOSITORY_URL}"
-        val sendIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_SUBJECT, "Mizani: Your money, in balance.")
-            putExtra(Intent.EXTRA_TEXT, text)
-        }
-        context.startActivity(Intent.createChooser(sendIntent, "Share Mizani"))
-    }
-
     Column(Modifier.fillMaxSize()) {
         MizaniTopBar(title = "About & privacy", onBack = onBack)
         Column(
@@ -152,13 +140,6 @@ fun AboutScreen(state: AppUiState, onBack: () -> Unit) {
                         else -> "Version ${AppInfo.VERSION}"
                     },
                     onClick = if (installedFromPlay || isCheckingForUpdate) null else ::checkForUpdates,
-                )
-                MizaniSectionDivider()
-                MizaniInfoRow(
-                    icon = Icons.Rounded.Share,
-                    title = "Share Mizani",
-                    subtitle = "Send the official project link",
-                    onClick = ::shareMizani,
                 )
                 if (updateMessage != null) {
                     MizaniSectionDivider()

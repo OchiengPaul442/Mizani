@@ -288,6 +288,14 @@ class AppViewModel(private val container: AppContainer) : ViewModel() {
         settingsRepository.setColorTheme(theme)
     }
 
+    suspend fun setCustomAccentColor(hex: String?) {
+        settingsRepository.setCustomAccentColor(hex)
+    }
+
+    suspend fun resetAccentColor() {
+        settingsRepository.resetAccentColor()
+    }
+
     suspend fun setDarkThemeStyle(style: DarkThemeStyle) {
         settingsRepository.setDarkThemeStyle(style)
     }

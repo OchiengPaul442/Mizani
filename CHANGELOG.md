@@ -8,11 +8,21 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
 
 ### Security
 
-- Require fresh PIN or enabled biometric confirmation before exporting financial records, creating encrypted backups, or sharing budgets.
+- Require fresh PIN or enabled biometric confirmation before exporting financial records or creating encrypted backups.
 
 ### Changed
 
+- Replace cramped preset accent chips with a spaced custom color picker; saved accents apply across the app.
+- Add subtle accent-tinted edges to shared cards and the bottom bar, with stronger definition in dark mode.
+- Replace the post-splash loader copy and progress bar with a centered logo and radiating pulse rings.
 - Reuse rendered Storyset illustrations on screen revisits instead of parsing the same SVG again.
+- Center onboarding content consistently in its available viewport, with scrolling on shorter screens.
+- Inset the bottom navigation in a rounded, lightly bordered surface with consistent spacing.
+- Open the selected transaction when a row in Home’s recent activity is tapped.
+
+### Removed
+
+- Temporarily remove app and budget sharing entry points.
 
 ## [1.2.0] - 2026-10-28
 

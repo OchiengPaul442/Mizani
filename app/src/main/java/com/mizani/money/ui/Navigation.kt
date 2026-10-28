@@ -8,12 +8,15 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.border
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -23,7 +26,6 @@ import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.SwapHoriz
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -43,6 +45,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.animation.core.tween
@@ -61,6 +64,8 @@ import com.mizani.money.feature.transactions.AddTransactionScreen
 import com.mizani.money.feature.transactions.TransactionsScreen
 import com.mizani.money.feature.wallets.WalletsScreen
 import com.mizani.money.core.model.TransactionType
+import com.mizani.money.ui.components.Spacing
+import com.mizani.money.ui.components.mizaniSurfaceBorderColor
 
 private data class Tab(
     val route: String,
@@ -181,14 +186,22 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
         },
         bottomBar = {
             if (isTopLevel) {
-                Column {
-                    HorizontalDivider(
-                        modifier = Modifier.fillMaxWidth(),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
-                    )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                ) {
                     NavigationBar(
-                        containerColor = MaterialTheme.colorScheme.surface,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(MaterialTheme.shapes.large)
+                            .border(
+                                width = 1.dp,
+                                color = mizaniSurfaceBorderColor(),
+                                shape = MaterialTheme.shapes.large,
+                            ),
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
                         tonalElevation = 0.dp,
                     ) {
                         tabs.forEach { tab ->
@@ -228,6 +241,7 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                     vm = vm,
                     state = state,
                     onOpenTransactions = { openTopLevel("transactions") },
+                    onEditTransaction = { id -> openDetail("edit/$id") },
                     onOpenInsights = { openTopLevel("insights") },
                     onAdd = { showAddSheet = true },
                     onAddIncome = { openAdd(TransactionType.INCOME) },

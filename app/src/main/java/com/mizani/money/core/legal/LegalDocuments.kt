@@ -22,10 +22,10 @@ data class LegalDocument(
  * then asks existing users to accept the revised documents before opening their ledger.
  */
 object LegalDocuments {
-    const val EFFECTIVE_DATE = "27 October 2026"
+    const val EFFECTIVE_DATE = "28 October 2026"
     const val PRIVACY_EFFECTIVE_DATE = "28 October 2026"
-    const val TERMS_VERSION = "2026-10-27-3"
-    const val PRIVACY_VERSION = "2026-10-28-1"
+    const val TERMS_VERSION = "2026-10-28-4"
+    const val PRIVACY_VERSION = "2026-10-28-2"
     const val PRIVACY_CONTACT = "paul.ochieng.dev@gmail.com"
     const val PROVIDER_NAME = "Paul Ochieng"
     const val PROVIDER_ADDRESS_DRAFT =
@@ -89,8 +89,8 @@ object LegalDocuments {
                 "A CSV export and an Excel workbook are human-readable and are not encrypted. The workbook " +
                     "contains multiple sheets of your financial records for analysis. A Mizani backup is encrypted " +
                     "with the passphrase you choose; if you lose that passphrase, the backup cannot be restored. " +
-                    "Files you save or share may be copied, backed up, or processed by the storage or sharing " +
-                    "service you choose. The app cannot remove copies outside its private storage.",
+                    "Files you save outside Mizani may be copied, backed up, or processed by the destination " +
+                    "service under its own terms. The app cannot remove copies outside its private storage.",
                 "Automatic device backup is disabled. Deleting all local data cannot be undone without a " +
                     "backup. Uninstalling Mizani can permanently remove your records. Export a backup first " +
                     "if you want to keep a copy.",
@@ -125,7 +125,7 @@ object LegalDocuments {
         version = PRIVACY_VERSION,
         effectiveDate = PRIVACY_EFFECTIVE_DATE,
         introduction =
-            "This Notice explains how Mizani stores and shares your information and the choices you have.",
+            "This Notice explains how Mizani stores your information and the choices you have.",
         sections = listOf(
             LegalSection("1. Who is responsible", listOf(
                 "Provider: $PROVIDER_NAME. Address: $PROVIDER_ADDRESS_DRAFT. Contact: $PRIVACY_CONTACT.",
@@ -174,17 +174,14 @@ object LegalDocuments {
                 "CSV exports and Excel workbooks are unencrypted and may expose your financial details to anyone " +
                     "who can access the file. The workbook includes multiple sheets such as transactions, wallets, " +
                     "budgets, recurring schedules, goals and debts. A Mizani backup is encrypted with the " +
-                    "passphrase you choose. When you save, share, or restore a file, Android’s file picker and any " +
+                    "passphrase you choose. When you save or restore a file, Android’s file picker and any " +
                     "destination service you select may process or store it under their own terms and privacy " +
                     "notice. Mizani cannot delete those external copies for you.",
-                "If you choose to share a budget, Mizani sends a plain-text summary of its name, period, category " +
-                    "names and planned limits to the app you select. It excludes transactions and wallet balances. " +
-                    "The receiving app may process or store the message under its own terms and privacy notice.",
             )),
-            LegalSection("7. Sharing and other services", listOf(
+            LegalSection("7. Other services", listOf(
                 "The provider does not receive or sell an online copy of your ledger, or use it for advertising. " +
                     "External services receive only the information described above or a file you choose to " +
-                    "save or share. The operating system, app marketplace, and network providers may process " +
+                    "save. The operating system, app marketplace, and network providers may process " +
                     "technical information under their own terms.",
             )),
             LegalSection("8. Your choices and privacy rights", listOf(

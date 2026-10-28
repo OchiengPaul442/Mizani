@@ -1,12 +1,12 @@
 # Mizani Privacy Notice
 
-**Version:** 2026-10-28-1
+**Version:** 2026-10-28-2
 **Effective:** 28 October 2026
 **Provider:** Paul Ochieng
 **Address:** Kampala, Uganda (provisional; full physical or postal address required before public release)
 **Contact:** paul.ochieng.dev@gmail.com
 
-This Notice explains how Mizani stores and shares your information and the choices you have.
+This Notice explains how Mizani stores your information and the choices you have.
 
 ## 1. Who is responsible
 
@@ -42,13 +42,11 @@ Mizani keeps no online copy of your ledger. Local records remain in the app unti
 
 ## 6. Exports and other services
 
-CSV exports and Excel workbooks are unencrypted and may expose your financial details to anyone who can access the file. The workbook includes multiple sheets such as transactions, wallets, budgets, recurring schedules, goals and debts. A Mizani backup is encrypted with the passphrase you choose. When you save, share, or restore a file, Android’s file picker and any destination service you select may process or store it under their own terms and privacy notice. Mizani cannot delete those external copies for you.
+CSV exports and Excel workbooks are unencrypted and may expose your financial details to anyone who can access the file. The workbook includes multiple sheets such as transactions, wallets, budgets, recurring schedules, goals and debts. A Mizani backup is encrypted with the passphrase you choose. When you save or restore a file, Android’s file picker and any destination service you select may process or store it under their own terms and privacy notice. Mizani cannot delete those external copies for you.
 
-If you choose to share a budget, Mizani sends a plain-text summary of its name, period, category names and planned limits to the app you select. It excludes transactions and wallet balances. The receiving app may process or store the message under its own terms and privacy notice.
+## 7. Other services
 
-## 7. Sharing and other services
-
-The provider does not receive or sell an online copy of your ledger, or use it for advertising. External services receive only the information described above or a file you choose to save or share. The operating system, app marketplace, and network providers may process technical information under their own terms.
+The provider does not receive or sell an online copy of your ledger, or use it for advertising. External services receive only the information described above or a file you choose to save. The operating system, app marketplace, and network providers may process technical information under their own terms.
 
 ## 8. Your choices and privacy rights
 
