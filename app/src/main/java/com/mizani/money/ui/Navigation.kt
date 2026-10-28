@@ -7,16 +7,19 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -24,8 +27,10 @@ import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.SwapHoriz
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -37,8 +42,8 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,6 +52,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.animation.core.tween
@@ -56,17 +62,20 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.mizani.money.feature.categories.CategoriesScreen
+import com.mizani.money.feature.commitments.CommitmentsScreen
 import com.mizani.money.feature.home.HomeScreen
 import com.mizani.money.feature.insights.InsightsScreen
 import com.mizani.money.feature.more.MoreScreen
 import com.mizani.money.feature.settings.AboutScreen
 import com.mizani.money.feature.settings.SettingsScreen
 import com.mizani.money.feature.transactions.AddTransactionScreen
+import com.mizani.money.feature.transactions.MessageImportScreen
 import com.mizani.money.feature.transactions.TransactionsScreen
 import com.mizani.money.feature.wallets.WalletsScreen
 import com.mizani.money.core.model.TransactionType
 import com.mizani.money.ui.components.Spacing
 import com.mizani.money.ui.components.mizaniSurfaceBorderColor
+import com.mizani.money.ui.theme.LocalMizaniThemeTokens
 
 private data class Tab(
     val route: String,
@@ -138,6 +147,9 @@ private fun depthOf(route: String?): Int = when (route) {
 @OptIn(ExperimentalMaterial3Api::class)
 fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
     val navController = rememberNavController()
+    val pendingImport by vm.pendingImport.collectAsState()
+    val sharedImportReady by vm.sharedImportReady.collectAsState()
+    val sharedImportNotice by vm.sharedImportNotice.collectAsState()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val isTopLevel = currentRoute == null || currentRoute in topLevelRoutes
@@ -148,6 +160,18 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
 
     LaunchedEffect(currentRoute) {
         vm.hideWalletBalances()
+    }
+
+    LaunchedEffect(sharedImportReady) {
+        if (sharedImportReady && currentRoute != "import-review") {
+            navController.navigate("import-review") { launchSingleTop = true }
+        }
+    }
+
+    LaunchedEffect(sharedImportNotice) {
+        if (sharedImportNotice != null && currentRoute != "import-message") {
+            navController.navigate("import-message") { launchSingleTop = true }
+        }
     }
 
     fun openAdd(type: TransactionType) {
@@ -280,6 +304,7 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                     vm = vm,
                     state = state,
                     onExportData = { openDetail("export") },
+                    onSetupPin = { openDetail("settings") },
                 )
             }
             composable(
@@ -292,6 +317,15 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 MoreScreen(
                     onNavigate = ::openDetail,
                 )
+            }
+            composable(
+                "commitments",
+                enterTransition = ::navEnter,
+                exitTransition = ::navExit,
+                popEnterTransition = ::navPopEnter,
+                popExitTransition = ::navPopExit,
+            ) {
+                CommitmentsScreen(vm = vm, state = state, onBack = ::navigateBack)
             }
             composable(
                 "add/{type}",
@@ -312,6 +346,56 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                     onDone = ::navigateBack,
                     onBack = ::navigateBack,
                 )
+            }
+            composable(
+                "import-message",
+                enterTransition = ::navEnter,
+                exitTransition = ::navExit,
+                popEnterTransition = ::navPopEnter,
+                popExitTransition = ::navPopExit,
+            ) {
+                MessageImportScreen(
+                    vm = vm,
+                    initialNotice = sharedImportNotice,
+                    onReview = { navController.navigate("import-review") { launchSingleTop = true } },
+                    onBack = {
+                        vm.clearPendingImport()
+                        navigateBack()
+                    },
+                )
+            }
+            composable(
+                "import-review",
+                enterTransition = ::navEnter,
+                exitTransition = ::navExit,
+                popEnterTransition = ::navPopEnter,
+                popExitTransition = ::navPopExit,
+            ) {
+                val candidate = pendingImport
+                if (candidate == null) {
+                    MessageImportScreen(
+                        vm = vm,
+                        initialNotice = "Paste a transaction message to begin.",
+                        onReview = { navController.navigate("import-review") { launchSingleTop = true } },
+                        onBack = ::navigateBack,
+                    )
+                } else {
+                    AddTransactionScreen(
+                        vm = vm,
+                        state = state,
+                        initialTransactionId = null,
+                        initialType = candidate.type,
+                        importCandidate = candidate,
+                        onDone = {
+                            vm.clearPendingImport()
+                            navigateBack()
+                        },
+                        onBack = {
+                            vm.clearPendingImport()
+                            navigateBack()
+                        },
+                    )
+                }
             }
             composable(
                 "edit/{id}",
@@ -393,40 +477,106 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
     if (showAddSheet) {
         ModalBottomSheet(onDismissRequest = { showAddSheet = false }) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text("What would you like to record?", style = MaterialTheme.typography.titleLarge)
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("What would you like to record?", style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        "Choose how money moved.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                val tokens = LocalMizaniThemeTokens.current
+                AddActionButton(
+                    icon = Icons.Rounded.ArrowUpward,
+                    iconTint = tokens.expense,
+                    title = "Record expense",
+                    supportingText = "Money spent from a wallet",
+                    onClick = { openAdd(TransactionType.EXPENSE) },
+                )
+                AddActionButton(
+                    icon = Icons.Rounded.ArrowDownward,
+                    iconTint = tokens.income,
+                    title = "Record income",
+                    supportingText = "Money received into a wallet",
+                    onClick = { openAdd(TransactionType.INCOME) },
+                )
+                AddActionButton(
+                    icon = Icons.Rounded.SwapHoriz,
+                    iconTint = tokens.transfer,
+                    title = "Move between wallets",
+                    supportingText = "Does not affect income or spending",
+                    onClick = { openAdd(TransactionType.TRANSFER) },
+                )
+                AddActionButton(
+                    icon = Icons.Rounded.ContentPaste,
+                    iconTint = MaterialTheme.colorScheme.primary,
+                    title = "Import a message",
+                    supportingText = "Review an MTN or Airtel confirmation",
+                    onClick = {
+                        vm.clearPendingImport()
+                        openDetail("import-message")
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddActionButton(
+    icon: ImageVector,
+    iconTint: Color,
+    title: String,
+    supportingText: String,
+    onClick: () -> Unit,
+) {
+    FilledTonalButton(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        colors = ButtonDefaults.filledTonalButtonColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+        ),
+        border = BorderStroke(1.dp, mizaniSurfaceBorderColor()),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(iconTint.copy(alpha = 0.14f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.Start,
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(title, style = MaterialTheme.typography.titleSmall)
                 Text(
-                    "Choose the money that came in or went out.",
-                    style = MaterialTheme.typography.bodyMedium,
+                    supportingText,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(Modifier.height(2.dp))
-                FilledTonalButton(
-                    onClick = { showAddSheet = false; openAdd(TransactionType.EXPENSE) },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(Icons.Rounded.ArrowUpward, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Record expense")
-                }
-                FilledTonalButton(
-                    onClick = { showAddSheet = false; openAdd(TransactionType.INCOME) },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(Icons.Rounded.ArrowDownward, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Record income")
-                }
-                TextButton(
-                    onClick = { showAddSheet = false; openAdd(TransactionType.TRANSFER) },
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                ) {
-                    Icon(Icons.Rounded.SwapHoriz, contentDescription = null)
-                    Spacer(Modifier.width(6.dp))
-                    Text("Move money between wallets")
-                }
             }
         }
     }

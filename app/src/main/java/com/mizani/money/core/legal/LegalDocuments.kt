@@ -26,7 +26,7 @@ object LegalDocuments {
     const val EFFECTIVE_DATE = "28 October 2026"
     const val PRIVACY_EFFECTIVE_DATE = "28 October 2026"
     const val TERMS_VERSION = "2026-10-28-4"
-    const val PRIVACY_VERSION = "2026-10-28-2"
+    const val PRIVACY_VERSION = "2026-10-28-3"
     const val PRIVACY_CONTACT = "paul.ochieng.dev@gmail.com"
     const val PROVIDER_NAME = "Paul Ochieng"
     const val PROVIDER_ADDRESS_DRAFT =
@@ -136,14 +136,18 @@ object LegalDocuments {
                     "amounts, fees, currencies, payees and notes; budgets and categories; income sources; goals " +
                     "and contributions; recurring items; and debt records. Free-text names and notes may contain " +
                     "personal information if you choose to put it there.",
+                "If you choose to paste or share a supported mobile-money confirmation, Mizani reads its text " +
+                    "on this device. The original message is discarded after review; only the transaction you " +
+                    "confirm and its provider reference are stored in your ledger.",
                 "Mizani also stores settings such as your selected country, primary currency, theme and app-lock " +
                     "preferences, optional reminder settings and time, and cached currency rates. App-lock details " +
                     "stay on this device. The app records which versions of these documents you accepted and when.",
             )),
             LegalSection("3. Why the app uses this information", listOf(
                 "Mizani uses your information to provide the budgeting features you choose, protect your records, " +
-                    "and create exports or backups when you request them. The optional reminder checks your local " +
-                    "ledger and uses a generic notification; it does not send ledger information off the device.",
+                    "and create exports or backups when you request them. Optional daily and commitment reminders " +
+                    "check your local ledger and use generic notifications without names or amounts; they do not " +
+                    "send ledger information off the device.",
                 "Mizani does not require a name, email address, phone number, bank login, or account. Your " +
                     "ledger is not used for advertising or usage tracking.",
             )),
@@ -174,7 +178,7 @@ object LegalDocuments {
             LegalSection("6. Exports and other services", listOf(
                 "CSV exports and Excel workbooks are unencrypted and may expose your financial details to anyone " +
                     "who can access the file. The workbook includes multiple sheets such as transactions, wallets, " +
-                    "budgets, recurring schedules, goals and debts. A Mizani backup is encrypted with the " +
+                    "budgets, recurring schedules, goals, debts and commitments. A Mizani backup is encrypted with the " +
                     "passphrase you choose. When you save or restore a file, Android’s file picker and any " +
                     "destination service you select may process or store it under their own terms and privacy " +
                     "notice. Mizani cannot delete those external copies for you.",
@@ -190,7 +194,8 @@ object LegalDocuments {
                     "data from Settings. Deletion does not remove exports or backups already saved elsewhere. " +
                     "Currency-rate requests happen only when you convert a foreign-currency transaction. Update " +
                     "checks are optional and available when you install outside Google Play. Neither sends ledger " +
-                    "entries. The optional reminder uses local settings and checks local records only.",
+                    "entries. Optional reminders use local settings and check local records only. Shared or pasted " +
+                    "transaction text is processed on this device and is not retained as a message.",
                 "Privacy rights depend on the law that applies where you live. That law may give you rights to " +
                     "request access, correction or deletion, object to certain processing, or complain to a data " +
                     "protection authority. You can manage records stored only on this device in the app. For a " +

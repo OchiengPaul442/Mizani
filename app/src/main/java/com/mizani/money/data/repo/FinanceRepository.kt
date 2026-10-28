@@ -9,11 +9,15 @@ import com.mizani.money.core.model.IncomeSourceKind
 import com.mizani.money.core.model.RecurringType
 import com.mizani.money.core.model.TransactionType
 import com.mizani.money.core.model.WalletType
+import com.mizani.money.core.importing.ImportIdentifiers
+import com.mizani.money.core.money.MoneyLimits
 import com.mizani.money.core.time.DateText
 import com.mizani.money.core.time.Periods
 import com.mizani.money.data.local.BudgetEntity
 import com.mizani.money.data.local.BudgetLineEntity
 import com.mizani.money.data.local.CategoryEntity
+import com.mizani.money.data.local.CommitmentEntity
+import com.mizani.money.data.local.CommitmentPaymentEntity
 import com.mizani.money.data.local.DebtEntity
 import com.mizani.money.data.local.GoalContributionEntity
 import com.mizani.money.data.local.GoalEntity
@@ -31,6 +35,9 @@ import kotlinx.coroutines.flow.flowOn
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
+
+private const val MAX_COMMITMENT_NAME_LENGTH = 80
+private const val MAX_COMMITMENT_REMINDER_DAYS = 30
 
 /**
  * The single write boundary for financial data. Every mutation is validated and executed
@@ -50,6 +57,8 @@ class FinanceRepository(private val database: MizaniDatabase) {
     private val contributionDao = database.goalContributionDao()
     private val recurringDao = database.recurringRuleDao()
     private val debtDao = database.debtDao()
+    private val commitmentDao = database.commitmentDao()
+    private val commitmentPaymentDao = database.commitmentPaymentDao()
 
     val snapshot: Flow<LedgerSnapshot> = combine(
         combine(
@@ -69,8 +78,13 @@ class FinanceRepository(private val database: MizaniDatabase) {
         ) { budgets, lines, goals, contributions ->
             PlanPart(budgets, lines, goals, contributions)
         },
-        combine(recurringDao.observe(), debtDao.observe()) { recurring, debts ->
-            OtherPart(recurring, debts)
+        combine(
+            recurringDao.observe(),
+            debtDao.observe(),
+            commitmentDao.observe(),
+            commitmentPaymentDao.observe(),
+        ) { recurring, debts, commitments, payments ->
+            OtherPart(recurring, debts, commitments, payments)
         },
     ) { core, plan, other ->
         LedgerSnapshot(
@@ -85,6 +99,8 @@ class FinanceRepository(private val database: MizaniDatabase) {
             contributions = plan.contributions,
             recurring = other.recurring,
             debts = other.debts,
+            commitments = other.commitments,
+            commitmentPayments = other.commitmentPayments,
         )
     }.distinctUntilChanged()
         .flowOn(Dispatchers.Default)
@@ -302,10 +318,43 @@ class FinanceRepository(private val database: MizaniDatabase) {
 
     suspend fun saveTransaction(draft: TransactionDraft): String = database.withTransaction {
         val workspace = workspaceDao.get() ?: error("No workspace yet")
+        val existing = transactionDao.getById(draft.id)
         val wallet = walletDao.getById(draft.walletId) ?: error("Wallet not found")
         require(!wallet.archived) { "Wallet is archived" }
         require(draft.feeMinor >= 0) { "Fee cannot be negative" }
         require(wallet.currencyCode == workspace.currencyCode) { "Currency mismatch" }
+
+        val sourceProvider = draft.sourceProvider?.let(ImportIdentifiers::normalizeProvider)?.takeIf { it.isNotEmpty() }
+        val sourceReference = draft.sourceReference?.let(ImportIdentifiers::normalizeReference)?.takeIf { it.isNotEmpty() }
+        require((sourceProvider == null) == (sourceReference == null)) {
+            "Import source and reference must be provided together"
+        }
+        if (sourceProvider != null && sourceReference != null) {
+            require(ImportIdentifiers.isValidProvider(sourceProvider)) {
+                "Import source is invalid"
+            }
+            require(ImportIdentifiers.isValidReference(sourceReference)) {
+                "Import reference is invalid"
+            }
+            val duplicate = transactionDao.findBySourceReference(sourceProvider, sourceReference)
+            require(duplicate == null || duplicate.id == draft.id) {
+                "This imported transaction reference is already saved"
+            }
+        }
+
+        commitmentPaymentDao.getForTransaction(draft.id)?.let { payment ->
+            require(draft.type == TransactionType.EXPENSE) {
+                "A linked commitment payment must remain an expense"
+            }
+            val commitment = commitmentDao.getById(payment.commitmentId)
+            if (commitment != null) {
+                val paidWithoutThisExpense = commitmentPaidMinor(commitment.id, excludingTransactionId = draft.id)
+                require(draft.amountMinor <= commitment.targetMinor - paidWithoutThisExpense) {
+                    "This edit would pay more than the remaining commitment"
+                }
+            }
+        }
+
         TransactionCurrencyRules.validate(
             workspaceCurrencyCode = workspace.currencyCode,
             type = draft.type,
@@ -381,7 +430,6 @@ class FinanceRepository(private val database: MizaniDatabase) {
             requireCategoryType(feeCategoryId, CategoryType.EXPENSE, "Fee")
         }
 
-        val existing = transactionDao.getById(draft.id)
         val now = System.currentTimeMillis()
         val occurredAt = if (draft.date == LocalDate.now()) {
             now
@@ -412,17 +460,30 @@ class FinanceRepository(private val database: MizaniDatabase) {
             sourceCurrencyCode = draft.sourceCurrencyCode,
             exchangeRate = draft.exchangeRate,
             exchangeRateDate = draft.exchangeRateDate,
+            sourceProvider = sourceProvider,
+            sourceReference = sourceReference,
         )
         transactionDao.upsert(entity)
         entity.id
     }
 
     suspend fun deleteTransaction(id: String) {
-        transactionDao.softDelete(id, System.currentTimeMillis())
+        database.withTransaction {
+            val now = System.currentTimeMillis()
+            transactionDao.softDelete(id, now)
+            commitmentPaymentDao.getForTransaction(id)?.let { commitmentPaymentDao.delete(it.id) }
+        }
     }
 
     suspend fun restoreTransaction(id: String) {
-        transactionDao.restore(id, System.currentTimeMillis())
+        database.withTransaction {
+            val transaction = transactionDao.getById(id) ?: return@withTransaction
+            val payment = commitmentPaymentDao.getForTransaction(id)
+            if (payment != null && transaction.type != TransactionType.EXPENSE) {
+                error("A linked commitment payment must remain an expense")
+            }
+            transactionDao.restore(id, System.currentTimeMillis())
+        }
     }
 
     // ----------------------------------------------------------------- budgets
@@ -770,6 +831,131 @@ class FinanceRepository(private val database: MizaniDatabase) {
         }
     }
 
+    // ----------------------------------------------------------- commitments
+
+    suspend fun saveCommitment(id: String?, draft: CommitmentDraft): String = database.withTransaction {
+        val workspace = workspaceDao.get() ?: error("No workspace")
+        val name = draft.name.trim()
+        require(name.isNotEmpty()) { "Enter a commitment name" }
+        require(name.length <= MAX_COMMITMENT_NAME_LENGTH) { "Commitment name is too long" }
+        require(draft.targetMinor in 1..MoneyLimits.MAX_MINOR_AMOUNT) { "Enter a valid commitment amount" }
+        require(draft.reminderDaysBefore in 0..MAX_COMMITMENT_REMINDER_DAYS) {
+            "Choose a reminder between 0 and $MAX_COMMITMENT_REMINDER_DAYS days before the due date"
+        }
+        requireCategoryType(draft.categoryId, CategoryType.EXPENSE, "Commitment")
+
+        val existing = id?.let { commitmentDao.getById(it) }
+        val paid = existing?.let { commitmentPaidMinor(it.id) } ?: 0L
+        require(draft.targetMinor >= paid) { "Target cannot be less than payments already linked" }
+        val now = System.currentTimeMillis()
+        val commitment = CommitmentEntity(
+            id = existing?.id ?: Ids.newId(),
+            name = name,
+            targetMinor = draft.targetMinor,
+            dueEpochDay = draft.dueDate.toEpochDay(),
+            categoryId = draft.categoryId,
+            reminderDaysBefore = draft.reminderDaysBefore,
+            archived = existing?.archived ?: false,
+            createdAt = existing?.createdAt ?: now,
+            updatedAt = now,
+            revision = (existing?.revision ?: 0L) + 1L,
+        )
+        commitmentDao.upsert(commitment)
+        commitment.id
+    }
+
+    suspend fun setCommitmentArchived(id: String, archived: Boolean) {
+        database.withTransaction {
+            val commitment = commitmentDao.getById(id) ?: return@withTransaction
+            commitmentDao.upsert(
+                commitment.copy(
+                    archived = archived,
+                    updatedAt = System.currentTimeMillis(),
+                    revision = commitment.revision + 1L,
+                ),
+            )
+        }
+    }
+
+    suspend fun deleteCommitment(id: String) {
+        database.withTransaction {
+            val now = System.currentTimeMillis()
+            commitmentPaymentDao.deleteForCommitment(id)
+            commitmentDao.softDelete(id, now)
+        }
+    }
+
+    /** Links an existing expense; this never creates or duplicates a ledger transaction. */
+    suspend fun linkExpenseToCommitment(commitmentId: String, transactionId: String): String =
+        database.withTransaction {
+            val commitment = commitmentDao.getById(commitmentId) ?: error("Commitment not found")
+            require(!commitment.archived) { "Commitment is archived" }
+            val transaction = transactionDao.getById(transactionId) ?: error("Transaction not found")
+            require(transaction.deletedAt == null) { "Deleted transactions cannot be linked" }
+            require(transaction.type == TransactionType.EXPENSE) { "Only expenses can be linked as payments" }
+            val workspace = workspaceDao.get() ?: error("No workspace")
+            require(transaction.currencyCode == workspace.currencyCode) { "Currency mismatch" }
+            require(commitmentPaymentDao.getForTransaction(transactionId) == null) {
+                "This expense is already linked to a commitment"
+            }
+            val netPayment = netCommitmentPaymentMinor(transaction)
+            require(netPayment > 0L) { "This expense has no remaining value after refunds" }
+            val alreadyPaid = commitmentPaidMinor(commitmentId)
+            require(netPayment <= commitment.targetMinor - alreadyPaid) {
+                "Payment is greater than the remaining commitment"
+            }
+            val now = System.currentTimeMillis()
+            val payment = CommitmentPaymentEntity(
+                id = Ids.newId(),
+                commitmentId = commitmentId,
+                transactionId = transactionId,
+                createdAt = now,
+                updatedAt = now,
+            )
+            commitmentPaymentDao.insert(payment)
+            payment.id
+        }
+
+    /** Unlinks the association only; the original expense remains in the ledger. */
+    suspend fun unlinkCommitmentPayment(paymentId: String) {
+        database.withTransaction { commitmentPaymentDao.delete(paymentId) }
+    }
+
+    suspend fun hasImportedReference(provider: String, reference: String): Boolean {
+        val normalizedProvider = ImportIdentifiers.normalizeProvider(provider)
+        val normalizedReference = ImportIdentifiers.normalizeReference(reference)
+        if (normalizedProvider.isEmpty() || normalizedReference.isEmpty()) return false
+        return transactionDao.findBySourceReference(normalizedProvider, normalizedReference) != null
+    }
+
+    suspend fun setOutlookDailyTarget(targetMinor: Long?) {
+        require(targetMinor == null || targetMinor in 1..MoneyLimits.MAX_MINOR_AMOUNT) {
+            "Daily target must be greater than zero"
+        }
+        database.withTransaction {
+            val workspace = workspaceDao.get() ?: error("No workspace")
+            workspaceDao.updateOutlookDailyTarget(workspace.id, targetMinor, System.currentTimeMillis())
+        }
+    }
+
+    private suspend fun commitmentPaidMinor(
+        commitmentId: String,
+        excludingTransactionId: String? = null,
+    ): Long {
+        return commitmentPaymentDao.getForCommitment(commitmentId).fold(0L) { total, payment ->
+            if (payment.transactionId == excludingTransactionId) return@fold total
+            val transaction = transactionDao.getById(payment.transactionId)
+            if (transaction == null || transaction.deletedAt != null || transaction.type != TransactionType.EXPENSE) {
+                total
+            } else {
+                Math.addExact(total, netCommitmentPaymentMinor(transaction))
+            }
+        }
+    }
+
+    private suspend fun netCommitmentPaymentMinor(transaction: TransactionEntity): Long =
+        (transaction.amountMinor - transactionDao.refundedAmountFor(transaction.id)).coerceAtLeast(0L)
+
     // ----------------------------------------------------------- income sources
 
     suspend fun saveIncomeSource(id: String?, name: String, kind: IncomeSourceKind): String =
@@ -804,12 +990,16 @@ class FinanceRepository(private val database: MizaniDatabase) {
             contributions = contributionDao.getAll(),
             recurring = recurringDao.getAll(),
             debts = debtDao.getAll(),
+            commitments = commitmentDao.getAll(),
+            commitmentPayments = commitmentPaymentDao.getAll(),
         )
     }
 
     suspend fun restoreBundle(bundle: RestoreBundle) {
         BackupValidator.validate(bundle)
         database.withTransaction {
+            commitmentPaymentDao.clear()
+            commitmentDao.clear()
             transactionDao.clear()
             contributionDao.clear()
             budgetLineDao.clear()
@@ -833,6 +1023,8 @@ class FinanceRepository(private val database: MizaniDatabase) {
             bundle.contributions.forEach { contributionDao.upsert(it) }
             bundle.recurring.forEach { recurringDao.upsert(it) }
             bundle.debts.forEach { debtDao.upsert(it) }
+            bundle.commitments.forEach { commitmentDao.upsert(it) }
+            bundle.commitmentPayments.forEach { commitmentPaymentDao.insert(it) }
         }
     }
 
@@ -847,6 +1039,8 @@ class FinanceRepository(private val database: MizaniDatabase) {
 
     suspend fun clearAllFinancialData() {
         database.withTransaction {
+            commitmentPaymentDao.clear()
+            commitmentDao.clear()
             transactionDao.clear()
             contributionDao.clear()
             budgetLineDao.clear()

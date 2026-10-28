@@ -24,20 +24,30 @@ Mizani is an Android budgeting app designed to work offline. It needs no account
 
 - **Track money in and out.** Record income and expenses, with transfers, refunds and balance
   adjustments for a more accurate ledger.
+- **Import mobile money confirmations.** Paste or share an MTN MoMo or Airtel Money message,
+  review the suggested expense or income, and edit it before saving. Import works on-device,
+  keeps only the provider reference to catch duplicates, and never reads SMS in the background.
 - **Organize your money.** Use wallets for cash, mobile money and bank accounts; group records by
   category; search and filter activity.
 - **Understand your cash flow.** Review income, spending, category breakdowns, wallet balances and
   trends in Insights. Charts include accessible text summaries.
 - **Check wallets quickly.** Active wallets appear on Home. Their balances stay hidden until you
-  confirm with your app PIN or enabled biometrics.
+  confirm with your app PIN or enabled biometrics. If you have no PIN, set up app lock first.
+- **Track one-off commitments.** Add a target and due date for items such as school fees, link
+  payments already recorded as expenses, and optionally receive a generic local reminder. Use
+  recurring schedules for repeated bills and debt records for loans.
+- **Plan with Money Outlook.** See an estimate based on liquid wallet balances, recorded spending
+  and unpaid commitments due within 30 days. Expected income is excluded. If there is not enough
+  recorded history, enter a daily spending target instead.
 - **Record different currencies.** Enter income or expenses in another supported currency. When
   online, Mizani fetches the latest available daily reference rate and saves the source amount,
   converted amount, rate and rate date. Reference rates can differ from bank, card or mobile money
   settlement rates.
 - **Keep and move your records.** Export transactions to CSV or Excel, or create and restore a
   Mizani backup encrypted with a passphrase. CSV and Excel files are not encrypted.
-- **Get a gentle reminder.** An optional local reminder defaults to 8:00 p.m. and can be changed in
-  Settings. It reminds you if no income, expense or refund was recorded that day.
+- **Get a gentle reminder.** An optional daily local reminder defaults to 8:00 p.m. and can be
+  changed in Settings. Commitment reminders are also local and show no names or amounts on the
+  lock screen.
 - **Protect access.** Use an optional six digit app PIN or biometric unlock.
 
 ## Brand
@@ -152,11 +162,11 @@ Mizani is a single Android app module with package boundaries:
 
 | Package                 | Responsibility                                                    |
 | ----------------------- | ----------------------------------------------------------------- |
-| <code>core</code>       | Money, currencies, country defaults, dates and security policy    |
+| <code>core</code>       | Money, currencies, user-shared message parsing, country defaults, dates and security policy |
 | <code>data/local</code> | Room entities and encrypted database                              |
 | <code>data/repo</code>  | Validated data access, preferences and exchange-rate lookup       |
 | <code>domain</code>     | Analytics, CSV/Excel export and encrypted backup                  |
-| <code>feature</code>    | Compose screens for onboarding, Home, Activity, Insights and More |
+| <code>feature</code>    | Compose screens for onboarding, Home, Activity, Insights, commitments and More |
 | <code>ui</code>         | Navigation, theme and reusable components                         |
 
 Start with the [project structure](docs/PROJECT_STRUCTURE.md) and [architecture

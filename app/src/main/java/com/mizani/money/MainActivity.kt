@@ -1,6 +1,7 @@
 package com.mizani.money
 
 import android.os.Bundle
+import android.content.Intent
 import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -40,6 +41,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mizani.money.feature.lock.LockScreen
 import com.mizani.money.feature.legal.LegalConsentScreen
@@ -51,6 +53,7 @@ import com.mizani.money.ui.components.MizaniMark
 import com.mizani.money.ui.components.Spacing
 import com.mizani.money.ui.theme.MizaniTheme
 import kotlinx.coroutines.launch
+import com.mizani.money.core.importing.TransactionMessageParser
 
 class MainActivity : FragmentActivity() {
 
@@ -63,6 +66,7 @@ class MainActivity : FragmentActivity() {
         // Financial records must not appear in screenshots, screen recordings, or recents previews.
         setSecureWindow()
         enableEdgeToEdge()
+        consumeSharedText(intent)
         setContent {
             val state by appViewModel.uiState.collectAsStateWithLifecycle()
             MizaniTheme(
@@ -80,6 +84,33 @@ class MainActivity : FragmentActivity() {
         super.onResume()
         // Reassert after returning from external activities or system UI.
         setSecureWindow()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(Intent(this, MainActivity::class.java))
+        consumeSharedText(intent)
+    }
+
+    private fun consumeSharedText(incoming: Intent?) {
+        if (incoming?.action != Intent.ACTION_SEND || incoming.type != "text/plain") return
+        val sharedText = incoming.getCharSequenceExtra(Intent.EXTRA_TEXT)
+        val senderHint = incoming.getCharSequenceExtra(Intent.EXTRA_TITLE)
+            ?: incoming.getCharSequenceExtra(Intent.EXTRA_SUBJECT)
+        incoming.removeExtra(Intent.EXTRA_TEXT)
+        incoming.removeExtra(Intent.EXTRA_TITLE)
+        incoming.removeExtra(Intent.EXTRA_SUBJECT)
+        if (sharedText == null) return
+        lifecycleScope.launch {
+            if (sharedText.length > TransactionMessageParser.MAX_MESSAGE_LENGTH) {
+                appViewModel.setSharedImportNotice("This message is too long to import. Paste only the transaction confirmation.")
+            } else {
+                appViewModel.stageSharedTransaction(
+                    message = sharedText.toString(),
+                    providerHint = senderHint?.takeIf { it.length <= 160 }?.toString(),
+                )
+            }
+        }
     }
 
     private fun setSecureWindow() {

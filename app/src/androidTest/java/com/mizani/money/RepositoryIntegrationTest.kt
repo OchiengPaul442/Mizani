@@ -13,6 +13,7 @@ import com.mizani.money.core.model.WalletType
 import com.mizani.money.core.time.DateRange
 import com.mizani.money.core.time.Periods
 import com.mizani.money.data.repo.BudgetLineInput
+import com.mizani.money.data.repo.CommitmentDraft
 import com.mizani.money.data.repo.RecurringDraft
 import com.mizani.money.data.repo.TransactionDraft
 import com.mizani.money.domain.analytics.AnalyticsEngine
@@ -257,5 +258,86 @@ class RepositoryIntegrationTest {
             },
             "budget line",
         )
+    }
+
+    @Test
+    fun importedReferencesStayUniqueAndCommitmentLinksDoNotDuplicateExpenses() = runBlocking {
+        val app = ApplicationProvider.getApplicationContext<MizaniApplication>()
+        val repo = app.container.financeRepository
+        val today = LocalDate.now()
+        repo.createWorkspace("UG", "UGX", "Cash", WalletType.CASH, 10_000)
+        val wallet = repo.snapshot.first().wallets.single()
+        val category = DefaultCategories.defaultEntityId("category", "education")
+        val transactionId = repo.saveTransaction(
+            TransactionDraft(
+                type = TransactionType.EXPENSE,
+                amountMinor = 600,
+                walletId = wallet.id,
+                categoryId = category,
+                date = today,
+                sourceProvider = "MTN_MOMO",
+                sourceReference = "abc-123",
+            ),
+        )
+        assertTrue(repo.hasImportedReference("mtn_momo", "ABC-123"))
+
+        try {
+            repo.saveTransaction(
+                TransactionDraft(
+                    type = TransactionType.EXPENSE,
+                    amountMinor = 600,
+                    walletId = wallet.id,
+                    categoryId = category,
+                    date = today,
+                    sourceProvider = "mtn_momo",
+                    sourceReference = "ABC-123",
+                ),
+            )
+            fail("A duplicate provider reference must be rejected")
+        } catch (_: IllegalArgumentException) {
+            // Expected duplicate rejection.
+        }
+
+        val commitmentId = repo.saveCommitment(
+            id = null,
+            draft = CommitmentDraft(
+                name = "School fees",
+                targetMinor = 1_000,
+                dueDate = today.plusDays(10),
+                categoryId = category,
+                reminderDaysBefore = 7,
+            ),
+        )
+        repo.linkExpenseToCommitment(commitmentId, transactionId)
+        val linked = repo.snapshot.first()
+        assertEquals(1, linked.transactions.size)
+        assertEquals(600L, linked.commitmentProgress().single().paidMinor)
+        assertEquals(400L, linked.commitmentProgress().single().remainingMinor)
+        repo.saveTransaction(
+            TransactionDraft(
+                type = TransactionType.REFUND,
+                amountMinor = 100,
+                walletId = wallet.id,
+                categoryId = category,
+                linkedTransactionId = transactionId,
+                date = today,
+            ),
+        )
+        val refunded = repo.snapshot.first()
+        assertEquals(500L, refunded.commitmentProgress().single().paidMinor)
+        assertEquals(500L, refunded.commitmentProgress().single().remainingMinor)
+        val balanceBeforeUnlink = refunded.walletBalances()[wallet.id]
+
+        repo.unlinkCommitmentPayment(refunded.commitmentPayments.single().id)
+        val unlinked = repo.snapshot.first()
+        assertEquals(2, unlinked.transactions.size)
+        assertEquals(balanceBeforeUnlink, unlinked.walletBalances()[wallet.id])
+        assertEquals(0L, unlinked.commitmentProgress().single().paidMinor)
+
+        repo.deleteTransaction(transactionId)
+        assertTrue(repo.snapshot.first().commitmentPayments.isEmpty())
+        repo.restoreTransaction(transactionId)
+        assertTrue(repo.snapshot.first().commitmentPayments.isEmpty())
+        assertTrue(repo.hasImportedReference("mtn_momo", "ABC-123"))
     }
 }

@@ -14,6 +14,8 @@ import com.mizani.money.core.money.MoneyFormat
 import com.mizani.money.data.local.BudgetEntity
 import com.mizani.money.data.local.BudgetLineEntity
 import com.mizani.money.data.local.CategoryEntity
+import com.mizani.money.data.local.CommitmentEntity
+import com.mizani.money.data.local.CommitmentPaymentEntity
 import com.mizani.money.data.local.DebtEntity
 import com.mizani.money.data.local.GoalContributionEntity
 import com.mizani.money.data.local.GoalEntity
@@ -68,7 +70,7 @@ class ExportManager(
         builder.append('\uFEFF')
         builder.append(
             "date,type,amount,currency,fee,wallet,to_wallet,category,income_source,payee,note,linked_transaction," +
-                "original_amount,original_currency,original_fee,exchange_rate,exchange_rate_date\n",
+                "original_amount,original_currency,original_fee,exchange_rate,exchange_rate_date,source_provider,source_reference\n",
         )
         snapshot.transactions
             .sortedWith(compareBy<TransactionEntity> { it.localDateEpochDay }.thenBy { it.occurredAt })
@@ -99,6 +101,8 @@ class ExportManager(
                     ),
                     csvEscapeNumeric(transaction.exchangeRate ?: ""),
                     csvEscape(transaction.exchangeRateDate ?: ""),
+                    csvEscape(transaction.sourceProvider ?: ""),
+                    csvEscape(transaction.sourceReference ?: ""),
                 )
                 builder.append(escaped.joinToString(",")).append('\n')
             }
@@ -152,6 +156,7 @@ class ExportManager(
                     "Transfer wallet ID", "Transfer wallet", "Category ID", "Category", "Fee category ID",
                     "Fee category", "Income source ID", "Income source", "Payee", "Note", "Linked transaction ID",
                     "Original amount", "Original currency", "Original fee", "Exchange rate", "Exchange rate date",
+                    "Import source", "Import reference",
                     "Created at", "Updated at", "Deleted at",
                 ),
                 rows = snapshot.transactions
@@ -173,6 +178,7 @@ class ExportManager(
                                 money(it, transaction.sourceCurrencyCode ?: transaction.currencyCode)
                             } ?: text(""),
                             decimal(transaction.exchangeRate), text(transaction.exchangeRateDate),
+                            text(transaction.sourceProvider), text(transaction.sourceReference),
                             timestamp(transaction.createdAt), timestamp(transaction.updatedAt),
                             timestamp(transaction.deletedAt),
                         )
@@ -285,6 +291,23 @@ class ExportManager(
                     )
                 },
             ),
+            ExcelSheet(
+                name = "Commitments",
+                headers = listOf(
+                    "ID", "Name", "Target", "Paid", "Remaining", "Due date", "Category ID", "Category",
+                    "Reminder days before", "Archived",
+                ),
+                rows = snapshot.commitmentProgress().map { progress ->
+                    val commitment = progress.commitment
+                    listOf(
+                        text(commitment.id), text(commitment.name), money(commitment.targetMinor, workspaceCurrency),
+                        money(progress.paidMinor, workspaceCurrency), money(progress.remainingMinor, workspaceCurrency),
+                        date(commitment.dueEpochDay), text(commitment.categoryId),
+                        text(commitment.categoryId?.let { categories[it]?.name }), number(commitment.reminderDaysBefore),
+                        text(if (commitment.archived) "Yes" else "No"),
+                    )
+                },
+            ),
         )
         XlsxWorkbookWriter.write(output, sheets)
     }
@@ -387,6 +410,8 @@ class ExportManager(
         put("contributions", bundle.contributions.map(::encodeContribution).toJsonArray())
         put("recurring", bundle.recurring.map(::encodeRecurring).toJsonArray())
         put("debts", bundle.debts.map(::encodeDebt).toJsonArray())
+        put("commitments", bundle.commitments.map(::encodeCommitment).toJsonArray())
+        put("commitmentPayments", bundle.commitmentPayments.map(::encodeCommitmentPayment).toJsonArray())
     }
 
     private fun decodeBundle(bytes: ByteArray): RestoreBundle {
@@ -413,6 +438,8 @@ class ExportManager(
             contributions = root.getJSONArray("contributions").mapObjects(::decodeContribution),
             recurring = root.getJSONArray("recurring").mapObjects(::decodeRecurring),
             debts = root.getJSONArray("debts").mapObjects(::decodeDebt),
+            commitments = root.optJSONArray("commitments")?.mapObjects(::decodeCommitment) ?: emptyList(),
+            commitmentPayments = root.optJSONArray("commitmentPayments")?.mapObjects(::decodeCommitmentPayment) ?: emptyList(),
         )
         if (!Currencies.all.any { it.code == bundle.workspace.currencyCode }) {
             throw BackupException("Backup uses an unsupported currency")
@@ -429,6 +456,7 @@ class ExportManager(
         put("updatedAt", workspace.updatedAt)
         put("revision", workspace.revision)
         putNullable("deletedAt", workspace.deletedAt)
+        putNullable("outlookDailyTargetMinor", workspace.outlookDailyTargetMinor)
     }
 
     private fun decodeWorkspace(json: JSONObject) = WorkspaceEntity(
@@ -440,6 +468,7 @@ class ExportManager(
         updatedAt = json.optLong("updatedAt"),
         revision = json.optLong("revision", 1),
         deletedAt = json.optNullableLong("deletedAt"),
+        outlookDailyTargetMinor = json.optNullableLong("outlookDailyTargetMinor"),
     )
 
     private fun encodeWallet(wallet: WalletEntity) = JSONObject().apply {
@@ -551,6 +580,8 @@ class ExportManager(
         putNullable("sourceCurrencyCode", transaction.sourceCurrencyCode)
         putNullable("exchangeRate", transaction.exchangeRate)
         putNullable("exchangeRateDate", transaction.exchangeRateDate)
+        putNullable("sourceProvider", transaction.sourceProvider)
+        putNullable("sourceReference", transaction.sourceReference)
     }
 
     private fun decodeTransaction(json: JSONObject) = TransactionEntity(
@@ -578,6 +609,8 @@ class ExportManager(
         sourceCurrencyCode = json.optNullableString("sourceCurrencyCode"),
         exchangeRate = json.optNullableString("exchangeRate"),
         exchangeRateDate = json.optNullableString("exchangeRateDate"),
+        sourceProvider = json.optNullableString("sourceProvider"),
+        sourceReference = json.optNullableString("sourceReference"),
     )
 
     private fun encodeBudget(budget: BudgetEntity) = JSONObject().apply {
@@ -756,6 +789,52 @@ class ExportManager(
         deletedAt = json.optNullableLong("deletedAt"),
     )
 
+    private fun encodeCommitment(commitment: CommitmentEntity) = JSONObject().apply {
+        put("id", commitment.id)
+        put("name", commitment.name)
+        put("targetMinor", commitment.targetMinor)
+        put("dueEpochDay", commitment.dueEpochDay)
+        putNullable("categoryId", commitment.categoryId)
+        put("reminderDaysBefore", commitment.reminderDaysBefore)
+        put("archived", commitment.archived)
+        put("createdAt", commitment.createdAt)
+        put("updatedAt", commitment.updatedAt)
+        put("revision", commitment.revision)
+        putNullable("deletedAt", commitment.deletedAt)
+    }
+
+    private fun decodeCommitment(json: JSONObject) = CommitmentEntity(
+        id = json.getString("id"),
+        name = json.getString("name"),
+        targetMinor = json.optLong("targetMinor"),
+        dueEpochDay = json.optLong("dueEpochDay"),
+        categoryId = json.optNullableString("categoryId"),
+        reminderDaysBefore = json.optInt("reminderDaysBefore"),
+        archived = json.optBoolean("archived"),
+        createdAt = json.optLong("createdAt"),
+        updatedAt = json.optLong("updatedAt"),
+        revision = json.optLong("revision", 1),
+        deletedAt = json.optNullableLong("deletedAt"),
+    )
+
+    private fun encodeCommitmentPayment(payment: CommitmentPaymentEntity) = JSONObject().apply {
+        put("id", payment.id)
+        put("commitmentId", payment.commitmentId)
+        put("transactionId", payment.transactionId)
+        put("createdAt", payment.createdAt)
+        put("updatedAt", payment.updatedAt)
+        put("revision", payment.revision)
+    }
+
+    private fun decodeCommitmentPayment(json: JSONObject) = CommitmentPaymentEntity(
+        id = json.getString("id"),
+        commitmentId = json.getString("commitmentId"),
+        transactionId = json.getString("transactionId"),
+        createdAt = json.optLong("createdAt"),
+        updatedAt = json.optLong("updatedAt"),
+        revision = json.optLong("revision", 1),
+    )
+
     private fun amountText(minor: Long, currencyCode: String): String {
         val currency = Currencies.byCode(currencyCode)
         return MoneyFormat.toInput(minor, currency).ifBlank { "0" }
@@ -783,11 +862,11 @@ class ExportManager(
 
     companion object {
         private const val FORMAT = "mizani-backup"
-        private const val VERSION = 1
+        private const val VERSION = 2
         private const val MAX_BACKUP_RECORDS = 100_000L
         private val RECORD_ARRAY_NAMES = listOf(
             "wallets", "categories", "incomeSources", "transactions", "budgets", "budgetLines",
-            "goals", "contributions", "recurring", "debts",
+            "goals", "contributions", "recurring", "debts", "commitments", "commitmentPayments",
         )
     }
 }

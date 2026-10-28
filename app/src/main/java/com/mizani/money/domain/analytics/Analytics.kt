@@ -262,8 +262,8 @@ class AnalyticsEngine(private val data: LedgerSnapshot) {
                 it.deletedAt == null && !it.archived && it.type == RecurringType.BILL &&
                     LocalDate.ofEpochDay(it.nextDueEpochDay) <= range.end
             }
-            .sumOf { rule ->
-                rule.amountMinor * occurrencesInRange(rule, range).toLong()
+            .fold(0L) { total, rule ->
+                Math.addExact(total, Math.multiplyExact(rule.amountMinor, occurrencesInRange(rule, range).toLong()))
             }
         val debtPayments = data.debts
             .filter { it.deletedAt == null && !it.archived && it.nextDueEpochDay != null }
@@ -271,8 +271,61 @@ class AnalyticsEngine(private val data: LedgerSnapshot) {
                 val due = it.nextDueEpochDay?.let(LocalDate::ofEpochDay)
                 due != null && range.contains(due)
             }
-            .sumOf { it.periodicPaymentMinor }
-        return bills + debtPayments
+            .fold(0L) { total, debt -> Math.addExact(total, debt.periodicPaymentMinor) }
+        val finiteCommitments = data.commitmentProgress()
+            .asSequence()
+            .filter { progress ->
+                !progress.commitment.archived && progress.remainingMinor > 0L &&
+                    range.contains(LocalDate.ofEpochDay(progress.commitment.dueEpochDay))
+            }
+            .fold(0L) { total, progress -> Math.addExact(total, progress.remainingMinor) }
+        return Math.addExact(Math.addExact(bills, debtPayments), finiteCommitments)
+    }
+
+    /**
+     * Estimates coverage using current liquid wallet balances less outflows due in the next
+     * 30 days. Future income is deliberately excluded. History needs seven observed days and
+     * recorded spending; otherwise a saved user target is used.
+     */
+    fun moneyOutlook(today: LocalDate = LocalDate.now()): MoneyOutlook {
+        val liquid = data.liquidBalance()
+        // DateRange is inclusive, so today plus 29 covers 30 calendar dates including today.
+        val horizon = DateRange(today, today.plusDays(29))
+        val reserved = reservedCommitments(horizon, today)
+        val spendable = (liquid - reserved).coerceAtLeast(0L)
+        val windowStart = today.minusDays(HISTORY_WINDOW_DAYS - 1L)
+        val window = DateRange(windowStart, today)
+        val recordedTransactions = transactionsIn(window).filter { it.type != TransactionType.ADJUSTMENT }
+        val workspaceStart = data.workspace?.createdAt?.let { timestamp ->
+            java.time.Instant.ofEpochMilli(timestamp).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+        }
+        val firstObserved = listOfNotNull(
+            windowStart,
+            workspaceStart,
+            recordedTransactions.minOfOrNull { LocalDate.ofEpochDay(it.localDateEpochDay) },
+        ).maxOrNull() ?: windowStart
+        val observedDays = if (recordedTransactions.isEmpty()) 0 else {
+            (ChronoUnit.DAYS.between(firstObserved, today) + 1L).toInt().coerceIn(0, HISTORY_WINDOW_DAYS)
+        }
+        val expenses = expenseMinor(window).coerceAtLeast(0L)
+        val average = if (observedDays >= MIN_HISTORY_DAYS && expenses > 0L) {
+            // Round up so fractional minor units never overstate estimated coverage.
+            (expenses + observedDays - 1L) / observedDays
+        } else null
+        val target = data.workspace?.outlookDailyTargetMinor?.takeIf { it > 0L }
+        val dailyCost = average ?: target
+        return MoneyOutlook(
+            liquidBalanceMinor = liquid,
+            reservedCommitmentsMinor = reserved,
+            spendableBalanceMinor = spendable,
+            shortfallMinor = (reserved - liquid).coerceAtLeast(0L),
+            recordedExpensesMinor = expenses,
+            observedDays = observedDays,
+            averageDailySpendMinor = average,
+            dailyTargetMinor = target,
+            daysCovered = dailyCost?.let { spendable / it },
+            usesDailyTarget = average == null && target != null,
+        )
     }
 
     fun upcoming(range: DateRange, today: LocalDate = LocalDate.now()): List<UpcomingCommitment> {
@@ -532,6 +585,9 @@ class AnalyticsEngine(private val data: LedgerSnapshot) {
 
     companion object {
         const val UNCATEGORISED = "uncategorised"
+
+        private const val HISTORY_WINDOW_DAYS = 30
+        private const val MIN_HISTORY_DAYS = 7
 
         /** Minimum number of days covered by recorded spending activity before a forecast is shown. */
         const val MIN_FORECAST_HISTORY_DAYS = 7

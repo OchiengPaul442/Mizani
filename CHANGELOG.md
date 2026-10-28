@@ -6,10 +6,24 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-28
+
+### Added
+
+- Import reviewed MTN MoMo and Airtel Money confirmation text by paste or Android share, with local reference deduplication and no SMS access.
+- Track one-off commitments with partial payments linked to existing expenses and optional private reminders.
+- Add Money Outlook with a clear 30-day obligation reserve, recorded-spending runway, and a user-set daily target when history is insufficient.
+
+### Fixed
+
+- Keep app lock, appearance preferences, and saved legal acceptance through compatible app updates; only changed legal documents require renewed acceptance.
+- Associate imported amounts with the sent or received action, excluding fee and balance values from transaction suggestions.
+
 ### Security
 
 - Require fresh PIN or enabled biometric confirmation before exporting financial records or creating encrypted backups.
 - Keep Home and Wallets balances concealed until the user confirms with their app PIN or enabled biometrics.
+- Process shared transaction text only in memory, discard the source message after review, and keep commitment notifications generic.
 
 ### Changed
 
@@ -22,6 +36,7 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
 - Center onboarding content consistently in its available viewport, with scrolling on shorter screens.
 - Inset the bottom navigation in a rounded, lightly bordered surface with consistent spacing.
 - Open the selected transaction when a row in Home’s recent activity is tapped.
+- Clarify the floating Add sheet with equally prominent, descriptive choices for expenses, income, and wallet transfers.
 
 ### Removed
 

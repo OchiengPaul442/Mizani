@@ -2,6 +2,8 @@ package com.mizani.money.data.repo
 
 import com.mizani.money.core.model.CategoryType
 import com.mizani.money.core.model.TransactionType
+import com.mizani.money.core.importing.ImportIdentifiers
+import com.mizani.money.core.money.MoneyLimits
 
 /**
  * Structural validation for a [RestoreBundle] before it replaces the local ledger.
@@ -47,6 +49,15 @@ internal object BackupValidator {
         require(bundle.debts.map { it.id }.toSet().size == bundle.debts.size) {
             "Backup contains duplicate debt ids"
         }
+        require(bundle.commitments.map { it.id }.toSet().size == bundle.commitments.size) {
+            "Backup contains duplicate commitment ids"
+        }
+        require(bundle.commitmentPayments.map { it.id }.toSet().size == bundle.commitmentPayments.size) {
+            "Backup contains duplicate commitment payment ids"
+        }
+        require(bundle.commitmentPayments.map { it.transactionId }.toSet().size == bundle.commitmentPayments.size) {
+            "A transaction cannot pay more than one commitment"
+        }
 
         // Single base currency per workspace: every record must agree with the workspace.
         val workspaceCurrency = bundle.workspace.currencyCode
@@ -59,6 +70,10 @@ internal object BackupValidator {
         val categoryTypeById = bundle.categories.associate { it.id to it.type }
         val transactionIds = bundle.transactions.map { it.id }.toSet()
         val incomeSourceIds = bundle.incomeSources.map { it.id }.toSet()
+        require(bundle.workspace.outlookDailyTargetMinor == null || bundle.workspace.outlookDailyTargetMinor in 1..MoneyLimits.MAX_MINOR_AMOUNT) {
+            "Money Outlook target is invalid"
+        }
+        val importReferences = mutableSetOf<Pair<String, String>>()
 
         bundle.transactions.forEach { transaction ->
             require(transaction.walletId in walletIds) { "Transaction references a missing wallet" }
@@ -114,6 +129,22 @@ internal object BackupValidator {
                     "Transaction references a missing income source"
                 }
             }
+            val provider = transaction.sourceProvider
+            val reference = transaction.sourceReference
+            require((provider == null) == (reference == null)) {
+                "Imported transaction source and reference must be provided together"
+            }
+            if (provider != null && reference != null) {
+                require(ImportIdentifiers.isValidProvider(provider)) { "Imported transaction source is invalid" }
+                require(ImportIdentifiers.isValidReference(reference)) { "Imported transaction reference is invalid" }
+                require(
+                    importReferences.add(
+                        ImportIdentifiers.normalizeProvider(provider) to ImportIdentifiers.normalizeReference(reference),
+                    ),
+                ) {
+                    "Backup contains duplicate imported transaction references"
+                }
+            }
             if (transaction.linkedTransactionId != null) {
                 require(transaction.linkedTransactionId in transactionIds) {
                     "Transaction references a missing linked transaction"
@@ -161,6 +192,26 @@ internal object BackupValidator {
         bundle.debts.forEach { debt ->
             require(debt.currentBalanceMinor >= 0) { "Debt balance cannot be negative" }
             require(debt.periodicPaymentMinor >= 0) { "Debt payment cannot be negative" }
+        }
+        val commitmentIds = bundle.commitments.map { it.id }.toSet()
+        bundle.commitments.forEach { commitment ->
+            require(commitment.targetMinor in 1..MoneyLimits.MAX_MINOR_AMOUNT) {
+                "Commitment target is invalid"
+            }
+            require(commitment.reminderDaysBefore in 0..30) { "Commitment reminder is invalid" }
+            if (commitment.categoryId != null) {
+                require(commitment.categoryId in categoryIds) { "Commitment references a missing category" }
+                require(categoryTypeById[commitment.categoryId] == CategoryType.EXPENSE) {
+                    "Commitment category must be an expense category"
+                }
+            }
+        }
+        bundle.commitmentPayments.forEach { payment ->
+            require(payment.commitmentId in commitmentIds) { "Commitment payment references a missing commitment" }
+            require(payment.transactionId in transactionIds) { "Commitment payment references a missing transaction" }
+            require(bundle.transactions.first { it.id == payment.transactionId }.type == TransactionType.EXPENSE) {
+                "Only an expense can pay a commitment"
+            }
         }
     }
 }

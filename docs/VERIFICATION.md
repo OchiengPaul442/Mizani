@@ -20,6 +20,14 @@ its test database. Isolated runs passed for `GuestJourneyTest` (1 test), `Reposi
 (2 tests), `BackupRestoreTest` (1 test), and `DemoDataTest` (1 test). `AppLockTest` still times out
 waiting for `Welcome back` when run alone and remains unresolved.
 
+On 2026-10-28, `:app:testDebugUnitTest` passed all 118 tests across 17 suites. The debug APK and
+Android test APK built successfully, and `:app:lintDebug` completed with no errors (41 warnings,
+mostly dependency-version, unused-resource, and existing style findings). The new migration, backup,
+and repository instrumentation tests compiled, but were not run during this verification because no
+ADB-ready disposable emulator was available. The existing emulator remained offline, and the fresh
+workspace AVD was unauthorized by ADB despite a restart with the local host key; no app state was
+cleared or reinstalled on either device.
+
 ## Manual emulator acceptance
 
 On 2026-10-28, the new flows were exercised on a fresh, disposable API 36 x86_64 Google Play AVD
@@ -57,11 +65,18 @@ The broader manual checklist below remains unverified:
 5. Export CSV and Excel, then create and restore an encrypted backup.
 6. Check app lock, larger text, TalkBack labels, and navigation transitions on a physical device or
    emulator.
+7. Share or paste an MTN MoMo or Airtel Money confirmation, review and edit the suggestion, save it,
+   then retry the same reference and confirm it is rejected. Confirm no SMS permission is requested.
+8. Create a one-off commitment, link multiple recorded expenses as partial payments, then unlink one
+   and confirm the ledger expense remains. Check the due reminder shows no name or amount on the lock screen.
+9. Review Money Outlook with less than seven days of activity, with a saved daily target, and with
+   enough history. Confirm expected income does not raise the estimate and linked payments are not reserved twice.
 
 ## Scope and data compatibility
 
-The active app flow focuses on Home, Activity, Insights, wallets, categories, and data export. The
-budget, recurring-payment, savings-goal, debt-management, and account/sync screens were removed.
-Existing database entities and encrypted backup fields for those older records remain so that
-restoring or exporting an older workspace does not discard stored data. No production release or
-external deployment was performed.
+The active app flow includes Home, Activity, Insights, wallets, categories, data export, user-reviewed
+mobile-money text import, and one-off commitments. Repeating schedules and debt remain separate
+existing data models; this feature does not create duplicate recurring or debt modules. Budget,
+savings-goal, and account/sync screens remain outside the active flow, while their existing database
+entities and encrypted backup fields are retained. No production release or external deployment was
+performed.

@@ -18,6 +18,9 @@ interface WorkspaceDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(workspace: WorkspaceEntity)
 
+    @Query("UPDATE workspace SET outlookDailyTargetMinor = :targetMinor, updatedAt = :now, revision = revision + 1 WHERE id = :id")
+    suspend fun updateOutlookDailyTarget(id: String, targetMinor: Long?, now: Long)
+
     @Query("DELETE FROM workspace")
     suspend fun clear()
 }
@@ -113,6 +116,12 @@ interface TransactionDao {
 
     @Query("SELECT * FROM transactions WHERE id = :id")
     suspend fun getById(id: String): TransactionEntity?
+
+    @Query("SELECT * FROM transactions WHERE sourceProvider = :provider AND sourceReference = :reference LIMIT 1")
+    suspend fun findBySourceReference(provider: String, reference: String): TransactionEntity?
+
+    @Query("SELECT COALESCE(SUM(amountMinor), 0) FROM transactions WHERE type = 'REFUND' AND linkedTransactionId = :transactionId AND deletedAt IS NULL")
+    suspend fun refundedAmountFor(transactionId: String): Long
 
     @Query("SELECT COUNT(*) FROM transactions WHERE deletedAt IS NULL")
     fun observeCount(): Flow<Int>
@@ -257,5 +266,56 @@ interface DebtDao {
     suspend fun softDelete(id: String, now: Long)
 
     @Query("DELETE FROM debts")
+    suspend fun clear()
+}
+
+@Dao
+interface CommitmentDao {
+    @Query("SELECT * FROM commitments WHERE deletedAt IS NULL ORDER BY archived, dueEpochDay, name")
+    fun observe(): Flow<List<CommitmentEntity>>
+
+    @Query("SELECT * FROM commitments WHERE deletedAt IS NULL ORDER BY archived, dueEpochDay, name")
+    suspend fun getAll(): List<CommitmentEntity>
+
+    @Query("SELECT * FROM commitments WHERE id = :id AND deletedAt IS NULL")
+    suspend fun getById(id: String): CommitmentEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(commitment: CommitmentEntity)
+
+    @Query("UPDATE commitments SET archived = :archived, updatedAt = :now, revision = revision + 1 WHERE id = :id")
+    suspend fun setArchived(id: String, archived: Boolean, now: Long)
+
+    @Query("UPDATE commitments SET deletedAt = :now, updatedAt = :now, revision = revision + 1 WHERE id = :id")
+    suspend fun softDelete(id: String, now: Long)
+
+    @Query("DELETE FROM commitments")
+    suspend fun clear()
+}
+
+@Dao
+interface CommitmentPaymentDao {
+    @Query("SELECT * FROM commitment_payments")
+    fun observe(): Flow<List<CommitmentPaymentEntity>>
+
+    @Query("SELECT * FROM commitment_payments")
+    suspend fun getAll(): List<CommitmentPaymentEntity>
+
+    @Query("SELECT * FROM commitment_payments WHERE commitmentId = :commitmentId")
+    suspend fun getForCommitment(commitmentId: String): List<CommitmentPaymentEntity>
+
+    @Query("SELECT * FROM commitment_payments WHERE transactionId = :transactionId LIMIT 1")
+    suspend fun getForTransaction(transactionId: String): CommitmentPaymentEntity?
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insert(payment: CommitmentPaymentEntity)
+
+    @Query("DELETE FROM commitment_payments WHERE id = :id")
+    suspend fun delete(id: String)
+
+    @Query("DELETE FROM commitment_payments WHERE commitmentId = :commitmentId")
+    suspend fun deleteForCommitment(commitmentId: String)
+
+    @Query("DELETE FROM commitment_payments")
     suspend fun clear()
 }

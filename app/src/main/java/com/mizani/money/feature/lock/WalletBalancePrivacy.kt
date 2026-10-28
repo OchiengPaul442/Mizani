@@ -29,6 +29,7 @@ fun WalletBalanceVisibilityControl(
     vm: AppViewModel,
     state: AppUiState,
     onSetupPin: () -> Unit,
+    showLabel: Boolean = false,
 ) {
     var confirming by remember { mutableStateOf(false) }
     val visible = state.walletBalancesVisible
@@ -37,6 +38,18 @@ fun WalletBalanceVisibilityControl(
         visible -> "Hide wallet balances"
         hasPin -> "Show wallet balances; confirm with your app PIN or enabled biometrics"
         else -> "Set up an app PIN to view wallet balances"
+    }
+    val actionLabel = when {
+        visible -> "Hide"
+        hasPin -> "Show"
+        else -> "Set up app lock"
+    }
+    val action = {
+        when {
+            visible -> vm.hideWalletBalances()
+            hasPin -> confirming = true
+            else -> onSetupPin()
+        }
     }
 
     if (confirming && hasPin) {
@@ -53,25 +66,26 @@ fun WalletBalanceVisibilityControl(
         )
     }
 
-    IconButton(
-        onClick = {
-            when {
-                visible -> vm.hideWalletBalances()
-                hasPin -> confirming = true
-                else -> onSetupPin()
-            }
-        },
-        modifier = Modifier.semantics { contentDescription = description },
-    ) {
-        Icon(
-            imageVector = when {
-                visible -> Icons.Rounded.VisibilityOff
-                hasPin -> Icons.Rounded.Visibility
-                else -> Icons.Rounded.Lock
-            },
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-        )
+    val icon = when {
+        visible -> Icons.Rounded.VisibilityOff
+        hasPin -> Icons.Rounded.Visibility
+        else -> Icons.Rounded.Lock
+    }
+    if (showLabel) {
+        androidx.compose.material3.TextButton(
+            onClick = action,
+            modifier = Modifier.semantics { contentDescription = description },
+        ) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Text(actionLabel)
+        }
+    } else {
+        IconButton(
+            onClick = action,
+            modifier = Modifier.semantics { contentDescription = description },
+        ) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        }
     }
 }
 

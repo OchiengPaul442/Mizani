@@ -18,6 +18,7 @@ com.mizani.money
 ├── core/
 │   ├── money/                     Money, Currency, parsing/formatting (pure JVM)
 │   ├── model/                     domain enums, country packs, default categories
+│   ├── importing/                 bounded local parser for user-shared transaction text
 │   ├── time/                      DateRange, periods, recurring date math
 │   └── security/                  PBKDF2-HMAC-SHA256, PIN policy
 ├── data/
@@ -35,7 +36,7 @@ com.mizani.money
 │   ├── theme/                     colour, type, shapes, palette tokens
 │   └── components/                reusable Compose primitives (cards, charts, pickers)
 └── feature/
-    ├── onboarding/ home/ transactions/ wallets/ categories/
+    ├── onboarding/ home/ transactions/ commitments/ wallets/ categories/
     ├── insights/ more/ settings/ legal/ lock/
 ```
 

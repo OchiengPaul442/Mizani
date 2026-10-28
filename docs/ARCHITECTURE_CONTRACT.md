@@ -40,6 +40,14 @@ This is an offline-first financial application.
   or spending.
 - Deletions are soft (tombstone) so analytics and future sync never resurrect money history.
 - Financial writes happen in Room transactions with validation at the repository boundary.
+- Commitment payments associate one active expense with one obligation; they never create a
+  second ledger row. Linked refunds reduce the paid total. Deleting an expense removes its link;
+  restoring that expense does not relink it. Transfers and non-expense transactions cannot be
+  linked. Archiving an obligation preserves its history but removes it from Outlook reserves and
+  reminder scheduling.
+- Money Outlook subtracts unpaid obligations due within 30 days from active liquid wallets,
+  excludes expected income, and uses recorded daily expense history only after seven observed
+  days; otherwise it uses the user's optional daily target.
 
 ## Analytics rules
 
@@ -72,7 +80,7 @@ This is an offline-first financial application.
 
 ## Explicit V1 boundaries
 
-- SMS import is policy-gated and absent; core budgeting never depends on it.
+- Transaction import is user-initiated through shared or pasted text for supported MTN MoMo and Airtel Money confirmations. Never request broad SMS access or monitor messages in the background. Parse locally, require review before saving, discard the raw message, and retain only normalized reference data for deduplication.
 - No bank APIs, payment processing, lending, credit scoring, investments or tax advice.
 - No cloud sync implementation in this build; the UI states this and offers encrypted backup.
 - Single base currency per workspace; expense and income entry may be converted from another

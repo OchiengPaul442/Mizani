@@ -8,6 +8,7 @@ import com.mizani.money.core.model.TransactionType
 import com.mizani.money.core.model.WalletType
 import com.mizani.money.core.time.Periods
 import com.mizani.money.data.repo.BudgetLineInput
+import com.mizani.money.data.repo.CommitmentDraft
 import com.mizani.money.data.repo.TransactionDraft
 import com.mizani.money.domain.export.BackupException
 import kotlinx.coroutines.flow.first
@@ -53,8 +54,23 @@ class BackupRestoreTest {
                 payee = "Market",
                 note = "Backup fixture",
                 date = today,
+                sourceProvider = "mtn_momo",
+                sourceReference = "BACKUP123",
             ),
         )
+        val transactionId = repo.snapshot.first().transactions.single().id
+        val commitmentId = repo.saveCommitment(
+            id = null,
+            draft = CommitmentDraft(
+                name = "School fees",
+                targetMinor = 50_000,
+                dueDate = today.plusDays(10),
+                categoryId = food,
+                reminderDaysBefore = 7,
+            ),
+        )
+        repo.linkExpenseToCommitment(commitmentId, transactionId)
+        repo.setOutlookDailyTarget(5_000)
         repo.saveBudget(
             budgetId = null,
             name = "Backup budget",
@@ -68,6 +84,8 @@ class BackupRestoreTest {
         assertTrue(csv.contains("25000"))
         assertTrue(csv.contains("Market"))
         assertTrue(csv.contains("cash", ignoreCase = true))
+        assertTrue(csv.contains("mtn_momo"))
+        assertTrue(csv.contains("BACKUP123"))
 
         val passphrase = "correct-horse-battery"
         val backup = exporter.buildBackup(passphrase)
@@ -95,5 +113,62 @@ class BackupRestoreTest {
         assertEquals(1, restored.budgets.size)
         assertEquals(25_000L, restored.transactions.single().amountMinor)
         assertTrue(restored.categories.isNotEmpty())
+        assertEquals("mtn_momo", restored.transactions.single().sourceProvider)
+        assertEquals("BACKUP123", restored.transactions.single().sourceReference)
+        assertEquals(1, restored.commitments.size)
+        assertEquals(1, restored.commitmentPayments.size)
+        assertEquals(5_000L, restored.workspace.outlookDailyTargetMinor)
+    }
+
+    @Test
+    fun version1EncryptedBackupWithoutNewFieldsRemainsReadable() = runBlocking {
+        val app = ApplicationProvider.getApplicationContext<MizaniApplication>()
+        val exporter = app.container.exportManager
+        val json = org.json.JSONObject().apply {
+            put("format", "mizani-backup")
+            put("version", 1)
+            put(
+                "workspace",
+                org.json.JSONObject().apply {
+                    put("id", "legacy-workspace")
+                    put("name", "My money")
+                    put("countryCode", "UG")
+                    put("currencyCode", "UGX")
+                    put("createdAt", 1)
+                    put("updatedAt", 1)
+                    put("revision", 1)
+                    put("deletedAt", org.json.JSONObject.NULL)
+                },
+            )
+            put(
+                "wallets",
+                org.json.JSONArray().put(
+                    org.json.JSONObject().apply {
+                        put("id", "legacy-wallet")
+                        put("name", "Cash")
+                        put("type", "CASH")
+                        put("openingBalanceMinor", 0)
+                        put("currencyCode", "UGX")
+                        put("colorHex", "#087F72")
+                        put("icon", "wallet")
+                        put("sortOrder", 0)
+                        put("archived", false)
+                        put("createdAt", 1)
+                        put("updatedAt", 1)
+                        put("revision", 1)
+                        put("deletedAt", org.json.JSONObject.NULL)
+                    },
+                ),
+            )
+            listOf(
+                "categories", "incomeSources", "transactions", "budgets", "budgetLines", "goals",
+                "contributions", "recurring", "debts",
+            ).forEach { put(it, org.json.JSONArray()) }
+        }.toString().toByteArray(Charsets.UTF_8)
+        val backup = com.mizani.money.domain.export.BackupCrypto.encrypt(json, "legacy-backup-passphrase")
+
+        val summary = exporter.inspectBackup(backup, "legacy-backup-passphrase")
+
+        assertEquals(0, summary.transactionCount)
     }
 }

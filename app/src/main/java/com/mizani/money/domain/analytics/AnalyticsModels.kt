@@ -76,6 +76,19 @@ data class UpcomingCommitment(
     val walletName: String,
 )
 
+data class MoneyOutlook(
+    val liquidBalanceMinor: Long,
+    val reservedCommitmentsMinor: Long,
+    val spendableBalanceMinor: Long,
+    val shortfallMinor: Long,
+    val recordedExpensesMinor: Long,
+    val observedDays: Int,
+    val averageDailySpendMinor: Long?,
+    val dailyTargetMinor: Long?,
+    val daysCovered: Long?,
+    val usesDailyTarget: Boolean,
+)
+
 data class IncomeVariability(
     val medianMinor: Long,
     val lowestMinor: Long,

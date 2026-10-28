@@ -18,6 +18,16 @@ These instructions apply to the whole repository. Follow them alongside the user
 - Keep analytics deterministic, locally computed, and explained in the UI. Preserve accessibility descriptions and text alternatives for charts.
 - Check app-lock, backup/restore, and test-data-reset behavior before changing related paths. See `docs/VERIFICATION.md`; Android instrumentation tests can clear app state and must use a disposable emulator/profile.
 
+## Backward compatibility for feature work
+
+- Before changing an existing financial flow, inspect its current data model, repository validation, analytics, navigation, exports, backup/restore behavior, and tests. Preserve existing user-visible behavior unless the feature explicitly changes it.
+- Keep persisted enum values, Room column and table meanings, backup JSON field names, DataStore keys, and established navigation routes stable. Prefer additive optional fields and compatible defaults; never reinterpret or silently discard older user data.
+- For every Room change, add a forward-only migration, check in the generated schema, and test migration from each supported prior schema with representative records. Never use a destructive migration or silently clear state.
+- Keep older encrypted backups restorable when adding fields or entities. Validate both old-backup-to-new-app restore and new-backup round trips; retain unrelated legacy fields. Do not change CSV/XLSX columns or meanings without documenting the compatibility impact.
+- When linking new features to ledger transactions, reuse the existing transaction instead of creating duplicate financial activity. Define how edits, soft deletion, restoration, refunds, transfers, and archival affect linked totals before shipping.
+- Keep new permissions and notifications narrowly scoped. Do not request broad SMS access for user-initiated import; notifications must remain generic and private on the lock screen.
+- For changes that touch existing financial data, verify both a fresh install and an upgrade/restore path. Run instrumentation classes separately on a disposable emulator because each class may reset app state; never clear an unidentified or non-disposable profile.
+
 ## Licensing, assets, and legal documents
 
 - Mizani-authored source and executable forms are under Apache-2.0. Preserve the root `LICENSE` and `NOTICE`; retain the original developer and project attribution when distributing derivatives.

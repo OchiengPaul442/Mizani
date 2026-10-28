@@ -54,7 +54,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.platform.LocalLocale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -88,7 +88,8 @@ fun OnboardingScreen(
         mutableIntStateOf(if (hasAcceptedCurrentLegalDocuments) 2 else 0)
     }
     var acceptedCurrentDocumentsThisSession by remember { mutableStateOf(false) }
-    val suggestedCountry = CountryPacks.forDeviceRegion(LocalLocale.current.platformLocale.country)
+    val deviceCountry = LocalConfiguration.current.locales[0]?.country.orEmpty()
+    val suggestedCountry = CountryPacks.forDeviceRegion(deviceCountry)
     var countryCode by rememberSaveable { mutableStateOf(suggestedCountry.code) }
     var currencyCode by rememberSaveable { mutableStateOf(suggestedCountry.currencyCode) }
     var walletName by rememberSaveable { mutableStateOf("Cash") }

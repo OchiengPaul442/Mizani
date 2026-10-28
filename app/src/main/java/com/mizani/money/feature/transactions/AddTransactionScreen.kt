@@ -70,6 +70,8 @@ import com.mizani.money.R
 import com.mizani.money.core.model.CategoryType
 import com.mizani.money.core.model.Ids
 import com.mizani.money.core.model.TransactionType
+import com.mizani.money.core.model.WalletType
+import com.mizani.money.core.importing.ImportedTransactionCandidate
 import com.mizani.money.core.money.CurrencyConversion
 import com.mizani.money.core.money.Currencies
 import com.mizani.money.core.money.MoneyFormat
@@ -107,6 +109,7 @@ fun AddTransactionScreen(
     state: AppUiState,
     initialTransactionId: String?,
     initialType: TransactionType = TransactionType.EXPENSE,
+    importCandidate: ImportedTransactionCandidate? = null,
     onDone: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -120,7 +123,9 @@ fun AddTransactionScreen(
     val balances = remember(snapshot) { snapshot.walletBalances() }
     val wallets = snapshot.activeWallets.ifEmpty { snapshot.wallets }
 
-    var type by rememberSaveable(existing?.id, initialType) { mutableStateOf(existing?.type ?: initialType) }
+    var type by rememberSaveable(existing?.id, initialType, importCandidate?.reference) {
+        mutableStateOf(existing?.type ?: importCandidate?.type ?: initialType)
+    }
     var entryCurrencyCode by rememberSaveable(existing?.id, currency.code) {
         mutableStateOf(
             existing?.takeIf { it.type == TransactionType.EXPENSE || it.type == TransactionType.INCOME }
@@ -145,7 +150,7 @@ fun AddTransactionScreen(
     var isRateLoading by remember(existing?.id) { mutableStateOf(false) }
     var isRateRefreshing by remember(existing?.id) { mutableStateOf(false) }
     var rateError by remember(existing?.id) { mutableStateOf<String?>(null) }
-    var amountText by rememberSaveable(existing?.id) {
+    var amountText by rememberSaveable(existing?.id, importCandidate?.reference) {
         mutableStateOf(existing?.let {
             val hasForeignAmount = (it.type == TransactionType.EXPENSE || it.type == TransactionType.INCOME) &&
                 it.sourceAmountMinor != null && it.sourceCurrencyCode != null
@@ -153,24 +158,35 @@ fun AddTransactionScreen(
                 kotlin.math.abs(if (hasForeignAmount) it.sourceAmountMinor!! else it.amountMinor),
                 Currencies.byCode(if (hasForeignAmount) it.sourceCurrencyCode!! else currency.code),
             )
-        } ?: "")
+        } ?: importCandidate?.let { MoneyFormat.toInput(it.amountMinor, Currencies.byCode(it.currencyCode)) }.orEmpty())
     }
-    var feeText by rememberSaveable(existing?.id) {
+    var feeText by rememberSaveable(existing?.id, importCandidate?.reference) {
         mutableStateOf(existing?.let {
             val hasForeignAmount = (it.type == TransactionType.EXPENSE || it.type == TransactionType.INCOME) &&
                 it.sourceAmountMinor != null && it.sourceCurrencyCode != null
             val sourceCurrency = Currencies.byCode(if (hasForeignAmount) it.sourceCurrencyCode!! else currency.code)
             val sourceFee = if (hasForeignAmount) it.sourceFeeMinor ?: 0L else it.feeMinor
             if (sourceFee > 0) MoneyFormat.toInput(sourceFee, sourceCurrency) else ""
-        } ?: "")
+        } ?: importCandidate?.takeIf { it.feeMinor > 0L }
+            ?.let { MoneyFormat.toInput(it.feeMinor, Currencies.byCode(it.currencyCode)) }.orEmpty())
     }
-    var walletId by rememberSaveable(existing?.id) {
-        mutableStateOf(existing?.walletId ?: wallets.firstOrNull()?.id)
+    var walletId by rememberSaveable(existing?.id, importCandidate?.reference) {
+        mutableStateOf(
+            existing?.walletId ?: importCandidate?.let { candidate ->
+                wallets.firstOrNull { wallet ->
+                    wallet.type == WalletType.MOBILE_MONEY && when (candidate.provider) {
+                        "mtn_momo" -> wallet.name.contains("mtn", ignoreCase = true) || wallet.name.contains("momo", ignoreCase = true)
+                        "airtel_money" -> wallet.name.contains("airtel", ignoreCase = true)
+                        else -> false
+                    }
+                }?.id ?: wallets.firstOrNull { it.type == WalletType.MOBILE_MONEY }?.id
+            } ?: wallets.firstOrNull()?.id,
+        )
     }
-    var toWalletId by rememberSaveable(existing?.id) {
+    var toWalletId by rememberSaveable(existing?.id, importCandidate?.reference) {
         mutableStateOf(existing?.toWalletId ?: wallets.firstOrNull { it.id != walletId }?.id)
     }
-    var categoryId by rememberSaveable(existing?.id) {
+    var categoryId by rememberSaveable(existing?.id, importCandidate?.reference) {
         mutableStateOf(
             existing?.categoryId
                 ?: snapshot.transactions.firstOrNull {
@@ -186,17 +202,22 @@ fun AddTransactionScreen(
     var adjustmentNegative by rememberSaveable(existing?.id) {
         mutableStateOf((existing?.amountMinor ?: 0L) < 0)
     }
-    var date by rememberSaveable(existing?.id) {
-        mutableStateOf(existing?.let { LocalDate.ofEpochDay(it.localDateEpochDay) } ?: vm.today)
+    var date by rememberSaveable(existing?.id, importCandidate?.reference) {
+        mutableStateOf(
+            existing?.let { LocalDate.ofEpochDay(it.localDateEpochDay) }
+                ?: importCandidate?.date ?: vm.today,
+        )
     }
-    var payee by rememberSaveable(existing?.id) { mutableStateOf(existing?.payee ?: "") }
+    var payee by rememberSaveable(existing?.id, importCandidate?.reference) {
+        mutableStateOf(existing?.payee ?: importCandidate?.payee.orEmpty())
+    }
     var note by rememberSaveable(existing?.id) { mutableStateOf(existing?.note ?: "") }
-    var showMore by rememberSaveable(existing?.id) {
+    var showMore by rememberSaveable(existing?.id, importCandidate?.reference) {
         mutableStateOf(
             existing?.let {
                 it.note.isNotBlank() || it.payee.isNotBlank() || it.feeMinor > 0 ||
                     it.incomeSourceId != null || it.linkedTransactionId != null
-            } ?: false,
+            } ?: (importCandidate?.payee?.isNotBlank() == true || importCandidate?.feeMinor?.let { it > 0L } == true),
         )
     }
     var error by remember { mutableStateOf<String?>(null) }
@@ -368,6 +389,8 @@ fun AddTransactionScreen(
             sourceCurrencyCode = entryCurrency.code.takeIf { isForeignCurrency },
             exchangeRate = conversionRate?.rate.takeIf { isForeignCurrency },
             exchangeRateDate = conversionRate?.date?.toString().takeIf { isForeignCurrency },
+            sourceProvider = existing?.sourceProvider ?: importCandidate?.provider,
+            sourceReference = existing?.sourceReference ?: importCandidate?.reference,
         )
         saving = true
         scope.launch {
@@ -411,7 +434,11 @@ fun AddTransactionScreen(
     Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize().imePadding()) {
         MizaniTopBar(
-            title = if (existing == null) "New transaction" else "Edit transaction",
+            title = when {
+                existing != null -> "Edit transaction"
+                importCandidate != null -> "Review imported transaction"
+                else -> "New transaction"
+            },
             subtitle = if (existing == null) null else DateText.medium(date),
             onBack = onBack,
             actions = {
@@ -507,6 +534,14 @@ fun AddTransactionScreen(
                         )
                     }
                 }
+            }
+
+            if (importCandidate != null) {
+                Text(
+                    "Suggested from ${if (importCandidate.provider == "mtn_momo") "MTN MoMo" else "Airtel Money"} · Ref ${importCandidate.reference}. Check the details before saving.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
 
             if (canEnterForeignCurrency) {

@@ -28,6 +28,7 @@ data class WorkspaceEntity(
     val updatedAt: Long,
     val revision: Long = 1L,
     val deletedAt: Long? = null,
+    val outlookDailyTargetMinor: Long? = null,
 )
 
 @Entity(
@@ -93,6 +94,7 @@ data class IncomeSourceEntity(
         Index("toWalletId"),
         Index("categoryId"),
         Index("linkedTransactionId"),
+        Index(value = ["sourceProvider", "sourceReference"], unique = true),
     ],
 )
 data class TransactionEntity(
@@ -123,6 +125,9 @@ data class TransactionEntity(
     /** Decimal text, target major units per source major unit; retained exactly for auditability. */
     val exchangeRate: String? = null,
     val exchangeRateDate: String? = null,
+    /** Normalized source identifiers used only for user-initiated import deduplication. */
+    val sourceProvider: String? = null,
+    val sourceReference: String? = null,
 )
 
 @Entity(
@@ -238,4 +243,40 @@ data class DebtEntity(
     val updatedAt: Long,
     val revision: Long = 1L,
     val deletedAt: Long? = null,
+)
+
+@Entity(
+    tableName = "commitments",
+    indices = [Index("dueEpochDay"), Index("deletedAt"), Index("archived"), Index("categoryId")],
+)
+data class CommitmentEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val targetMinor: Long,
+    val dueEpochDay: Long,
+    val categoryId: String?,
+    /** 0 disables reminders; otherwise notify this many days before the due date. */
+    val reminderDaysBefore: Int = 0,
+    val archived: Boolean = false,
+    val createdAt: Long,
+    val updatedAt: Long,
+    val revision: Long = 1L,
+    val deletedAt: Long? = null,
+)
+
+@Entity(
+    tableName = "commitment_payments",
+    indices = [
+        Index("commitmentId"),
+        // A ledger transaction can fund only one commitment at a time.
+        Index(value = ["transactionId"], unique = true),
+    ],
+)
+data class CommitmentPaymentEntity(
+    @PrimaryKey val id: String,
+    val commitmentId: String,
+    val transactionId: String,
+    val createdAt: Long,
+    val updatedAt: Long,
+    val revision: Long = 1L,
 )

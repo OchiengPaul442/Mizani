@@ -59,9 +59,11 @@
     <string name="settings_open_notification_settings">Open notification settings</string>
     <string name="settings_reminder_schedule_error">Could not update the reminder. Try again.</string>
     <string name="notification_channel_reminders">Money reminders</string>
-    <string name="notification_channel_reminders_description">Optional reminders to record income and expenses.</string>
+    <string name="notification_channel_reminders_description">Optional local reminders about recording activity and upcoming commitments.</string>
     <string name="notification_daily_reminder_title">Record today’s money</string>
     <string name="notification_daily_reminder_body">Open Mizani to add income or expenses you have not logged yet.</string>
+    <string name="notification_commitment_reminder_title">A commitment is due soon</string>
+    <string name="notification_commitment_reminder_body">Open Mizani to review your upcoming commitments.</string>
 
     <!-- App lock -->
     <string name="lock_error_pin">Incorrect PIN. Try again.</string>

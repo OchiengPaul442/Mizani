@@ -9,6 +9,8 @@ import com.mizani.money.core.model.WalletType
 import com.mizani.money.data.local.BudgetEntity
 import com.mizani.money.data.local.BudgetLineEntity
 import com.mizani.money.data.local.CategoryEntity
+import com.mizani.money.data.local.CommitmentEntity
+import com.mizani.money.data.local.CommitmentPaymentEntity
 import com.mizani.money.data.local.DebtEntity
 import com.mizani.money.data.local.GoalContributionEntity
 import com.mizani.money.data.local.GoalEntity
@@ -31,6 +33,8 @@ data class LedgerSnapshot(
     val contributions: List<GoalContributionEntity> = emptyList(),
     val recurring: List<RecurringRuleEntity> = emptyList(),
     val debts: List<DebtEntity> = emptyList(),
+    val commitments: List<CommitmentEntity> = emptyList(),
+    val commitmentPayments: List<CommitmentPaymentEntity> = emptyList(),
 ) {
     val currencyCode: String get() = workspace?.currencyCode ?: "UGX"
 
@@ -90,8 +94,40 @@ data class LedgerSnapshot(
     fun liquidBalance(): Long {
         val balances = walletBalances()
         return wallets
-            .filter { it.type != WalletType.DEBT && !it.archived }
+            .filter { it.type != WalletType.DEBT && !it.archived && it.deletedAt == null }
             .sumOf { balances[it.id] ?: 0L }
+    }
+
+    /** Paid totals are derived from linked, active expense transactions; links never duplicate ledger rows. */
+    fun commitmentProgress(): List<CommitmentProgress> {
+        val transactionsById = transactions.associateBy { it.id }
+        val refundsByExpenseId = transactions.asSequence()
+            .filter { it.type == TransactionType.REFUND && it.linkedTransactionId != null }
+            .groupingBy { it.linkedTransactionId!! }
+            .fold(0L) { total, refund -> Math.addExact(total, refund.amountMinor) }
+        val paymentsByCommitment = commitmentPayments.asSequence()
+            .groupBy { it.commitmentId }
+
+        return commitments.asSequence()
+            .filter { it.deletedAt == null }
+            .map { commitment ->
+                val paid = paymentsByCommitment[commitment.id].orEmpty().fold(0L) { total, payment ->
+                    val transaction = transactionsById[payment.transactionId]
+                    if (transaction == null || transaction.type != TransactionType.EXPENSE) {
+                        total
+                    } else {
+                        val netPayment = (transaction.amountMinor - (refundsByExpenseId[transaction.id] ?: 0L))
+                            .coerceAtLeast(0L)
+                        Math.addExact(total, netPayment)
+                    }
+                }
+                CommitmentProgress(
+                    commitment = commitment,
+                    paidMinor = paid,
+                    remainingMinor = (commitment.targetMinor - paid).coerceAtLeast(0L),
+                )
+            }
+            .toList()
     }
 
     private fun add(map: MutableMap<String, Long>, key: String, delta: Long) {
@@ -118,6 +154,22 @@ data class TransactionDraft(
     val sourceCurrencyCode: String? = null,
     val exchangeRate: String? = null,
     val exchangeRateDate: String? = null,
+    val sourceProvider: String? = null,
+    val sourceReference: String? = null,
+)
+
+data class CommitmentDraft(
+    val name: String,
+    val targetMinor: Long,
+    val dueDate: LocalDate,
+    val categoryId: String? = null,
+    val reminderDaysBefore: Int = 0,
+)
+
+data class CommitmentProgress(
+    val commitment: CommitmentEntity,
+    val paidMinor: Long,
+    val remainingMinor: Long,
 )
 
 data class BudgetLineInput(
@@ -154,6 +206,8 @@ data class RestoreBundle(
     val contributions: List<GoalContributionEntity>,
     val recurring: List<RecurringRuleEntity>,
     val debts: List<DebtEntity>,
+    val commitments: List<CommitmentEntity> = emptyList(),
+    val commitmentPayments: List<CommitmentPaymentEntity> = emptyList(),
 )
 
 internal data class CorePart(
@@ -174,4 +228,6 @@ internal data class PlanPart(
 internal data class OtherPart(
     val recurring: List<RecurringRuleEntity>,
     val debts: List<DebtEntity>,
+    val commitments: List<CommitmentEntity>,
+    val commitmentPayments: List<CommitmentPaymentEntity>,
 )

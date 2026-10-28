@@ -19,15 +19,18 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -53,6 +56,9 @@ import com.mizani.money.core.time.Periods
 import com.mizani.money.domain.analytics.AnalyticsEngine
 import com.mizani.money.domain.analytics.DashboardMetrics
 import com.mizani.money.domain.analytics.IncomeVariability
+import com.mizani.money.domain.analytics.MoneyOutlook
+import com.mizani.money.feature.lock.ProtectedBalanceValue
+import com.mizani.money.feature.lock.WalletBalanceVisibilityControl
 import com.mizani.money.ui.AppUiState
 import com.mizani.money.ui.AppViewModel
 import com.mizani.money.ui.components.DateRangePickerDialog
@@ -69,6 +75,7 @@ import com.mizani.money.ui.components.Spacing
 import com.mizani.money.ui.components.parseHexColor
 import com.mizani.money.ui.theme.LocalMizaniThemeTokens
 import java.time.YearMonth
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -77,6 +84,7 @@ fun InsightsScreen(
     vm: AppViewModel,
     state: AppUiState,
     onExportData: () -> Unit,
+    onSetupPin: () -> Unit = {},
 ) {
     val metrics by vm.metrics.collectAsStateWithLifecycle()
     val insights by vm.insights.collectAsStateWithLifecycle()
@@ -87,6 +95,7 @@ fun InsightsScreen(
     val currency = state.currency
     val today = vm.today
     var showRangePicker by remember { mutableStateOf(false) }
+    var showDailyTargetDialog by remember { mutableStateOf(false) }
 
     // Secondary metrics stay behind a "More metrics" toggle. rememberSaveable keeps the
     // choice across scrolling, tab switches and process death within the screen session.
@@ -104,6 +113,7 @@ fun InsightsScreen(
     }
 
     val engine = remember(snapshot) { AnalyticsEngine(snapshot) }
+    val outlook = remember(snapshot, today) { engine.moneyOutlook(today) }
     val currentMonth = remember(today) { Periods.monthOf(today) }
     val previousMonth = remember(today) { Periods.monthOf(today.minusMonths(1)) }
     val feeNow = remember(snapshot, today) { engine.feesMinor(currentMonth) }
@@ -156,6 +166,23 @@ fun InsightsScreen(
                 onSelect = { preset -> vm.selectPreset(preset) },
                 onCustom = { showRangePicker = true },
             )
+
+            MoneyOutlookCard(
+                vm = vm,
+                state = state,
+                outlook = outlook,
+                onSetupPin = onSetupPin,
+                onEditTarget = { showDailyTargetDialog = true },
+            )
+
+            if (showDailyTargetDialog) {
+                DailyTargetDialog(
+                    vm = vm,
+                    initialTargetMinor = snapshot.workspace?.outlookDailyTargetMinor,
+                    currency = currency,
+                    onDismiss = { showDailyTargetDialog = false },
+                )
+            }
 
             if (snapshot.transactions.isEmpty()) {
                 EmptyState(
@@ -457,6 +484,162 @@ fun InsightsScreen(
             Spacer(Modifier.height(Spacing.xl))
         }
     }
+}
+
+@Composable
+private fun MoneyOutlookCard(
+    vm: AppViewModel,
+    state: AppUiState,
+    outlook: MoneyOutlook,
+    onSetupPin: () -> Unit,
+    onEditTarget: () -> Unit,
+) {
+    val currency = state.currency
+    val dailyCost = outlook.averageDailySpendMinor ?: outlook.dailyTargetMinor
+    MizaniCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Money Outlook", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "A simple estimate from your balances and upcoming payments",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            WalletBalanceVisibilityControl(vm, state, onSetupPin)
+        }
+        Spacer(Modifier.height(Spacing.md))
+        if (outlook.daysCovered != null) {
+            Text("Estimated coverage", style = MaterialTheme.typography.labelLarge)
+            Text(
+                "${outlook.daysCovered} days",
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                if (outlook.usesDailyTarget) "Using your daily spending target" else "Using recorded spending over the last 30 days",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            Text("Set a daily target to estimate how long your money may last.", style = MaterialTheme.typography.bodyMedium)
+            Text(
+                "A history estimate becomes available after at least seven days of recorded activity and nonzero spending.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Spacer(Modifier.height(Spacing.md))
+        OutlookAmountRow(
+            label = "Available after upcoming commitments",
+            amountMinor = outlook.spendableBalanceMinor,
+            currency = currency,
+            visible = state.walletBalancesVisible,
+        )
+        OutlookAmountRow(
+            label = "Payments due in the next 30 days",
+            amountMinor = outlook.reservedCommitmentsMinor,
+            currency = currency,
+            visible = state.walletBalancesVisible,
+        )
+        if (dailyCost != null) {
+            OutlookAmountRow(
+                label = if (outlook.usesDailyTarget) "Your daily target" else "Average recorded spending per day",
+                amountMinor = dailyCost,
+                currency = currency,
+                visible = state.walletBalancesVisible,
+            )
+        }
+        if (outlook.shortfallMinor > 0L) {
+            Text(
+                "Upcoming payments are higher than your current liquid balances by ${if (state.walletBalancesVisible) MoneyFormat.format(outlook.shortfallMinor, currency) else "••••••"}.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+        Text(
+            "Uses liquid wallet balances, recorded spending, and unpaid bills due within 30 days. Expected income is excluded; transfers are not treated as spending. This is an estimate, not a guarantee.",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        TextButton(onClick = onEditTarget) {
+            Text(if (outlook.dailyTargetMinor == null) "Set daily target" else "Edit daily target")
+        }
+    }
+}
+
+@Composable
+private fun OutlookAmountRow(
+    label: String,
+    amountMinor: Long,
+    currency: Currency,
+    visible: Boolean,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        ProtectedBalanceValue(
+            amountMinor = amountMinor,
+            currency = currency,
+            visible = visible,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
+}
+
+@Composable
+private fun DailyTargetDialog(
+    vm: AppViewModel,
+    initialTargetMinor: Long?,
+    currency: Currency,
+    onDismiss: () -> Unit,
+) {
+    var amount by remember(initialTargetMinor, currency.code) {
+        mutableStateOf(initialTargetMinor?.let { MoneyFormat.toInput(it, currency) }.orEmpty())
+    }
+    var error by remember { mutableStateOf<String?>(null) }
+    var saving by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    AlertDialog(
+        onDismissRequest = { if (!saving) onDismiss() },
+        title = { Text("Daily spending target") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                Text("Used when there is not enough recent history for a spending estimate. Leave blank to remove it.")
+                OutlinedTextField(
+                    value = amount,
+                    onValueChange = { amount = it; error = null },
+                    label = { Text("Amount per day (${currency.code})") },
+                    singleLine = true,
+                    isError = error != null,
+                    supportingText = { error?.let { Text(it) } },
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = !saving,
+                onClick = {
+                    val target = if (amount.isBlank()) null else MoneyFormat.parse(amount, currency)
+                    if (amount.isNotBlank() && (target == null || target <= 0L)) {
+                        error = "Enter an amount greater than zero."
+                    } else {
+                        saving = true
+                        scope.launch {
+                            runCatching { vm.finance.setOutlookDailyTarget(target) }
+                                .onSuccess { onDismiss() }
+                                .onFailure { error = it.message ?: "Could not save the target." }
+                            saving = false
+                        }
+                    }
+                },
+            ) { Text(if (saving) "Saving…" else "Save") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss, enabled = !saving) { Text("Cancel") } },
+    )
 }
 
 private data class MonthFlow(val month: YearMonth, val incomeMinor: Long, val expenseMinor: Long)

@@ -99,6 +99,11 @@ object Currencies {
         allCurrenciesByCode[code.uppercase(Locale.ROOT)] ?: USD
 }
 
+object MoneyLimits {
+    /** Largest supported persisted minor-unit amount across entry, restore and analytics paths. */
+    const val MAX_MINOR_AMOUNT = 9_000_000_000_000_000L
+}
+
 /** Converts minor units using a decimal rate expressed as target major units per source major unit. */
 object CurrencyConversion {
     fun convertMinorUnits(
@@ -221,7 +226,7 @@ object MoneyFormat {
             val scaled = BigDecimal(cleaned)
                 .movePointRight(currency.minorUnits)
                 .setScale(0, RoundingMode.HALF_UP)
-            if (scaled > BigDecimal.valueOf(9_000_000_000_000_000L)) return null
+            if (scaled > BigDecimal.valueOf(MoneyLimits.MAX_MINOR_AMOUNT)) return null
             scaled.toLong()
         } catch (_: NumberFormatException) {
             null

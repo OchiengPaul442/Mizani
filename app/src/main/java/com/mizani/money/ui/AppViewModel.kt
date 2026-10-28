@@ -10,6 +10,9 @@ import com.mizani.money.core.model.ColorTheme
 import com.mizani.money.core.model.DarkThemeStyle
 import com.mizani.money.core.money.Currencies
 import com.mizani.money.core.money.Currency
+import com.mizani.money.core.importing.ImportedTransactionCandidate
+import com.mizani.money.core.importing.MessageParseResult
+import com.mizani.money.core.importing.TransactionMessageParser
 import com.mizani.money.core.legal.LegalDocuments
 import com.mizani.money.core.time.DateRange
 import com.mizani.money.core.time.Periods
@@ -82,6 +85,12 @@ class AppViewModel(private val container: AppContainer) : ViewModel() {
     private val startupAttempt = MutableStateFlow(0)
     private val unlocked = MutableStateFlow(false)
     private val _walletBalancesVisible = MutableStateFlow(false)
+    private val _pendingImport = MutableStateFlow<ImportedTransactionCandidate?>(null)
+    val pendingImport: StateFlow<ImportedTransactionCandidate?> = _pendingImport
+    private val _sharedImportReady = MutableStateFlow(false)
+    val sharedImportReady: StateFlow<Boolean> = _sharedImportReady
+    private val _sharedImportNotice = MutableStateFlow<String?>(null)
+    val sharedImportNotice: StateFlow<String?> = _sharedImportNotice
 
     /** Timestamp of the last backgrounding; null while foregrounded. */
     var backgroundedAt: Long? = null
@@ -147,7 +156,16 @@ class AppViewModel(private val container: AppContainer) : ViewModel() {
                     }
                     finance = repository
                     exporter = exportManager
-                    repository.snapshot.collect { snapshotFlow.value = it }
+                    repository.snapshot.collect { snapshot ->
+                        snapshotFlow.value = snapshot
+                        try {
+                            container.commitmentReminderScheduler.reconcile(snapshot)
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
+                        } catch (_: Exception) {
+                            // Reminder repair must never prevent access to the encrypted ledger.
+                        }
+                    }
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (_: LinkageError) {
@@ -284,6 +302,60 @@ class AppViewModel(private val container: AppContainer) : ViewModel() {
 
     fun hideWalletBalances() {
         _walletBalancesVisible.value = false
+    }
+
+    suspend fun prepareTransactionImport(
+        message: String,
+        providerHint: String? = null,
+    ): Result<ImportedTransactionCandidate> = runCatching {
+        require(message.length <= TransactionMessageParser.MAX_MESSAGE_LENGTH) {
+            "This message is too long to import. Paste only the transaction confirmation."
+        }
+        val candidate = when (val parsed = TransactionMessageParser.parse(message, today, providerHint)) {
+            is MessageParseResult.Parsed -> parsed.candidate
+            is MessageParseResult.Rejected -> throw IllegalArgumentException(
+                when (parsed.reason) {
+                    MessageParseResult.Reason.TOO_LONG -> "This message is too long to import."
+                    MessageParseResult.Reason.UNSUPPORTED_PROVIDER -> "This message is not from a supported mobile money provider."
+                    MessageParseResult.Reason.UNSUPPORTED_MESSAGE -> "We couldn't identify a complete transaction confirmation."
+                },
+            )
+        }
+        val workspace = finance.currentWorkspace() ?: error("Set up a workspace before importing transactions")
+        require(candidate.currencyCode == workspace.currencyCode) {
+            "The message currency differs from your workspace currency. Record this transaction manually."
+        }
+        require(!finance.hasImportedReference(candidate.provider, candidate.reference)) {
+            "This transaction reference has already been imported."
+        }
+        _sharedImportNotice.value = null
+        _sharedImportReady.value = false
+        _pendingImport.value = candidate
+        candidate
+    }
+
+    suspend fun stageSharedTransaction(message: String, providerHint: String? = null) {
+        val current = uiState.first { !it.loading }
+        // Don't hold incoming financial text while onboarding, legal consent, or the app lock is active.
+        if (current.startupError || current.locked || !current.settings.onboardingComplete ||
+            !current.settings.hasAcceptedCurrentLegalDocuments || current.snapshot.workspace == null
+        ) return
+        prepareTransactionImport(message, providerHint)
+            .onSuccess { _sharedImportReady.value = true }
+            .onFailure {
+                _sharedImportNotice.value = it.message ?: "We couldn't read this transaction message."
+            }
+    }
+
+    fun setSharedImportNotice(message: String) {
+        _sharedImportNotice.value = message.take(160)
+        _sharedImportReady.value = false
+    }
+
+    fun clearPendingImport() {
+        _pendingImport.value = null
+        _sharedImportNotice.value = null
+        _sharedImportReady.value = false
     }
 
     suspend fun enableLock(pin: String): Result<Unit> = runCatching {

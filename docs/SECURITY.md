@@ -12,7 +12,8 @@ Mizani stores personal financial records. Its protections are designed to reduce
 - Encrypted backups use AES-GCM and a passphrase-derived key. New backups use the versioned `MZNB2` envelope with PBKDF2-HMAC-SHA256 at 600,000 iterations; `MZNB1` files remain readable for compatibility. This iteration count follows current OWASP PBKDF2 guidance ([Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)). Backup input is size-bounded, decoded values are validated, and replacement happens in one Room transaction.
 - CSV and Excel exports are intentionally unencrypted for analysis. After fresh identity confirmation, the app warns before export and uses Android's document picker; save those files only in a location you trust.
 - Network requests use HTTPS. Exchange-rate requests send currency codes, not transaction records. Update checks fetch public release metadata. Daily reminders contain no balances or transaction details and use private notification visibility.
-- Wallet balances are concealed on Home and Wallets by default. Revealing them requires a fresh app PIN confirmation, or biometrics when the user enabled them. The reveal lasts only while the app stays on that screen and in the foreground.
+- Mobile-money import accepts only text a user chooses to paste or share. Parsing stays on device, the original message is discarded after review, and no SMS permission or background message listener is used. Commitment reminders show generic text without names or amounts on the lock screen.
+- Wallet balances are concealed on Home and Wallets by default. Revealing them requires a fresh app PIN confirmation, or biometrics when the user enabled them. A user without a PIN must set up app lock to create one. The reveal lasts only while the app stays on that screen and in the foreground.
 
 ## Recovery and data-loss precautions
 

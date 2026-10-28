@@ -84,6 +84,39 @@ object DailyReminderNotifications {
         }
     }
 
+    /** Generic notification copy keeps commitment names and amounts off the lock screen. */
+    fun postCommitment(context: Context, commitmentId: String): Boolean {
+        ensureChannel(context)
+        if (!canPost(context)) return false
+        val notificationId = 80_000 + (commitmentId.hashCode() and 0x3fff)
+        val openApp = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        val contentIntent = PendingIntent.getActivity(
+            context,
+            notificationId,
+            openApp,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_stat_mizani)
+            .setContentTitle(context.getString(R.string.notification_commitment_reminder_title))
+            .setContentText(context.getString(R.string.notification_commitment_reminder_body))
+            .setContentIntent(contentIntent)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setAutoCancel(true)
+            .setOnlyAlertOnce(true)
+            .build()
+        return try {
+            NotificationManagerCompat.from(context).notify(notificationId, notification)
+            true
+        } catch (_: SecurityException) {
+            false
+        }
+    }
+
     fun cancel(context: Context) {
         NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID)
     }

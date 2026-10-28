@@ -298,7 +298,7 @@ private fun WalletShortcutsSection(
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.titleMedium,
             )
-            WalletBalanceVisibilityControl(vm, state, onSetupPin)
+            WalletBalanceVisibilityControl(vm, state, onSetupPin, showLabel = true)
             androidx.compose.material3.TextButton(onClick = onOpenWallets) {
                 Text("See all")
             }
