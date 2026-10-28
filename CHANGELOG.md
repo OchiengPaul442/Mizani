@@ -37,6 +37,7 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
 - Inset the bottom navigation in a rounded, lightly bordered surface with consistent spacing.
 - Open the selected transaction when a row in Home’s recent activity is tapped.
 - Clarify the floating Add sheet with equally prominent, descriptive choices for expenses, income, and wallet transfers.
+- Make Money Outlook easier to scan with a clearer coverage estimate, concise setup guidance, and expandable calculation details.
 
 ### Removed
 

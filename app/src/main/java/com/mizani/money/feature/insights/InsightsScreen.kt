@@ -19,11 +19,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,6 +46,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -496,12 +501,13 @@ private fun MoneyOutlookCard(
 ) {
     val currency = state.currency
     val dailyCost = outlook.averageDailySpendMinor ?: outlook.dailyTargetMinor
+    var showCalculation by rememberSaveable { mutableStateOf(false) }
     MizaniCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Money Outlook", style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "A simple estimate from your balances and upcoming payments",
+                    "Estimate how long your money may cover daily spending.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -510,61 +516,173 @@ private fun MoneyOutlookCard(
         }
         Spacer(Modifier.height(Spacing.md))
         if (outlook.daysCovered != null) {
-            Text("Estimated coverage", style = MaterialTheme.typography.labelLarge)
-            Text(
-                "${outlook.daysCovered} days",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                if (outlook.usesDailyTarget) "Using your daily spending target" else "Using recorded spending over the last 30 days",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            OutlookEstimatePanel(
+                daysCovered = outlook.daysCovered,
+                basis = if (outlook.usesDailyTarget) {
+                    "Using your daily target"
+                } else {
+                    "Based on recorded spending over ${outlook.observedDays} days"
+                },
             )
         } else {
-            Text("Set a daily target to estimate how long your money may last.", style = MaterialTheme.typography.bodyMedium)
-            Text(
-                "A history estimate becomes available after at least seven days of recorded activity and nonzero spending.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            OutlookSetupPanel(
+                observedDays = outlook.observedDays,
+                onEditTarget = onEditTarget,
             )
         }
         Spacer(Modifier.height(Spacing.md))
         OutlookAmountRow(
-            label = "Available after upcoming commitments",
+            label = "Left after upcoming payments",
             amountMinor = outlook.spendableBalanceMinor,
             currency = currency,
             visible = state.walletBalancesVisible,
         )
         OutlookAmountRow(
-            label = "Payments due in the next 30 days",
+            label = "Due in the next 30 days",
             amountMinor = outlook.reservedCommitmentsMinor,
             currency = currency,
             visible = state.walletBalancesVisible,
         )
         if (dailyCost != null) {
             OutlookAmountRow(
-                label = if (outlook.usesDailyTarget) "Your daily target" else "Average recorded spending per day",
+                label = if (outlook.usesDailyTarget) "Daily target" else "Average per day",
                 amountMinor = dailyCost,
                 currency = currency,
                 visible = state.walletBalancesVisible,
             )
         }
         if (outlook.shortfallMinor > 0L) {
-            Text(
-                "Upcoming payments are higher than your current liquid balances by ${if (state.walletBalancesVisible) MoneyFormat.format(outlook.shortfallMinor, currency) else "••••••"}.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
+            Spacer(Modifier.height(Spacing.xs))
+            OutlookPaymentGap(
+                amountMinor = outlook.shortfallMinor,
+                currency = currency,
+                visible = state.walletBalancesVisible,
             )
         }
+        if (outlook.daysCovered != null && outlook.dailyTargetMinor != null) {
+            TextButton(onClick = onEditTarget) {
+                Text(if (outlook.usesDailyTarget) "Edit daily target" else "Edit fallback target")
+            }
+        }
+        OutlookCalculationDisclosure(
+            expanded = showCalculation,
+            onToggle = { showCalculation = !showCalculation },
+        )
+    }
+}
+
+@Composable
+private fun OutlookEstimatePanel(daysCovered: Long, basis: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Column(
+            modifier = Modifier.padding(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            Text("Estimated coverage", style = MaterialTheme.typography.labelLarge)
+            Text(
+                coverageLabel(daysCovered),
+                style = MaterialTheme.typography.headlineMedium,
+            )
+            Text(basis, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+private fun coverageLabel(daysCovered: Long): String = when (daysCovered) {
+    0L -> "Less than a day"
+    1L -> "About 1 day"
+    else -> "About $daysCovered days"
+}
+
+@Composable
+private fun OutlookSetupPanel(observedDays: Int, onEditTarget: () -> Unit) {
+    val historyGuidance = if (observedDays >= 7) {
+        "A history estimate needs recorded spending. Set a daily target to see an estimate now."
+    } else {
+        "A history estimate needs records spanning 7 days and some spending. Set a daily target to see an estimate now."
+    }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Column(
+            modifier = Modifier.padding(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            Text("Start with a daily target", style = MaterialTheme.typography.titleSmall)
+            Text(historyGuidance, style = MaterialTheme.typography.bodySmall)
+            Button(
+                onClick = onEditTarget,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Set daily target")
+            }
+        }
+    }
+}
+
+@Composable
+private fun OutlookPaymentGap(
+    amountMinor: Long,
+    currency: Currency,
+    visible: Boolean,
+) {
+    val messageColor = MaterialTheme.colorScheme.onSecondaryContainer
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = messageColor,
+        shape = MaterialTheme.shapes.small,
+    ) {
+        Column(
+            modifier = Modifier.padding(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            Text(
+                "Upcoming payments exceed money in your active wallets.",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            if (visible) {
+                OutlookAmountRow(
+                    label = "Gap to cover",
+                    amountMinor = amountMinor,
+                    currency = currency,
+                    visible = true,
+                    contentColor = messageColor,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun OutlookCalculationDisclosure(expanded: Boolean, onToggle: () -> Unit) {
+    TextButton(
+        onClick = onToggle,
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { stateDescription = if (expanded) "Expanded" else "Collapsed" },
+    ) {
+        Text("How this estimate is calculated")
+        Spacer(Modifier.weight(1f))
+        Icon(
+            imageVector = if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+            contentDescription = null,
+        )
+    }
+    if (expanded) {
         Text(
-            "Uses liquid wallet balances, recorded spending, and unpaid bills due within 30 days. Expected income is excluded; transfers are not treated as spending. This is an estimate, not a guarantee.",
-            style = MaterialTheme.typography.labelSmall,
+            "Starts with balances across your active wallets, excluding debt accounts, then subtracts unpaid bills, debt payments and commitments due within 30 days. With 7 observed days and some spending, daily cost comes from recent expenses. Otherwise, a saved daily target is used if you have one. Future income is excluded. Transfers between your wallets do not count as spending; transfer fees do. Spending and payments can change, so use this as a guide.",
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        TextButton(onClick = onEditTarget) {
-            Text(if (outlook.dailyTargetMinor == null) "Set daily target" else "Edit daily target")
-        }
     }
 }
 
@@ -574,18 +692,26 @@ private fun OutlookAmountRow(
     amountMinor: Long,
     currency: Currency,
     visible: Boolean,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            label,
+            modifier = Modifier.weight(1f).padding(end = Spacing.sm),
+            style = MaterialTheme.typography.bodySmall,
+            color = contentColor.copy(alpha = 0.8f),
+        )
         ProtectedBalanceValue(
             amountMinor = amountMinor,
             currency = currency,
             visible = visible,
             style = MaterialTheme.typography.bodyMedium,
+            color = contentColor,
+            maxLines = 1,
         )
     }
 }
