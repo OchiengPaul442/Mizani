@@ -11,7 +11,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -28,6 +27,8 @@ import androidx.compose.ui.unit.dp
 import com.mizani.money.core.importing.TransactionMessageParser
 import com.mizani.money.ui.AppViewModel
 import com.mizani.money.ui.components.MizaniTopBar
+import com.mizani.money.ui.components.MizaniPicker
+import com.mizani.money.ui.components.PickerOption
 import com.mizani.money.ui.components.Spacing
 import kotlinx.coroutines.launch
 
@@ -54,26 +55,27 @@ fun MessageImportScreen(
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
             Text(
-                "Paste or share an MTN MoMo or Airtel Money confirmation. Mizani reads it on this device; the original message is not saved.",
+                "Paste or share a mobile-money confirmation. Mizani reads it on this device; the original message is not saved.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                "If the message does not name its provider, select who sent it:",
+                "If the message does not name its provider, choose it here. Supported networks include MTN MoMo, Airtel Money, M-Pesa, Orange Money, Moov, Wave, Telecel, Tigo, EcoCash, OPay and more.",
                 style = MaterialTheme.typography.labelLarge,
             )
-            androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                FilterChip(
-                    selected = providerHint == "MTN MoMo",
-                    onClick = { providerHint = if (providerHint == "MTN MoMo") null else "MTN MoMo" },
-                    label = { Text("MTN MoMo") },
-                )
-                FilterChip(
-                    selected = providerHint == "Airtel Money",
-                    onClick = { providerHint = if (providerHint == "Airtel Money") null else "Airtel Money" },
-                    label = { Text("Airtel Money") },
-                )
-            }
+            MizaniPicker(
+                selectedText = providerHint?.let { id ->
+                    TransactionMessageParser.providerOptions.firstOrNull { it.id == id }?.label
+                } ?: "Provider detected automatically",
+                options = TransactionMessageParser.providerOptions.map { PickerOption(it.id, it.label) },
+                onSelect = { providerHint = it },
+                noneLabel = "Detect automatically",
+                onSelectNone = { providerHint = null },
+                searchable = true,
+                searchHint = "Search mobile-money networks",
+                fieldLabel = "Provider hint (optional)",
+                modifier = Modifier.fillMaxWidth(),
+            )
             OutlinedTextField(
                 value = message,
                 onValueChange = { value ->

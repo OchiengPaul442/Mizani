@@ -50,20 +50,24 @@
 
     <!-- Daily reminders -->
     <string name="settings_reminders_title">Reminders</string>
-    <string name="settings_daily_reminder_title">Daily log reminder</string>
-    <string name="settings_daily_reminder_description">Around %1$s, remind me to record income or expenses if nothing is logged today.</string>
+    <string name="settings_daily_reminder_title">Daily money check-in</string>
+    <string name="settings_daily_reminder_description">Around %1$s, remind me to review today\'s money activity if nothing has been recorded.</string>
     <string name="settings_reminder_time_label">Reminder time</string>
-    <string name="settings_reminder_local_note">This reminder checks your records on this phone. Android may delay it when battery saving is active.</string>
-    <string name="settings_reminder_permission_denied">Notifications are off, so Mizani cannot send this reminder.</string>
-    <string name="settings_reminder_notifications_disabled">Notifications are disabled in Android settings. Turn them on to receive this reminder.</string>
+    <string name="settings_reminder_local_note">Mizani checks your records on this phone. Android may delay alerts when battery saving or background restrictions are active.</string>
+    <string name="settings_reminder_permission_denied">Notification permission was declined. Allow notifications to receive reminders.</string>
+    <string name="settings_reminder_notifications_disabled">Notifications are turned off for Mizani. Turn them on in Android settings to receive reminders.</string>
     <string name="settings_open_notification_settings">Open notification settings</string>
+    <string name="settings_send_test_reminder">Send a test notification</string>
+    <string name="settings_reminder_test_sent">Test notification sent. If you do not see it, check Mizani\'s notification settings in Android.</string>
     <string name="settings_reminder_schedule_error">Could not update the reminder. Try again.</string>
     <string name="notification_channel_reminders">Money reminders</string>
     <string name="notification_channel_reminders_description">Optional local reminders about recording activity and upcoming commitments.</string>
-    <string name="notification_daily_reminder_title">Record today’s money</string>
-    <string name="notification_daily_reminder_body">Open Mizani to add income or expenses you have not logged yet.</string>
-    <string name="notification_commitment_reminder_title">A commitment is due soon</string>
-    <string name="notification_commitment_reminder_body">Open Mizani to review your upcoming commitments.</string>
+    <string name="notification_daily_reminder_title">Daily money check-in</string>
+    <string name="notification_daily_reminder_body">No income or expenses have been logged today. Open Mizani to review or add your activity.</string>
+    <string name="notification_commitment_reminder_title">Upcoming payment</string>
+    <string name="notification_commitment_reminder_body">Open Mizani to review a payment due soon.</string>
+    <string name="notification_test_reminder_title">Mizani reminders are on</string>
+    <string name="notification_test_reminder_body">This test confirms that Mizani can send reminder notifications.</string>
 
     <!-- App lock -->
     <string name="lock_error_pin">Incorrect PIN. Try again.</string>

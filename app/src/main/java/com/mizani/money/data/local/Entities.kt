@@ -253,6 +253,13 @@ data class CommitmentEntity(
     @PrimaryKey val id: String,
     val name: String,
     val targetMinor: Long,
+    /** Currency in which the obligation is denominated. */
+    val currencyCode: String = "UGX",
+    /** Target converted to the workspace currency using the saved reference rate. */
+    val targetWorkspaceMinor: Long = targetMinor,
+    /** Daily reference rate expressed as commitment currency major units to workspace units. */
+    val exchangeRate: String? = null,
+    val exchangeRateDate: String? = null,
     val dueEpochDay: Long,
     val categoryId: String?,
     /** 0 disables reminders; otherwise notify this many days before the due date. */

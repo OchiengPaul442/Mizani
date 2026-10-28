@@ -322,9 +322,6 @@ class AppViewModel(private val container: AppContainer) : ViewModel() {
             )
         }
         val workspace = finance.currentWorkspace() ?: error("Set up a workspace before importing transactions")
-        require(candidate.currencyCode == workspace.currencyCode) {
-            "The message currency differs from your workspace currency. Record this transaction manually."
-        }
         require(!finance.hasImportedReference(candidate.provider, candidate.reference)) {
             "This transaction reference has already been imported."
         }

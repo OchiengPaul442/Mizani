@@ -25,7 +25,7 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         CommitmentEntity::class,
         CommitmentPaymentEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -94,11 +94,26 @@ abstract class MizaniDatabase : RoomDatabase() {
             }
         }
 
+        internal val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // New commitments keep their own currency and a deterministic workspace-currency
+                // target. Existing commitments were always stored in the workspace currency.
+                db.execSQL("ALTER TABLE commitments ADD COLUMN currencyCode TEXT NOT NULL DEFAULT 'UGX'")
+                db.execSQL("ALTER TABLE commitments ADD COLUMN targetWorkspaceMinor INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE commitments ADD COLUMN exchangeRate TEXT")
+                db.execSQL("ALTER TABLE commitments ADD COLUMN exchangeRateDate TEXT")
+                db.execSQL(
+                    "UPDATE commitments SET currencyCode = (SELECT currencyCode FROM workspace LIMIT 1), " +
+                        "targetWorkspaceMinor = targetMinor WHERE targetWorkspaceMinor = 0",
+                )
+            }
+        }
+
         fun build(context: Context, passphrase: ByteArray): MizaniDatabase {
             val factory = SupportOpenHelperFactory(passphrase)
             return Room.databaseBuilder(context, MizaniDatabase::class.java, NAME)
                 .openHelperFactory(factory)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .build()
         }
     }

@@ -348,8 +348,8 @@ class FinanceRepository(private val database: MizaniDatabase) {
             }
             val commitment = commitmentDao.getById(payment.commitmentId)
             if (commitment != null) {
-                val paidWithoutThisExpense = commitmentPaidMinor(commitment.id, excludingTransactionId = draft.id)
-                require(draft.amountMinor <= commitment.targetMinor - paidWithoutThisExpense) {
+                val paidWithoutThisExpense = commitmentPaidWorkspaceMinor(commitment.id, excludingTransactionId = draft.id)
+                require(draft.amountMinor <= commitment.targetWorkspaceMinor - paidWithoutThisExpense) {
                     "This edit would pay more than the remaining commitment"
                 }
             }
@@ -838,20 +838,44 @@ class FinanceRepository(private val database: MizaniDatabase) {
         val name = draft.name.trim()
         require(name.isNotEmpty()) { "Enter a commitment name" }
         require(name.length <= MAX_COMMITMENT_NAME_LENGTH) { "Commitment name is too long" }
-        require(draft.targetMinor in 1..MoneyLimits.MAX_MINOR_AMOUNT) { "Enter a valid commitment amount" }
         require(draft.reminderDaysBefore in 0..MAX_COMMITMENT_REMINDER_DAYS) {
             "Choose a reminder between 0 and $MAX_COMMITMENT_REMINDER_DAYS days before the due date"
         }
         requireCategoryType(draft.categoryId, CategoryType.EXPENSE, "Commitment")
 
         val existing = id?.let { commitmentDao.getById(it) }
-        val paid = existing?.let { commitmentPaidMinor(it.id) } ?: 0L
-        require(draft.targetMinor >= paid) { "Target cannot be less than payments already linked" }
+        // Older callers that edit a commitment without the new optional currency fields keep the
+        // existing denomination and saved rate instead of silently resetting it to the workspace.
+        val preserveExistingCurrency = draft.currencyCode == null && existing != null
+        val currencyCode = (draft.currencyCode ?: existing?.currencyCode ?: workspace.currencyCode).uppercase()
+        val targetWorkspaceMinor = draft.targetWorkspaceMinor ?: if (preserveExistingCurrency) {
+            existing!!.targetWorkspaceMinor
+        } else {
+            draft.targetMinor
+        }
+        val exchangeRate = draft.exchangeRate ?: if (preserveExistingCurrency) existing?.exchangeRate else null
+        val exchangeRateDate = draft.exchangeRateDate?.toString()
+            ?: if (preserveExistingCurrency) existing?.exchangeRateDate else null
+        CommitmentCurrencyRules.validate(
+            workspaceCurrencyCode = workspace.currencyCode,
+            currencyCode = currencyCode,
+            targetMinor = draft.targetMinor,
+            targetWorkspaceMinor = targetWorkspaceMinor,
+            exchangeRate = exchangeRate,
+            exchangeRateDate = exchangeRateDate,
+        )
+
+        val paidWorkspace = existing?.let { commitmentPaidWorkspaceMinor(it.id) } ?: 0L
+        require(targetWorkspaceMinor >= paidWorkspace) { "Target cannot be less than payments already linked" }
         val now = System.currentTimeMillis()
         val commitment = CommitmentEntity(
             id = existing?.id ?: Ids.newId(),
             name = name,
             targetMinor = draft.targetMinor,
+            currencyCode = currencyCode,
+            targetWorkspaceMinor = targetWorkspaceMinor,
+            exchangeRate = exchangeRate,
+            exchangeRateDate = exchangeRateDate,
             dueEpochDay = draft.dueDate.toEpochDay(),
             categoryId = draft.categoryId,
             reminderDaysBefore = draft.reminderDaysBefore,
@@ -900,8 +924,8 @@ class FinanceRepository(private val database: MizaniDatabase) {
             }
             val netPayment = netCommitmentPaymentMinor(transaction)
             require(netPayment > 0L) { "This expense has no remaining value after refunds" }
-            val alreadyPaid = commitmentPaidMinor(commitmentId)
-            require(netPayment <= commitment.targetMinor - alreadyPaid) {
+            val alreadyPaid = commitmentPaidWorkspaceMinor(commitmentId)
+            require(netPayment <= commitment.targetWorkspaceMinor - alreadyPaid) {
                 "Payment is greater than the remaining commitment"
             }
             val now = System.currentTimeMillis()
@@ -938,7 +962,7 @@ class FinanceRepository(private val database: MizaniDatabase) {
         }
     }
 
-    private suspend fun commitmentPaidMinor(
+    private suspend fun commitmentPaidWorkspaceMinor(
         commitmentId: String,
         excludingTransactionId: String? = null,
     ): Long {

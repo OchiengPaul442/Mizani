@@ -7,6 +7,7 @@ import androidx.work.WorkerParameters
 import com.mizani.money.MizaniApplication
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
+import java.time.LocalDate
 import java.time.ZonedDateTime
 
 class DailyTransactionReminderWorker(
@@ -43,9 +44,11 @@ class DailyTransactionReminderWorker(
 
             val now = ZonedDateTime.now()
             val today = now.toLocalDate()
-            if (targetEpochDay != today.toEpochDay()) {
-                scheduleNextIfCurrent(settingsRepository, scheduleVersion)
-                return Result.success()
+            // WorkManager may run a delayed one-shot after its target date (for example after
+            // Doze or battery restrictions). Do not silently drop the reminder in that case;
+            // wait only when it runs early, then check the current day as usual.
+            if (today.isBefore(LocalDate.ofEpochDay(targetEpochDay))) {
+                return Result.retry()
             }
 
             val minuteOfDay = now.hour * 60 + now.minute

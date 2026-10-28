@@ -2,8 +2,6 @@ package com.mizani.money.ui
 
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -95,14 +93,16 @@ private val tabs = listOf(
 private val topLevelRoutes = tabs.map { it.route }.toSet()
 
 // Keep every route change consistent and restrained: full-screen-width movement caused a visible
-// jump between tabs and made details feel as if they were thrown off screen.
+// jump between tabs and made details feel as if they were thrown off screen. Destinations remain
+// opaque during transitions so a quick Back press never exposes the Scaffold background as a gray
+// scrim while the outgoing route is being removed.
 private fun navEnter(
     scope: androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>,
 ): EnterTransition {
     val from = depthOf(scope.initialState.destination.route)
     val to = depthOf(scope.targetState.destination.route)
     val towardsEnd = to >= from
-    return fadeIn(tween(190)) + slideInHorizontally(
+    return slideInHorizontally(
         animationSpec = tween(220, easing = FastOutSlowInEasing),
     ) { fullWidth -> if (towardsEnd) fullWidth / 14 else -fullWidth / 14 }
 }
@@ -113,7 +113,7 @@ private fun navExit(
     val from = depthOf(scope.initialState.destination.route)
     val to = depthOf(scope.targetState.destination.route)
     val towardsEnd = to >= from
-    return fadeOut(tween(150)) + slideOutHorizontally(
+    return slideOutHorizontally(
         animationSpec = tween(220, easing = FastOutSlowInEasing),
     ) { fullWidth -> if (towardsEnd) -fullWidth / 14 else fullWidth / 14 }
 }
@@ -123,13 +123,13 @@ private fun navExit(
 // slides in from the left and the outgoing one exits to the right.
 private fun navPopEnter(
     scope: androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>,
-): EnterTransition = fadeIn(tween(190)) + slideInHorizontally(
+): EnterTransition = slideInHorizontally(
     animationSpec = tween(220, easing = FastOutSlowInEasing),
 ) { fullWidth -> -fullWidth / 14 }
 
 private fun navPopExit(
     scope: androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>,
-): ExitTransition = fadeOut(tween(150)) + slideOutHorizontally(
+): ExitTransition = slideOutHorizontally(
     animationSpec = tween(220, easing = FastOutSlowInEasing),
 ) { fullWidth -> fullWidth / 14 }
 
@@ -163,6 +163,13 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
 
     LaunchedEffect(currentRoute) {
         vm.hideWalletBalances()
+        // Keep an import candidate alive until its destination has actually been popped. Clearing
+        // it from the save/back callback can replace the destination content while Navigation
+        // Compose is still moving its lifecycle entry, which is especially fragile during IME
+        // dismissal and Activity teardown.
+        if (currentRoute != "import-review" && pendingImport != null) {
+            vm.clearPendingImport()
+        }
     }
 
     LaunchedEffect(sharedImportReady) {
@@ -197,6 +204,19 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
             popUpTo(navController.graph.findStartDestination().id) { saveState = true }
             launchSingleTop = true
             restoreState = true
+        }
+    }
+
+    fun finishImportedTransaction() {
+        showAddSheet = false
+        if (navController.popBackStack("transactions", inclusive = false)) {
+            return
+        }
+        navController.navigate("transactions") {
+            // Do not save the transient paste/review destinations. Saving that back stack can
+            // retain an INITIALIZED import-review entry and make Activity teardown unsafe.
+            popUpTo(navController.graph.findStartDestination().id) { saveState = false }
+            launchSingleTop = true
         }
     }
 
@@ -336,10 +356,12 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
             }
             composable(
                 "add/{type}",
-                enterTransition = ::navEnter,
-                exitTransition = ::navExit,
-                popEnterTransition = ::navPopEnter,
-                popExitTransition = ::navPopExit,
+                // The add form can immediately open the import flow. Keep this hand-off
+                // synchronous so the review entry always reaches CREATED before it is popped.
+                enterTransition = { EnterTransition.None },
+                exitTransition = { ExitTransition.None },
+                popEnterTransition = { EnterTransition.None },
+                popExitTransition = { ExitTransition.None },
             ) { entry ->
                 val initialType = entry.arguments?.getString("type")
                     ?.let { runCatching { TransactionType.valueOf(it) }.getOrNull() }
@@ -356,10 +378,13 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
             }
             composable(
                 "import-message",
-                enterTransition = ::navEnter,
-                exitTransition = ::navExit,
-                popEnterTransition = ::navPopEnter,
-                popExitTransition = ::navPopExit,
+                // Import review is a short, form-like flow. Keeping these two destinations
+                // synchronous avoids a lifecycle race when a user reviews and saves quickly
+                // while the IME or the previous destination is still settling.
+                enterTransition = { EnterTransition.None },
+                exitTransition = { ExitTransition.None },
+                popEnterTransition = { EnterTransition.None },
+                popExitTransition = { ExitTransition.None },
             ) {
                 MessageImportScreen(
                     vm = vm,
@@ -373,10 +398,10 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
             }
             composable(
                 "import-review",
-                enterTransition = ::navEnter,
-                exitTransition = ::navExit,
-                popEnterTransition = ::navPopEnter,
-                popExitTransition = ::navPopExit,
+                enterTransition = { EnterTransition.None },
+                exitTransition = { ExitTransition.None },
+                popEnterTransition = { EnterTransition.None },
+                popExitTransition = { ExitTransition.None },
             ) {
                 val candidate = pendingImport
                 if (candidate == null) {
@@ -394,11 +419,13 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                         initialType = candidate.type,
                         importCandidate = candidate,
                         onDone = {
-                            vm.clearPendingImport()
-                            navigateBack()
+                            // Saving an import completes the whole flow and returns to Activity,
+                            // rather than leaving the user on the paste screen. Replace the
+                            // detail stack first, then clear the candidate so the review entry is
+                            // removed without a transient re-composition.
+                            finishImportedTransaction()
                         },
                         onBack = {
-                            vm.clearPendingImport()
                             navigateBack()
                         },
                     )

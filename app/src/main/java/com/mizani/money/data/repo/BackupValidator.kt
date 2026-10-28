@@ -195,9 +195,14 @@ internal object BackupValidator {
         }
         val commitmentIds = bundle.commitments.map { it.id }.toSet()
         bundle.commitments.forEach { commitment ->
-            require(commitment.targetMinor in 1..MoneyLimits.MAX_MINOR_AMOUNT) {
-                "Commitment target is invalid"
-            }
+            CommitmentCurrencyRules.validate(
+                workspaceCurrencyCode = workspaceCurrency,
+                currencyCode = commitment.currencyCode,
+                targetMinor = commitment.targetMinor,
+                targetWorkspaceMinor = commitment.targetWorkspaceMinor,
+                exchangeRate = commitment.exchangeRate,
+                exchangeRateDate = commitment.exchangeRateDate,
+            )
             require(commitment.reminderDaysBefore in 0..30) { "Commitment reminder is invalid" }
             if (commitment.categoryId != null) {
                 require(commitment.categoryId in categoryIds) { "Commitment references a missing category" }

@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -503,7 +504,7 @@ private fun MoneyOutlookCard(
             Column(Modifier.weight(1f)) {
                 Text("Money Outlook", style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "Estimate how long your money may cover daily spending.",
+                    "See how long your money may last at your current daily spending.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -577,8 +578,16 @@ private fun OutlookEstimatePanel(daysCovered: Long, visible: Boolean, basis: Str
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
             Text("Estimated coverage", style = MaterialTheme.typography.labelLarge)
+            val coverageText = if (visible) coverageLabel(daysCovered) else "••••••"
             Text(
-                if (visible) coverageLabel(daysCovered) else "Hidden while balances are hidden",
+                coverageText,
+                modifier = Modifier.semantics {
+                    contentDescription = if (visible) {
+                        "Estimated coverage $coverageText"
+                    } else {
+                        "Estimated coverage hidden"
+                    }
+                },
                 style = MaterialTheme.typography.headlineMedium,
             )
             Text(basis, style = MaterialTheme.typography.bodySmall)

@@ -295,16 +295,21 @@ class ExportManager(
                 name = "Commitments",
                 headers = listOf(
                     "ID", "Name", "Target", "Paid", "Remaining", "Due date", "Category ID", "Category",
-                    "Reminder days before", "Archived",
+                    "Reminder days before", "Archived", "Commitment currency", "Target in commitment currency",
+                    "Paid in commitment currency", "Remaining in commitment currency", "Reference rate", "Rate date",
                 ),
                 rows = snapshot.commitmentProgress().map { progress ->
                     val commitment = progress.commitment
                     listOf(
-                        text(commitment.id), text(commitment.name), money(commitment.targetMinor, workspaceCurrency),
-                        money(progress.paidMinor, workspaceCurrency), money(progress.remainingMinor, workspaceCurrency),
+                        text(commitment.id), text(commitment.name), money(commitment.targetWorkspaceMinor, workspaceCurrency),
+                        money(progress.paidWorkspaceMinor, workspaceCurrency), money(progress.remainingWorkspaceMinor, workspaceCurrency),
                         date(commitment.dueEpochDay), text(commitment.categoryId),
                         text(commitment.categoryId?.let { categories[it]?.name }), number(commitment.reminderDaysBefore),
                         text(if (commitment.archived) "Yes" else "No"),
+                        text(commitment.currencyCode), money(commitment.targetMinor, commitment.currencyCode),
+                        money(progress.paidMinor, commitment.currencyCode),
+                        money(progress.remainingMinor, commitment.currencyCode),
+                        text(commitment.exchangeRate ?: ""), text(commitment.exchangeRateDate ?: ""),
                     )
                 },
             ),
@@ -426,8 +431,9 @@ class ExportManager(
         if (version < 1) throw BackupException("Unsupported backup version")
         val recordCount = RECORD_ARRAY_NAMES.sumOf { root.optJSONArray(it)?.length()?.toLong() ?: 0L }
         if (recordCount > MAX_BACKUP_RECORDS) throw BackupException("Backup contains too many records")
+        val workspace = decodeWorkspace(root.getJSONObject("workspace"))
         val bundle = RestoreBundle(
-            workspace = decodeWorkspace(root.getJSONObject("workspace")),
+            workspace = workspace,
             wallets = root.getJSONArray("wallets").mapObjects(::decodeWallet),
             categories = root.getJSONArray("categories").mapObjects(::decodeCategory),
             incomeSources = root.optJSONArray("incomeSources")?.mapObjects(::decodeIncomeSource) ?: emptyList(),
@@ -438,7 +444,9 @@ class ExportManager(
             contributions = root.getJSONArray("contributions").mapObjects(::decodeContribution),
             recurring = root.getJSONArray("recurring").mapObjects(::decodeRecurring),
             debts = root.getJSONArray("debts").mapObjects(::decodeDebt),
-            commitments = root.optJSONArray("commitments")?.mapObjects(::decodeCommitment) ?: emptyList(),
+            commitments = root.optJSONArray("commitments")?.mapObjects {
+                decodeCommitment(it, workspace.currencyCode)
+            } ?: emptyList(),
             commitmentPayments = root.optJSONArray("commitmentPayments")?.mapObjects(::decodeCommitmentPayment) ?: emptyList(),
         )
         if (!Currencies.all.any { it.code == bundle.workspace.currencyCode }) {
@@ -793,6 +801,10 @@ class ExportManager(
         put("id", commitment.id)
         put("name", commitment.name)
         put("targetMinor", commitment.targetMinor)
+        put("currencyCode", commitment.currencyCode)
+        put("targetWorkspaceMinor", commitment.targetWorkspaceMinor)
+        putNullable("exchangeRate", commitment.exchangeRate)
+        putNullable("exchangeRateDate", commitment.exchangeRateDate)
         put("dueEpochDay", commitment.dueEpochDay)
         putNullable("categoryId", commitment.categoryId)
         put("reminderDaysBefore", commitment.reminderDaysBefore)
@@ -803,10 +815,14 @@ class ExportManager(
         putNullable("deletedAt", commitment.deletedAt)
     }
 
-    private fun decodeCommitment(json: JSONObject) = CommitmentEntity(
+    private fun decodeCommitment(json: JSONObject, workspaceCurrencyCode: String) = CommitmentEntity(
         id = json.getString("id"),
         name = json.getString("name"),
         targetMinor = json.optLong("targetMinor"),
+        currencyCode = json.optString("currencyCode", workspaceCurrencyCode),
+        targetWorkspaceMinor = json.optLong("targetWorkspaceMinor", json.optLong("targetMinor")),
+        exchangeRate = json.optNullableString("exchangeRate"),
+        exchangeRateDate = json.optNullableString("exchangeRateDate"),
         dueEpochDay = json.optLong("dueEpochDay"),
         categoryId = json.optNullableString("categoryId"),
         reminderDaysBefore = json.optInt("reminderDaysBefore"),

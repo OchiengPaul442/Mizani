@@ -106,4 +106,58 @@ class TransactionMessageParserTest {
         assertTrue(result is MessageParseResult.Parsed)
         assertEquals(TransactionType.EXPENSE, (result as MessageParseResult.Parsed).candidate.type)
     }
+
+    @Test
+    fun `parses MTN virtual card receipt with ISO timestamp and ID reference`() {
+        val result = TransactionMessageParser.parse(
+            "You have received UGX 10000 from MTN MOMO VIRTUAL CARD on 2026-10-28 13:45:16. fee:0. Reason: Card offload. New balance: UGX 37570. ID: 44604050982. Dial *165#.",
+            today = LocalDate.of(2026, 10, 29),
+        )
+
+        assertTrue(result is MessageParseResult.Parsed)
+        val candidate = (result as MessageParseResult.Parsed).candidate
+        assertEquals("mtn_momo", candidate.provider)
+        assertEquals("44604050982", candidate.reference)
+        assertEquals(TransactionType.INCOME, candidate.type)
+        assertEquals(10_000L, candidate.amountMinor)
+        assertEquals(0L, candidate.feeMinor)
+        assertEquals("MTN MOMO VIRTUAL CARD", candidate.payee)
+        assertEquals(LocalDate.of(2026, 10, 28), candidate.date)
+    }
+
+    @Test
+    fun `recognizes expanded African provider names`() {
+        val messages = mapOf(
+            "mpesa" to "Safaricom M-Pesa: You have received UGX 1,000 from ALICE. ID: MPESA1.",
+            "orange_money" to "Orange Money: You have received UGX 1,000 from ALICE. ID: ORANGE1.",
+            "wave" to "Wave: You have received UGX 1,000 from ALICE. ID: WAVE01.",
+            "ecocash" to "EcoCash: You have received UGX 1,000 from ALICE. ID: ECO001.",
+            "airteltigo_money" to "AirtelTigo Money: You have received GHS 1,000 from ALICE. ID: ATG001.",
+        )
+
+        messages.forEach { (provider, message) ->
+            val result = TransactionMessageParser.parse(message)
+            assertTrue("Expected $provider to parse", result is MessageParseResult.Parsed)
+            assertEquals(provider, (result as MessageParseResult.Parsed).candidate.provider)
+        }
+    }
+
+    @Test
+    fun `uses a local message digest when provider omits a reference`() {
+        val result = TransactionMessageParser.parse(
+            "MTN MoMo: You have received UGX 1,000 from ALICE.",
+        )
+
+        assertTrue(result is MessageParseResult.Parsed)
+        assertTrue((result as MessageParseResult.Parsed).candidate.reference.startsWith("MSG-"))
+    }
+
+    @Test
+    fun `rejects nonzero fractional units for UGX`() {
+        val result = TransactionMessageParser.parse(
+            "MTN MoMo: You have sent UGX 1,000.50 to SHOP. ID: FRACTION1.",
+        )
+
+        assertEquals(MessageParseResult.Reason.UNSUPPORTED_MESSAGE, (result as MessageParseResult.Rejected).reason)
+    }
 }

@@ -23,9 +23,12 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.mizani.money.core.legal.LegalDocuments
 import com.mizani.money.core.model.WalletType
+import com.mizani.money.data.repo.CommitmentDraft
 import com.mizani.money.reminder.DailyReminderNotifications
 import com.mizani.money.reminder.DailyReminderScheduler
 import com.mizani.money.reminder.DailyTransactionReminderWorker
+import com.mizani.money.reminder.CommitmentReminderScheduler
+import com.mizani.money.reminder.CommitmentReminderWorker
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -36,6 +39,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.time.ZonedDateTime
+import java.time.LocalDate
 import java.util.concurrent.TimeUnit
 
 /** Runs only in a disposable Android user; TestState.reset() clears that user's app data. */
@@ -135,7 +139,7 @@ class SettingsAndReminderEndToEndTest {
         runBlocking {
             app.container.settingsRepository.setDailyReminderMinuteOfDay(0)
         }
-        val reminderToggle = compose.onNodeWithContentDescription("Daily log reminder")
+        val reminderToggle = compose.onNodeWithContentDescription("Daily money check-in")
         reminderToggle.performScrollTo()
         reminderToggle.assertIsOff()
         reminderToggle.performClick()
@@ -143,6 +147,8 @@ class SettingsAndReminderEndToEndTest {
             runBlocking { app.container.settingsRepository.settings.first().dailyReminderEnabled }
         }
         reminderToggle.assertIsOn()
+
+        val notifications = app.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         val workManager = WorkManager.getInstance(app)
         val queueDeadline = System.currentTimeMillis() + 10_000L
@@ -166,7 +172,6 @@ class SettingsAndReminderEndToEndTest {
         val worker = TestListenableWorkerBuilder<DailyTransactionReminderWorker>(app)
             .setInputData(reminderInputData)
             .build()
-        val notifications = app.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notifications.cancelAll()
 
         runBlocking { worker.doWork() }
@@ -196,5 +201,83 @@ class SettingsAndReminderEndToEndTest {
             1,
             notifications.activeNotifications.count { it.packageName == app.packageName },
         )
+    }
+
+    @Test
+    fun delayedDailyReminderStillPostsAfterItsScheduledDate() {
+        DailyReminderNotifications.ensureChannel(app)
+        assertTrue(DailyReminderNotifications.canPost(app))
+        assertTrue(DailyReminderNotifications.postTest(app))
+        val notifications = app.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notifications.cancelAll()
+        runBlocking {
+            app.container.settingsRepository.setDailyReminderMinuteOfDay(0)
+            app.container.settingsRepository.setDailyReminderEnabled(true)
+        }
+        val settings = runBlocking { app.container.settingsRepository.settings.first() }
+        val today = ZonedDateTime.now().toLocalDate()
+        val reminderInputData = workDataOf(
+            DailyReminderScheduler.INPUT_REMINDER_MINUTE_OF_DAY to settings.dailyReminderMinuteOfDay,
+            // Simulate WorkManager running late after Doze or battery restrictions.
+            DailyReminderScheduler.INPUT_TARGET_EPOCH_DAY to today.minusDays(1).toEpochDay(),
+            DailyReminderScheduler.INPUT_SCHEDULE_VERSION to settings.dailyReminderScheduleVersion,
+        )
+        notifications.cancelAll()
+
+        val worker = TestListenableWorkerBuilder<DailyTransactionReminderWorker>(app)
+            .setInputData(reminderInputData)
+            .build()
+        runBlocking { worker.doWork() }
+
+        assertTrue(
+            "A delayed scheduled check must still deliver the current-day reminder",
+            notifications.activeNotifications.any { it.packageName == app.packageName },
+        )
+        assertEquals(
+            today.toEpochDay(),
+            runBlocking { app.container.settingsRepository.settings.first().lastDailyReminderEpochDay },
+        )
+    }
+
+    @Test
+    fun commitmentReminderWorkerPostsPrivateGenericNotification() {
+        DailyReminderNotifications.ensureChannel(app)
+        assertTrue(DailyReminderNotifications.canPost(app))
+        val dueDate = LocalDate.now().plusDays(1)
+        val commitmentId = runBlocking {
+            app.container.financeRepository.saveCommitment(
+                id = null,
+                draft = CommitmentDraft(
+                    name = "Rent",
+                    targetMinor = 500_000,
+                    dueDate = dueDate,
+                    reminderDaysBefore = 1,
+                ),
+            )
+        }
+        val notifications = app.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notifications.cancelAll()
+        val worker = TestListenableWorkerBuilder<CommitmentReminderWorker>(app)
+            .setInputData(
+                workDataOf(
+                    CommitmentReminderScheduler.INPUT_COMMITMENT_ID to commitmentId,
+                    CommitmentReminderScheduler.INPUT_DUE_EPOCH_DAY to dueDate.toEpochDay(),
+                    CommitmentReminderScheduler.INPUT_DAYS_BEFORE to 1,
+                ),
+            )
+            .build()
+
+        runBlocking { worker.doWork() }
+
+        val posted = notifications.activeNotifications.single { it.packageName == app.packageName }
+        assertEquals(
+            app.getString(R.string.notification_commitment_reminder_title),
+            posted.notification.extras.getString(Notification.EXTRA_TITLE),
+        )
+        assertEquals(
+            app.getString(R.string.notification_commitment_reminder_body),
+            posted.notification.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString(),
+        )
+        assertEquals(Notification.VISIBILITY_PRIVATE, posted.notification.visibility)
     }
 }

@@ -57,6 +57,27 @@ data class LedgerSnapshot(
 
     fun incomeSourceName(id: String?): String = incomeSource(id)?.name ?: "Income"
 
+    /**
+     * Returns the spendable value of each active expense after recorded refunds.
+     *
+     * Commitment links use the same net value: a refunded expense must not be offered as a
+     * payment, and a partially refunded expense can only contribute its remaining amount. Keeping
+     * this calculation on the canonical snapshot prevents screens from accidentally treating a
+     * refunded ledger row as a full payment.
+     */
+    fun netExpenseMinorById(): Map<String, Long> {
+        val refundsByExpenseId = transactions.asSequence()
+            .filter { it.type == TransactionType.REFUND && it.linkedTransactionId != null }
+            .groupingBy { it.linkedTransactionId!! }
+            .fold(0L) { total, refund -> Math.addExact(total, refund.amountMinor) }
+        return transactions.asSequence()
+            .filter { it.type == TransactionType.EXPENSE }
+            .associate { expense ->
+                expense.id to (expense.amountMinor - (refundsByExpenseId[expense.id] ?: 0L))
+                    .coerceAtLeast(0L)
+            }
+    }
+
     fun budgetLinesFor(budgetId: String?): List<BudgetLineEntity> =
         budgetId?.let { id -> budgetLines.filter { it.budgetId == id } } ?: emptyList()
 
@@ -111,7 +132,7 @@ data class LedgerSnapshot(
         return commitments.asSequence()
             .filter { it.deletedAt == null }
             .map { commitment ->
-                val paid = paymentsByCommitment[commitment.id].orEmpty().fold(0L) { total, payment ->
+                val paidWorkspace = paymentsByCommitment[commitment.id].orEmpty().fold(0L) { total, payment ->
                     val transaction = transactionsById[payment.transactionId]
                     if (transaction == null || transaction.type != TransactionType.EXPENSE) {
                         total
@@ -121,10 +142,30 @@ data class LedgerSnapshot(
                         Math.addExact(total, netPayment)
                     }
                 }
+                val targetWorkspace = commitment.targetWorkspaceMinor.coerceAtLeast(1L)
+                val remainingWorkspace = (targetWorkspace - paidWorkspace).coerceAtLeast(0L)
+                val rate = commitment.exchangeRate?.toBigDecimalOrNull()
+                val paid = CommitmentCurrencyRules.workspaceToCommitmentMinor(
+                    amountMinor = paidWorkspace,
+                    workspaceCurrencyCode = currencyCode,
+                    commitmentCurrencyCode = commitment.currencyCode,
+                    exchangeRate = rate,
+                ).coerceAtMost(commitment.targetMinor)
+                // Convert the remaining base-currency amount directly so a fully paid
+                // commitment always displays zero in its target currency, even when
+                // inverse-rate rounding would otherwise leave a stray minor unit.
+                val remaining = CommitmentCurrencyRules.workspaceToCommitmentMinor(
+                    amountMinor = remainingWorkspace,
+                    workspaceCurrencyCode = currencyCode,
+                    commitmentCurrencyCode = commitment.currencyCode,
+                    exchangeRate = rate,
+                )
                 CommitmentProgress(
                     commitment = commitment,
                     paidMinor = paid,
-                    remainingMinor = (commitment.targetMinor - paid).coerceAtLeast(0L),
+                    remainingMinor = remaining,
+                    paidWorkspaceMinor = paidWorkspace,
+                    remainingWorkspaceMinor = remainingWorkspace,
                 )
             }
             .toList()
@@ -164,12 +205,20 @@ data class CommitmentDraft(
     val dueDate: LocalDate,
     val categoryId: String? = null,
     val reminderDaysBefore: Int = 0,
+    /** Null keeps existing callers and old saved commitments in the workspace currency. */
+    val currencyCode: String? = null,
+    val targetWorkspaceMinor: Long? = null,
+    val exchangeRate: String? = null,
+    val exchangeRateDate: LocalDate? = null,
 )
 
 data class CommitmentProgress(
     val commitment: CommitmentEntity,
     val paidMinor: Long,
     val remainingMinor: Long,
+    /** Workspace-currency values used for balances, Outlook and link validation. */
+    val paidWorkspaceMinor: Long = paidMinor,
+    val remainingWorkspaceMinor: Long = remainingMinor,
 )
 
 data class BudgetLineInput(

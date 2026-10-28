@@ -31,6 +31,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,11 +50,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mizani.money.core.model.CategoryType
 import com.mizani.money.core.model.TransactionType
+import com.mizani.money.core.money.CurrencyConversion
+import com.mizani.money.core.money.Currencies
 import com.mizani.money.core.money.MoneyFormat
 import com.mizani.money.core.time.DateText
 import com.mizani.money.data.local.CommitmentEntity
 import com.mizani.money.data.repo.CommitmentDraft
 import com.mizani.money.data.repo.CommitmentProgress
+import com.mizani.money.data.repo.ExchangeRate
+import com.mizani.money.data.repo.ExchangeRateUnavailableException
 import com.mizani.money.ui.AppUiState
 import com.mizani.money.ui.AppViewModel
 import com.mizani.money.ui.components.DateField
@@ -67,6 +72,7 @@ import com.mizani.money.ui.components.ProgressBar
 import com.mizani.money.ui.components.SectionHeader
 import com.mizani.money.ui.components.Spacing
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 import java.time.LocalDate
 
 @Composable
@@ -83,6 +89,7 @@ fun CommitmentsScreen(
     var editError by remember { mutableStateOf<String?>(null) }
     var savingId by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    var actionError by remember { mutableStateOf<Pair<String, String>?>(null) }
     var deleteTarget by remember { mutableStateOf<CommitmentEntity?>(null) }
     var pendingDelete by remember { mutableStateOf(false) }
 
@@ -99,17 +106,35 @@ fun CommitmentsScreen(
         snapshot.commitmentPayments.mapTo(mutableSetOf()) { it.transactionId }
     }
     val linkedTransactionsById = remember(snapshot.transactions) { snapshot.transactions.associateBy { it.id } }
-    val unlinkedExpenses = remember(snapshot.transactions, alreadyLinkedIds) {
+    val netExpenseMinorById = remember(snapshot.transactions) { snapshot.netExpenseMinorById() }
+    val unlinkedExpenseCandidates = remember(snapshot.transactions, alreadyLinkedIds) {
         snapshot.transactions
             .filter { it.type == TransactionType.EXPENSE && it.id !in alreadyLinkedIds }
+    }
+    val unlinkedExpenses = remember(snapshot.transactions, alreadyLinkedIds, snapshot.currencyCode) {
+        snapshot.transactions
+            .filter {
+                it.type == TransactionType.EXPENSE &&
+                    it.id !in alreadyLinkedIds &&
+                    it.currencyCode == snapshot.currencyCode &&
+                    (netExpenseMinorById[it.id] ?: 0L) > 0L
+            }
             .sortedWith(compareByDescending<com.mizani.money.data.local.TransactionEntity> { it.localDateEpochDay }
                 .thenByDescending { it.occurredAt })
+    }
+    val linkableExpensesByCommitment = remember(active, unlinkedExpenses, netExpenseMinorById) {
+        active.associate { item ->
+            item.commitment.id to unlinkedExpenses.filter { expense ->
+                (netExpenseMinorById[expense.id] ?: 0L) <= item.remainingWorkspaceMinor
+            }
+        }
     }
 
     if (editorOpen) {
         CommitmentEditorDialog(
             initial = editor,
             state = state,
+            vm = vm,
             busy = savingId == "__editor__",
             error = editError,
             onDismiss = {
@@ -178,7 +203,7 @@ fun CommitmentsScreen(
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
             Text(
-                "Plan one-off costs with a target and due date. Record each payment as an expense, then link it here to track progress without duplicating it.",
+                "Keep a planned amount and due date in one place. Record the expense when you pay, then link it here to update the bill without adding a second transaction.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -215,7 +240,10 @@ fun CommitmentsScreen(
                         item = item,
                         state = state,
                         linkedTransactions = linkedTransactionsById,
-                        unlinkedExpenses = unlinkedExpenses,
+                        linkableExpenses = linkableExpensesByCommitment[item.commitment.id].orEmpty(),
+                        hasRecordedExpenses = unlinkedExpenseCandidates.isNotEmpty(),
+                        netExpenseMinorById = netExpenseMinorById,
+                        actionError = actionError?.takeIf { it.first == item.commitment.id }?.second,
                         busy = savingId == item.commitment.id,
                         onRecordExpense = onRecordExpense,
                         onEdit = { editor = item.commitment; editError = null; editorOpen = true },
@@ -231,18 +259,30 @@ fun CommitmentsScreen(
                         onLink = { transactionId ->
                             savingId = item.commitment.id
                             error = null
+                            actionError = null
                             scope.launch {
                                 runCatching { vm.finance.linkExpenseToCommitment(item.commitment.id, transactionId) }
-                                    .onFailure { error = it.message ?: "Could not link this expense." }
+                                    .onFailure {
+                                        actionError = item.commitment.id to commitmentActionMessage(
+                                            it,
+                                            "Could not link this expense. Please try again.",
+                                        )
+                                    }
                                 savingId = null
                             }
                         },
                         onUnlink = { paymentId ->
                             savingId = item.commitment.id
                             error = null
+                            actionError = null
                             scope.launch {
                                 runCatching { vm.finance.unlinkCommitmentPayment(paymentId) }
-                                    .onFailure { error = it.message ?: "Could not unlink this expense." }
+                                    .onFailure {
+                                        actionError = item.commitment.id to commitmentActionMessage(
+                                            it,
+                                            "Could not unlink this expense. Please try again.",
+                                        )
+                                    }
                                 savingId = null
                             }
                         },
@@ -256,7 +296,10 @@ fun CommitmentsScreen(
                         item = item,
                         state = state,
                         linkedTransactions = linkedTransactionsById,
-                        unlinkedExpenses = emptyList(),
+                        linkableExpenses = emptyList(),
+                        hasRecordedExpenses = false,
+                        netExpenseMinorById = netExpenseMinorById,
+                        actionError = actionError?.takeIf { it.first == item.commitment.id }?.second,
                         busy = savingId == item.commitment.id,
                         onRecordExpense = onRecordExpense,
                         onEdit = { editor = item.commitment; editError = null; editorOpen = true },
@@ -272,9 +315,15 @@ fun CommitmentsScreen(
                         onLink = {},
                         onUnlink = { paymentId ->
                             savingId = item.commitment.id
+                            actionError = null
                             scope.launch {
                                 runCatching { vm.finance.unlinkCommitmentPayment(paymentId) }
-                                    .onFailure { error = it.message ?: "Could not unlink this expense." }
+                                    .onFailure {
+                                        actionError = item.commitment.id to commitmentActionMessage(
+                                            it,
+                                            "Could not unlink this expense. Please try again.",
+                                        )
+                                    }
                                 savingId = null
                             }
                         },
@@ -290,7 +339,10 @@ private fun CommitmentCard(
     item: CommitmentProgress,
     state: AppUiState,
     linkedTransactions: Map<String, com.mizani.money.data.local.TransactionEntity>,
-    unlinkedExpenses: List<com.mizani.money.data.local.TransactionEntity>,
+    linkableExpenses: List<com.mizani.money.data.local.TransactionEntity>,
+    hasRecordedExpenses: Boolean,
+    netExpenseMinorById: Map<String, Long>,
+    actionError: String?,
     busy: Boolean,
     onRecordExpense: () -> Unit,
     onEdit: () -> Unit,
@@ -300,7 +352,8 @@ private fun CommitmentCard(
     onUnlink: (String) -> Unit,
 ) {
     val commitment = item.commitment
-    val currency = state.currency
+    val workspaceCurrency = state.currency
+    val currency = Currencies.byCode(commitment.currencyCode)
     val categoryName = state.snapshot.categoryName(commitment.categoryId)
     val date = LocalDate.ofEpochDay(commitment.dueEpochDay)
     val fraction = if (commitment.targetMinor > 0L) {
@@ -313,7 +366,7 @@ private fun CommitmentCard(
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 Text(commitment.name, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "Due ${DateText.medium(date)} · $categoryName${if (commitment.reminderDaysBefore > 0) " · ${commitment.reminderDaysBefore}-day reminder" else ""}",
+                    "Due ${DateText.medium(date)} · $categoryName · ${currency.code}${if (commitment.reminderDaysBefore > 0) " · ${commitment.reminderDaysBefore}-day reminder" else ""}",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -328,30 +381,42 @@ private fun CommitmentCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 Text("Paid", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(MoneyFormat.format(item.paidMinor, currency), style = MaterialTheme.typography.titleSmall)
             }
-            Column(horizontalAlignment = Alignment.End) {
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
                 Text("Remaining", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(MoneyFormat.format(item.remainingMinor, currency), style = MaterialTheme.typography.titleSmall)
             }
         }
         Spacer(Modifier.height(Spacing.sm))
-        ProgressBar(
-            fraction = fraction,
-            modifier = Modifier
-                .fillMaxWidth()
-                .semantics {
-                    progressBarRangeInfo = ProgressBarRangeInfo(fraction, 0f..1f)
-                    contentDescription = "${(fraction * 100).toInt()} percent paid toward ${commitment.name}"
-                },
-        )
-        Text(
-            "${MoneyFormat.format(item.paidMinor, currency)} of ${MoneyFormat.format(commitment.targetMinor, currency)}",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            ProgressBar(
+                fraction = fraction,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics {
+                        progressBarRangeInfo = ProgressBarRangeInfo(fraction, 0f..1f)
+                        contentDescription = "${(fraction * 100).toInt()} percent paid toward ${commitment.name}"
+                    },
+            )
+            Text(
+                "${MoneyFormat.format(item.paidMinor, currency)} of ${MoneyFormat.format(commitment.targetMinor, currency)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (commitment.currencyCode != workspaceCurrency.code) {
+                Text(
+                    "Target saved at 1 ${commitment.currencyCode} = ${MoneyFormat.formatBare(commitment.targetWorkspaceMinor, workspaceCurrency)} ${workspaceCurrency.code} · ${commitment.exchangeRateDate ?: "reference rate"}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
         if (links.isNotEmpty()) {
             Spacer(Modifier.height(Spacing.sm))
             Text("Linked expenses", style = MaterialTheme.typography.labelLarge)
@@ -371,7 +436,7 @@ private fun CommitmentCard(
                             overflow = TextOverflow.Ellipsis,
                         )
                         Text(
-                            "${DateText.medium(LocalDate.ofEpochDay(transaction.localDateEpochDay))} · ${MoneyFormat.format(transaction.amountMinor, currency)}",
+                            "${DateText.medium(LocalDate.ofEpochDay(transaction.localDateEpochDay))} · ${MoneyFormat.format(transaction.amountMinor, workspaceCurrency)}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -380,15 +445,20 @@ private fun CommitmentCard(
                 }
             }
         }
-        if (!commitment.archived && item.remainingMinor > 0L && unlinkedExpenses.isNotEmpty()) {
+        if (!commitment.archived && item.remainingMinor > 0L && linkableExpenses.isNotEmpty()) {
             Spacer(Modifier.height(Spacing.xs))
+            Text(
+                "Choose a recorded expense to add this payment to the bill.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             MizaniPicker(
-                selectedText = if (busy) "Updating…" else "Link a recorded expense",
-                options = unlinkedExpenses.map { expense ->
+                selectedText = if (busy) "Updating..." else "Choose expense to link",
+                options = linkableExpenses.map { expense ->
                     val label = expense.payee.ifBlank { state.snapshot.categoryName(expense.categoryId) }
                     PickerOption(
                         id = expense.id,
-                        label = "$label · ${MoneyFormat.format(expense.amountMinor, currency)} · ${DateText.short(LocalDate.ofEpochDay(expense.localDateEpochDay))}",
+                        label = "$label - ${MoneyFormat.format(netExpenseMinorById[expense.id] ?: expense.amountMinor, workspaceCurrency)} - ${DateText.short(LocalDate.ofEpochDay(expense.localDateEpochDay))}",
                     )
                 },
                 onSelect = onLink,
@@ -396,9 +466,14 @@ private fun CommitmentCard(
                 modifier = Modifier.fillMaxWidth(),
             )
         } else if (!commitment.archived && item.remainingMinor > 0L) {
+            Spacer(Modifier.height(Spacing.xs))
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 Text(
-                    "Record the payment as an expense first, then link it here.",
+                    if (hasRecordedExpenses) {
+                        "No recorded expense matches the remaining ${MoneyFormat.format(item.remainingMinor, currency)}. Record the payment in ${currency.code}, or choose an expense within the converted target."
+                    } else {
+                        "Record the payment as an expense first, then link it here."
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -407,6 +482,14 @@ private fun CommitmentCard(
                     Text("Record expense")
                 }
             }
+        }
+        actionError?.let { message ->
+            Text(
+                message,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive },
+            )
         }
         Spacer(Modifier.height(Spacing.xs))
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
@@ -422,19 +505,43 @@ private fun CommitmentCard(
     }
 }
 
+private fun commitmentActionMessage(error: Throwable, fallback: String): String = when (error.message) {
+    "Payment is greater than the remaining commitment" ->
+        "This expense is greater than the amount still due. Choose a smaller expense or increase the target."
+    "This expense has no remaining value after refunds" ->
+        "This expense has already been fully refunded and cannot be linked."
+    "Currency mismatch" ->
+        "This expense uses a different currency and cannot be linked to this bill."
+    "This expense is already linked to a commitment" ->
+        "This expense is already linked to another bill."
+    else -> fallback
+}
+
+private fun commitmentRateFailureMessage(error: Exception, hasCachedRate: Boolean): String = when {
+    hasCachedRate -> "Saved rate in use. Refresh failed."
+    error is ExchangeRateUnavailableException -> "No reference rate is available for this currency pair."
+    else -> "No rate available. Check your connection."
+}
+
 @Composable
 private fun CommitmentEditorDialog(
     initial: CommitmentEntity?,
     state: AppUiState,
+    vm: AppViewModel,
     busy: Boolean,
     error: String?,
     onDismiss: () -> Unit,
     onSave: (CommitmentDraft) -> Unit,
 ) {
-    val currency = state.currency
+    val workspaceCurrency = state.currency
+    var targetCurrencyCode by remember(initial?.id) {
+        mutableStateOf(initial?.currencyCode ?: workspaceCurrency.code)
+    }
+    val targetCurrency = Currencies.byCode(targetCurrencyCode)
+    val isForeignCurrency = targetCurrency.code != workspaceCurrency.code
     var name by remember(initial?.id) { mutableStateOf(initial?.name.orEmpty()) }
     var amount by remember(initial?.id) {
-        mutableStateOf(initial?.targetMinor?.let { MoneyFormat.toInput(it, currency) }.orEmpty())
+        mutableStateOf(initial?.targetMinor?.let { MoneyFormat.toInput(it, targetCurrency) }.orEmpty())
     }
     var dueDate by remember(initial?.id) {
         mutableStateOf(initial?.let { LocalDate.ofEpochDay(it.dueEpochDay) } ?: LocalDate.now())
@@ -443,6 +550,9 @@ private fun CommitmentEditorDialog(
     var reminderDays by remember(initial?.id) {
         mutableStateOf(initial?.reminderDaysBefore?.toString() ?: "0")
     }
+    var exchangeRate by remember(initial?.id) { mutableStateOf<ExchangeRate?>(null) }
+    var isRateLoading by remember(initial?.id) { mutableStateOf(false) }
+    var rateError by remember(initial?.id) { mutableStateOf<String?>(null) }
     var validationError by remember(initial?.id) { mutableStateOf<String?>(null) }
     val nameFocusRequester = remember(initial?.id) { FocusRequester() }
     val amountFocusRequester = remember(initial?.id) { FocusRequester() }
@@ -450,6 +560,58 @@ private fun CommitmentEditorDialog(
     val nameError = validationError?.takeIf { it.startsWith("Enter a name") }
     val amountError = validationError?.takeIf { it.startsWith("Enter an amount") }
     val reminderError = validationError?.takeIf { it.startsWith("Choose a reminder") }
+
+    LaunchedEffect(targetCurrency.code, workspaceCurrency.code, initial?.id) {
+        if (!isForeignCurrency) {
+            exchangeRate = null
+            rateError = null
+            isRateLoading = false
+            return@LaunchedEffect
+        }
+
+        val savedRate = initial?.takeIf {
+            it.currencyCode == targetCurrency.code && it.exchangeRate != null && it.exchangeRateDate != null
+        }?.let { commitment ->
+            runCatching {
+                ExchangeRate(
+                    commitment.currencyCode,
+                    workspaceCurrency.code,
+                    commitment.exchangeRate!!,
+                    LocalDate.parse(commitment.exchangeRateDate!!),
+                )
+            }.getOrNull()
+        }
+        if (savedRate != null) {
+            exchangeRate = savedRate
+            rateError = null
+            isRateLoading = false
+            return@LaunchedEffect
+        }
+
+        exchangeRate = null
+        rateError = null
+        isRateLoading = true
+        try {
+            exchangeRate = vm.exchangeRates.cachedRate(targetCurrency.code, workspaceCurrency.code)
+            val shouldRefresh = vm.exchangeRates.shouldRefresh(targetCurrency.code, workspaceCurrency.code)
+            if (shouldRefresh) {
+                try {
+                    exchangeRate = vm.exchangeRates.refreshRate(targetCurrency.code, workspaceCurrency.code)
+                    rateError = null
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (failure: Exception) {
+                    rateError = commitmentRateFailureMessage(failure, exchangeRate != null)
+                }
+            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (failure: Exception) {
+            rateError = commitmentRateFailureMessage(failure, exchangeRate != null)
+        } finally {
+            isRateLoading = false
+        }
+    }
 
     MizaniAlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
@@ -481,7 +643,7 @@ private fun CommitmentEditorDialog(
                 OutlinedTextField(
                     value = amount,
                     onValueChange = { amount = it; validationError = null },
-                    label = { Text("Target (${currency.code})") },
+                    label = { Text("Target amount (${targetCurrency.code})") },
                     isError = amountError != null,
                     supportingText = { amountError?.let { message ->
                         Text(message, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
@@ -490,6 +652,44 @@ private fun CommitmentEditorDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().focusRequester(amountFocusRequester),
                 )
+                MizaniPicker(
+                    selectedText = "${targetCurrency.code} · ${targetCurrency.name}",
+                    options = Currencies.transactionCurrencies.map { option ->
+                        PickerOption(option.code, "${option.code} · ${option.name}")
+                    },
+                    onSelect = {
+                        if (it != targetCurrencyCode) {
+                            // Do not silently reinterpret an amount under a new currency.
+                            // Clear it so the user enters a value with the new currency label.
+                            amount = ""
+                        }
+                        targetCurrencyCode = it
+                        validationError = null
+                        rateError = null
+                    },
+                    searchable = true,
+                    searchHint = "Search currencies",
+                    fieldLabel = "Target currency",
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (isForeignCurrency) {
+                    val rate = exchangeRate
+                    Text(
+                        when {
+                            isRateLoading && rate == null -> "Getting the latest daily reference rate..."
+                            rate != null -> buildString {
+                                append("1 ${rate.baseCurrencyCode} = ${rate.rate} ${rate.quoteCurrencyCode} · ${DateText.medium(rate.date)}. The target will be saved using this rate.")
+                                rateError?.let { append(" $it") }
+                            }
+                            else -> rateError ?: "No reference rate is available for this currency pair."
+                        },
+                        color = if (rate == null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.semantics {
+                            if (rate == null) liveRegion = LiveRegionMode.Polite
+                        },
+                    )
+                }
                 DateField(label = "Due date", date = dueDate, onDateSelected = { dueDate = it }, modifier = Modifier.fillMaxWidth())
                 val categories = state.snapshot.categories.filter {
                     it.type == CategoryType.EXPENSE && !it.archived || it.id == initial?.categoryId
@@ -538,7 +738,20 @@ private fun CommitmentEditorDialog(
             TextButton(
                 enabled = !busy,
                 onClick = {
-                    val parsedAmount = MoneyFormat.parse(amount, currency)
+                    val parsedAmount = MoneyFormat.parse(amount, targetCurrency)
+                    val conversionRate = exchangeRate?.rate?.toBigDecimalOrNull()
+                    val convertedTargetWorkspace = parsedAmount?.let { value ->
+                        if (!isForeignCurrency) value else conversionRate?.let { rate ->
+                            runCatching {
+                                CurrencyConversion.convertMinorUnits(
+                                    value,
+                                    targetCurrency,
+                                    workspaceCurrency,
+                                    rate,
+                                )
+                            }.getOrNull()
+                        }
+                    }
                     val days = reminderDays.toIntOrNull()
                     when {
                         name.isBlank() -> {
@@ -547,6 +760,16 @@ private fun CommitmentEditorDialog(
                         }
                         parsedAmount == null || parsedAmount <= 0L -> {
                             validationError = "Enter an amount greater than zero."
+                            amountFocusRequester.requestFocus()
+                        }
+                        isForeignCurrency && isRateLoading -> {
+                            validationError = "Wait for the latest exchange rate before saving."
+                        }
+                        isForeignCurrency && conversionRate == null -> {
+                            validationError = rateError ?: "No reference rate is available for this currency pair."
+                        }
+                        convertedTargetWorkspace == null || convertedTargetWorkspace <= 0L -> {
+                            validationError = "This amount is too small to convert into ${workspaceCurrency.code}."
                             amountFocusRequester.requestFocus()
                         }
                         days == null || days !in 0..30 -> {
@@ -562,6 +785,10 @@ private fun CommitmentEditorDialog(
                                     dueDate = dueDate,
                                     categoryId = categoryId,
                                     reminderDaysBefore = days,
+                                    currencyCode = targetCurrency.code,
+                                    targetWorkspaceMinor = convertedTargetWorkspace,
+                                    exchangeRate = exchangeRate?.rate,
+                                    exchangeRateDate = exchangeRate?.date,
                                 ),
                             )
                         }

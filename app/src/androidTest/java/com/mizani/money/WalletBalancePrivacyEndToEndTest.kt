@@ -16,6 +16,7 @@ import com.mizani.money.core.legal.LegalDocuments
 import com.mizani.money.core.model.WalletType
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -70,7 +71,8 @@ class WalletBalancePrivacyEndToEndTest {
             compose.onAllNodesWithText("Money Outlook").fetchSemanticsNodes().isNotEmpty()
         }
 
-        compose.onNodeWithText("Hidden while balances are hidden").assertExists()
+        assertTrue(compose.onAllNodesWithText("••••••").fetchSemanticsNodes().isNotEmpty())
+        compose.onNodeWithContentDescription("Estimated coverage hidden").assertExists()
         compose.onNodeWithContentDescription("Daily target UGX 20,000").assertExists()
         compose.onAllNodesWithText("UGX 275,000").assertCountEquals(0)
     }

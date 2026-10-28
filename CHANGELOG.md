@@ -6,11 +6,34 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
 
 ## [Unreleased]
 
+### Fixed
+
+- Expand offline mobile-money import detection beyond MTN MoMo and Airtel Money to include
+  M-Pesa, Orange Money, Moov, Wave, Telecel, Tigo, EcoCash, OPay, PalmPay, Moniepoint and
+  other supported African networks; accept provider `ID:` references, ISO dates and exact-message
+  hashes when a provider omits a reference.
+- Keep incoming import reviews honest: received money no longer inherits an arbitrary recent
+  income category. The review asks the user to choose what the money represents before saving.
+- Preserve daily reminder delivery when Android runs a delayed one-shot after its target date;
+  the worker now performs the current-day check instead of silently discarding the reminder.
+- Make bill payment linking predictable on mobile by showing only eligible expenses (after refunds,
+  in the workspace currency, and within the remaining target) and showing link/unlink failures
+  beside the bill instead of away from the action.
+- Support bills and commitments in a currency different from the workspace, saving the daily
+  reference rate and converted workspace target so progress, Money Outlook, exports, and backups
+  remain consistent.
+
 ### Changed
 
 - Rework the Home wallet area into a compact grouped list with inline balance privacy and a clear
   `See all` path; show the getting-started action before wallets for empty ledgers and limit quick
   wallet rows to three to keep the screen scannable.
+- Clarify Money Outlook copy and mask protected coverage estimates with dots instead of repeating
+  the privacy state in a long sentence; the accessible label still explains that the estimate is hidden.
+- Keep More-screen detail routes opaque during Back transitions to prevent the reported gray/frozen
+  appearance, with regression coverage for Wallets and Categories navigation.
+- Improve reminder wording, explain Android background-delivery limits, and add a test-notification
+  action so users can verify permission and channel delivery immediately.
 
 ## [1.4.0] - 2026-10-28
 

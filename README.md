@@ -24,17 +24,22 @@ Mizani is an Android budgeting app designed to work offline. It needs no account
 
 - **Track money in and out.** Record income and expenses, with transfers, refunds and balance
   adjustments for a more accurate ledger.
-- **Import mobile money confirmations.** Paste or share an MTN MoMo or Airtel Money message,
-  review the suggested expense or income, and edit it before saving. Import works on-device,
-  keeps only the provider reference to catch duplicates, and never reads SMS in the background.
+- **Import mobile money confirmations.** Paste or share a confirmation from MTN MoMo, Airtel
+  Money, M-Pesa, Orange Money, Moov, Wave, Telecel, Tigo, EcoCash, OPay, PalmPay, Moniepoint and
+  other supported African networks. Review the suggested expense or income and edit it before
+  saving; incoming money asks you to choose its income category. Import works on-device, keeps
+  only a provider reference (or an exact-message digest when no reference is supplied) to catch
+  duplicates, and never reads SMS in the background.
 - **Organize your money.** Use wallets for cash, mobile money and bank accounts; group records by
   category; search and filter activity.
 - **Understand your cash flow.** Review income, spending, category breakdowns, wallet balances and
   trends in Insights. Charts include accessible text summaries.
 - **Check wallets quickly.** Active wallets appear on Home. Their balances stay hidden until you
   confirm with your app PIN or enabled biometrics. If you have no PIN, set up app lock first.
-- **Track one-off commitments.** Add a target and due date for items such as school fees, link
-  payments already recorded as expenses, and optionally receive a generic local reminder.
+- **Track one-off commitments.** Add a target and due date for items such as school fees in the
+  workspace or another supported currency, link payments already recorded as expenses, and
+  optionally receive a generic local reminder. Foreign targets retain the daily reference rate
+  used to convert them for workspace-currency planning.
 - **Plan with Money Outlook.** See an estimate based on liquid wallet balances, recorded spending
   and unpaid commitments due within 30 days. Expected income is excluded. If there is not enough
   recorded history, enter a daily spending target instead.

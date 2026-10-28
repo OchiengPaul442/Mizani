@@ -91,20 +91,47 @@ class DatabaseMigrationTest {
         }
     }
 
-    private fun SupportSQLiteDatabase.seedWorkspaceAndWallet(suffix: String) {
+    @Test
+    fun version3ToVersion4BackfillsCommitmentCurrencyFromWorkspace() {
+        helper.createDatabase(DATABASE_V3, 3).apply {
+            seedWorkspaceAndWallet("v3", "KES")
+            execSQL(
+                "INSERT INTO commitments (id,name,targetMinor,dueEpochDay,categoryId,reminderDaysBefore," +
+                    "archived,createdAt,updatedAt,revision,deletedAt) VALUES " +
+                    "('commitment-v3','School fees',100000,20000,NULL,0,0,1,1,1,NULL)",
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(DATABASE_V3, 4, true, MizaniDatabase.MIGRATION_3_4).use { database ->
+            database.query(
+                "SELECT currencyCode,targetWorkspaceMinor,exchangeRate,exchangeRateDate " +
+                    "FROM commitments WHERE id = 'commitment-v3'",
+            ).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals("KES", cursor.getString(0))
+                assertEquals(100_000L, cursor.getLong(1))
+                assertTrue(cursor.isNull(2))
+                assertTrue(cursor.isNull(3))
+            }
+        }
+    }
+
+    private fun SupportSQLiteDatabase.seedWorkspaceAndWallet(suffix: String, currency: String = "UGX") {
         execSQL(
             "INSERT INTO workspace (id,name,countryCode,currencyCode,createdAt,updatedAt,revision,deletedAt) " +
-                "VALUES ('workspace-$suffix','My money','UG','UGX',1,1,1,NULL)",
+                "VALUES ('workspace-$suffix','My money','UG','$currency',1,1,1,NULL)",
         )
         execSQL(
             "INSERT INTO wallets (id,name,type,openingBalanceMinor,currencyCode,colorHex,icon,sortOrder,archived," +
                 "createdAt,updatedAt,revision,deletedAt) VALUES " +
-                "('wallet-$suffix','Cash','CASH',100000,'UGX','#087F72','wallet',0,0,1,1,1,NULL)",
+                "('wallet-$suffix','Cash','CASH',100000,'$currency','#087F72','wallet',0,0,1,1,1,NULL)",
         )
     }
 
     private companion object {
         const val DATABASE_V1 = "mizani_migration_v1_test.db"
         const val DATABASE_V2 = "mizani_migration_v2_test.db"
+        const val DATABASE_V3 = "mizani_migration_v3_test.db"
     }
 }

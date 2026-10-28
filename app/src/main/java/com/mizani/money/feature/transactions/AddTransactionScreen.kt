@@ -72,6 +72,7 @@ import com.mizani.money.core.model.Ids
 import com.mizani.money.core.model.TransactionType
 import com.mizani.money.core.model.WalletType
 import com.mizani.money.core.importing.ImportedTransactionCandidate
+import com.mizani.money.core.importing.TransactionMessageParser
 import com.mizani.money.core.money.CurrencyConversion
 import com.mizani.money.core.money.Currencies
 import com.mizani.money.core.money.MoneyFormat
@@ -126,10 +127,10 @@ fun AddTransactionScreen(
     var type by rememberSaveable(existing?.id, initialType, importCandidate?.reference) {
         mutableStateOf(existing?.type ?: importCandidate?.type ?: initialType)
     }
-    var entryCurrencyCode by rememberSaveable(existing?.id, currency.code) {
+    var entryCurrencyCode by rememberSaveable(existing?.id, importCandidate?.reference, currency.code) {
         mutableStateOf(
             existing?.takeIf { it.type == TransactionType.EXPENSE || it.type == TransactionType.INCOME }
-                ?.sourceCurrencyCode ?: currency.code,
+                ?.sourceCurrencyCode ?: importCandidate?.currencyCode ?: currency.code,
         )
     }
     var rateRefreshToken by remember(existing?.id) { mutableStateOf(0) }
@@ -188,13 +189,18 @@ fun AddTransactionScreen(
     }
     var categoryId by rememberSaveable(existing?.id, importCandidate?.reference) {
         mutableStateOf(
-            existing?.categoryId
-                ?: snapshot.transactions.firstOrNull {
+            when {
+                existing?.categoryId != null -> existing.categoryId
+                // An incoming message does not prove whether the money is salary,
+                // a transfer, a reimbursement or a gift. Require an explicit choice
+                // during import review instead of silently assigning the first income.
+                importCandidate?.type == TransactionType.INCOME -> null
+                else -> snapshot.transactions.firstOrNull {
                     it.type == if (type == TransactionType.INCOME) TransactionType.INCOME else TransactionType.EXPENSE
-                }?.categoryId
-                ?: snapshot.activeCategories.firstOrNull {
+                }?.categoryId ?: snapshot.activeCategories.firstOrNull {
                     it.type == if (type == TransactionType.INCOME) CategoryType.INCOME else CategoryType.EXPENSE
-                }?.id,
+                }?.id
+            },
         )
     }
     var incomeSourceId by rememberSaveable(existing?.id) { mutableStateOf(existing?.incomeSourceId) }
@@ -364,6 +370,10 @@ fun AddTransactionScreen(
         }
         if ((type == TransactionType.EXPENSE || type == TransactionType.REFUND) && categoryId == null) {
             error = "Choose a category"
+            return
+        }
+        if (type == TransactionType.INCOME && importCandidate != null && categoryId == null) {
+            error = "Choose an income category so we can classify this received money"
             return
         }
         if (!validFee) {
@@ -536,9 +546,23 @@ fun AddTransactionScreen(
                 }
             }
 
-            if (importCandidate != null) {
+            if (importCandidate != null && importCandidate.provider in setOf("mtn_momo", "airtel_money")) {
                 Text(
                     "Suggested from ${if (importCandidate.provider == "mtn_momo") "MTN MoMo" else "Airtel Money"} · Ref ${importCandidate.reference}. Check the details before saving.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (importCandidate != null && importCandidate.provider !in setOf("mtn_momo", "airtel_money")) {
+                Text(
+                    "Suggested from ${TransactionMessageParser.providerOptions.firstOrNull { it.id == importCandidate.provider }?.label ?: importCandidate.provider} · Ref ${importCandidate.reference}. Check the details before saving.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (importCandidate?.type == TransactionType.INCOME) {
+                Text(
+                    "Confirm what this receipt represents before saving. Received money can be income, a transfer, a reimbursement, a loan or returned money.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -850,6 +874,13 @@ fun AddTransactionScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
+                    }
+                    if (importCandidate?.type == TransactionType.INCOME && categoryId == null) {
+                        Text(
+                            "Choose what this received money represents. Mizani will not assume it is salary or a transfer.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                     val primaryCategories = orderedCategories.take(9).let { head ->
                         val selected = orderedCategories.firstOrNull { it.id == categoryId }

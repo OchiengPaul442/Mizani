@@ -29,6 +29,15 @@ APK built successfully, and lintDebug completed with no errors (50 findings: 17 
 notices, and 6 smaller style/resource findings). The migration tests use the checked-in v1-v3 Room
 schema snapshots as test assets; a debug-only serialization BOM keeps Room 2.8.5 migration parsing
 compatible with its runtime.
+On 2026-10-29, the focused `NavigationBackRegressionTest` passed on the API 36.1 emulator. It
+exercises More → Wallets → Back and More → Categories → Back, then asserts that the returned More
+screen remains interactive. `testDebugUnitTest`, `compileDebugAndroidTestKotlin`, and `lintDebug`
+also passed after the transition and Money Outlook copy changes. The two-test
+`WalletBalancePrivacyEndToEndTest` class passed after being updated to assert the dot mask and its
+non-revealing accessibility label.
+The three-test `SettingsAndReminderEndToEndTest` class also passed: it verifies the settings toggle
+queues WorkManager work, a delayed daily check still posts after its target date, repeated daily work
+does not duplicate a notification, and a commitment reminder posts generic private copy.
 
 ## Manual emulator acceptance
 
@@ -106,6 +115,26 @@ The reminder instrumentation verifies that the UI enables the setting, WorkManag
 request, the worker posts the generic private notification, and a repeated worker run does not post a
 duplicate. A real wall-clock attempt did not run within 240 seconds on this emulator, so exact delivery
 timing under Android's background scheduler remains unverified.
+
+### Money Outlook and More navigation regression (2026-10-29)
+
+The Money Outlook subtitle now describes the feature in plain language: “See how long your money may
+last at your current daily spending.” When wallet balances are hidden, the estimate is rendered as
+six dots rather than the confusing phrase “Hidden while balances are hidden”; its accessibility label
+still announces that the estimate is hidden without revealing the value. The daily target remains
+visible as the user requested.
+
+The reported gray/frozen state after returning from a More-screen detail was traced to fading both
+routes during a pop transition, which could expose the Scaffold background during a quick Back press.
+Route transitions now retain the restrained slide motion without cross-fading, and the focused
+instrumentation test covers the affected detail routes. Pixel-level screenshot validation remains
+unavailable because the app intentionally uses `FLAG_SECURE`; hierarchy assertions and emulator
+interaction were used instead.
+
+Reminder delivery now includes a user-facing “Send a test notification” action in Settings. Daily
+reminders keep their generic privacy-safe copy, and delayed WorkManager execution no longer drops a
+check when Android runs it after the originally scheduled date. Exact wall-clock delivery under
+Doze, OEM battery restrictions, reboot and timezone changes remains physical-device follow-up coverage.
 
 ### Remaining manual acceptance
 

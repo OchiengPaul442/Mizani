@@ -275,10 +275,10 @@ class AnalyticsEngine(private val data: LedgerSnapshot) {
         val finiteCommitments = data.commitmentProgress()
             .asSequence()
             .filter { progress ->
-                !progress.commitment.archived && progress.remainingMinor > 0L &&
+                !progress.commitment.archived && progress.remainingWorkspaceMinor > 0L &&
                     range.contains(LocalDate.ofEpochDay(progress.commitment.dueEpochDay))
             }
-            .fold(0L) { total, progress -> Math.addExact(total, progress.remainingMinor) }
+            .fold(0L) { total, progress -> Math.addExact(total, progress.remainingWorkspaceMinor) }
         return Math.addExact(Math.addExact(bills, debtPayments), finiteCommitments)
     }
 

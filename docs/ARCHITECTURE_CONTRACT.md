@@ -31,6 +31,9 @@ This is an offline-first financial application.
   arithmetic and rounds to the workspace currency's minor unit.
 - The exchange-rate request contains only the currency pair. Transaction amounts, payees and notes
   stay on device. Rates are daily reference rates, not bank/card settlement quotes.
+- Commitment targets may be denominated in a currency other than the workspace currency. The
+  commitment stores its saved daily reference rate and workspace-currency equivalent so progress,
+  reserves, exports and restores remain deterministic without re-fetching a rate.
 - Transfers between a user's wallets are not expenditure or income. Fees are expenditure.
 - Expected income is not received income. Recurring income rules never create cash until
   the user marks them received.
@@ -82,9 +85,17 @@ This is an offline-first financial application.
 
 ## Explicit V1 boundaries
 
-- Transaction import is user-initiated through shared or pasted text for supported MTN MoMo and Airtel Money confirmations. Never request broad SMS access or monitor messages in the background. Parse locally, require review before saving, discard the raw message, and retain only normalized reference data for deduplication.
+- Transaction import is user-initiated through shared or pasted text for supported African
+  mobile-money confirmations (including MTN MoMo, Airtel Money, M-Pesa, Orange Money, Moov, Wave,
+  Telecel, Tigo, EcoCash, OPay, PalmPay and Moniepoint). Never request broad SMS access or monitor
+  messages in the background. Parse locally, require review before saving, discard the raw message,
+  and retain only a normalized provider reference—or a deterministic exact-message digest when no
+  provider reference exists—for deduplication. Incoming money must be assigned an explicit income
+  category during import review because the message cannot prove whether it is salary, a transfer,
+  a reimbursement, a loan or a gift.
 - No bank APIs, payment processing, lending, credit scoring, investments or tax advice.
 - No cloud sync implementation in this build; the UI states this and offers encrypted backup.
 - Single base currency per workspace; expense and income entry may be converted from another
-  supported currency using the latest available daily Frankfurter reference rate.
+  supported currency using the latest available daily Frankfurter reference rate. Bills and
+  commitments may also use another supported currency and retain the rate used for their target.
 - No split transactions yet.

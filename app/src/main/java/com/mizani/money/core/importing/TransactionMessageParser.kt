@@ -1,11 +1,14 @@
 package com.mizani.money.core.importing
 
 import com.mizani.money.core.model.TransactionType
+import com.mizani.money.core.money.Currency
 import com.mizani.money.core.money.Currencies
 import com.mizani.money.core.money.MoneyLimits
 import com.mizani.money.core.money.MoneyFormat
 import java.time.LocalDate
 import java.time.DateTimeException
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import java.util.Locale
 
 /** Parsed suggestion only. The original message is never retained by the parser or ledger. */
@@ -35,14 +38,42 @@ sealed interface MessageParseResult {
 object TransactionMessageParser {
     const val MAX_MESSAGE_LENGTH = 4_096
 
-    private val amountPattern = Regex("(?i)\\b(UGX|KES|TZS|RWF|NGN|GHS|ZAR)\\s*([0-9][0-9,]*(?:\\.[0-9]{1,6})?)")
-    private val feePattern = Regex("(?i)(?:transaction\\s+fee|fee|charge)\\s*(?:of|:)?\\s*(?:(UGX|KES|TZS|RWF|NGN|GHS|ZAR)\\s*)?([0-9][0-9,]*(?:\\.[0-9]{1,6})?)")
-    private val referencePattern = Regex("(?i)\\b(?:ref(?:erence)?|txn(?:\\s+id)?|transaction\\s+id)\\s*[:#-]\\s*([A-Z0-9][A-Z0-9./_-]{2,127})\\b")
+    /** Common African mobile-money brands. Detection remains local and provider-specific. */
+    val providerOptions: List<ProviderOption> = listOf(
+        ProviderOption("mtn_momo", "MTN MoMo", Regex("(?i)\\bMTN\\b|MOMO|MO\\s*MO")),
+        ProviderOption("airteltigo_money", "AirtelTigo Money", Regex("(?i)AIRTEL\\s*TIGO(?:\\s*MONEY)?")),
+        ProviderOption("airtel_money", "Airtel Money", Regex("(?i)AIRTEL(?:\\s*MONEY)?")),
+        ProviderOption("mpesa", "M-Pesa", Regex("(?i)M[- ]?PESA|SAFARICOM|VODACOM")),
+        ProviderOption("orange_money", "Orange Money", Regex("(?i)ORANGE(?:\\s*MONEY)?")),
+        ProviderOption("moov_money", "Moov Money", Regex("(?i)MOOV(?:\\s*MONEY)?")),
+        ProviderOption("wave", "Wave", Regex("(?i)\\bWAVE(?:\\s*MONEY)?\\b")),
+        ProviderOption("telecel_cash", "Telecel Cash", Regex("(?i)TELECEL(?:\\s+CASH)?")),
+        ProviderOption("tigo_pesa", "Tigo Pesa", Regex("(?i)TIGO(?:\\s*PESA)?")),
+        ProviderOption("vodafone_cash", "Vodafone Cash", Regex("(?i)VODAFONE(?:\\s+CASH)?")),
+        ProviderOption("ecocash", "EcoCash", Regex("(?i)ECO\\s*CASH")),
+        ProviderOption("opay", "OPay", Regex("(?i)\\bOPAY\\b")),
+        ProviderOption("palmpay", "PalmPay", Regex("(?i)PALM\\s*PAY")),
+        ProviderOption("moniepoint", "Moniepoint", Regex("(?i)MONIEPOINT")),
+        ProviderOption("halopesa", "HaloPesa", Regex("(?i)HALO\\s*PESA")),
+        ProviderOption("tnm_mpamba", "TNM Mpamba", Regex("(?i)TNM(?:\\s+MPAMBA)?")),
+    )
+    private val currencyAlternation by lazy {
+        Currencies.transactionCurrencies.map { Regex.escape(it.code) }.sortedByDescending { it.length }.joinToString("|")
+    }
+    private val amountPattern by lazy {
+        Regex("(?i)\\b($currencyAlternation)\\s*([0-9][0-9,]*(?:\\.[0-9]{1,6})?)")
+    }
+    private val feePattern by lazy {
+        Regex("(?i)(?:transaction\\s+fee|fee|charge)\\s*(?:of|:)?\\s*($currencyAlternation)?\\s*([0-9][0-9,]*(?:\\.[0-9]{1,6})?)")
+    }
+    private val referencePattern = Regex("(?i)\\b(?:ref(?:erence)?|txn(?:\\s*(?:id|no))?|transaction\\s*(?:id|no)|(?:financial\\s+)?id|receipt(?:\\s*(?:id|no|number))?)\\s*[:#-]\\s*([A-Z0-9][A-Z0-9./_-]{2,127})\\b")
     private val outgoingPattern = Regex("(?i)\\b(?:you\\s+have\\s+sent|you\\s+sent|sent\\s+to|payment\\s+of|paid)\\b")
-    private val incomingPattern = Regex("(?i)\\b(?:you\\s+have\\s+received|you\\s+received|received\\s+from|deposit\\s+of)\\b")
+    private val incomingPattern = Regex("(?i)\\b(?:you\\s+have\\s+received|you\\s+received|received\\s+from|deposit\\s+of|credited)\\b")
     private val balanceLabelPattern = Regex("(?i)\\b(?:available\\s+)?balance\\b")
     private const val MAX_ACTION_AMOUNT_GAP = 200
     private const val MAX_PRE_ACTION_AMOUNT_GAP = 32
+
+    data class ProviderOption(val id: String, val label: String, internal val matcher: Regex)
 
     fun parse(
         message: String,
@@ -53,21 +84,25 @@ object TransactionMessageParser {
         val normalized = message.trim()
         if (normalized.isEmpty()) return MessageParseResult.Rejected(MessageParseResult.Reason.UNSUPPORTED_MESSAGE)
 
-        val provider = when {
-            Regex("(?i)\\bMTN\\b|MOMO|MO\\s*MO").containsMatchIn(normalized) -> "mtn_momo"
-            Regex("(?i)AIRTEL(?:\\s*MONEY)?").containsMatchIn(normalized) -> "airtel_money"
-            providerHint?.let { Regex("(?i)\\bMTN\\b|MOMO|MO\\s*MO").containsMatchIn(it) } == true -> "mtn_momo"
-            providerHint?.let { Regex("(?i)AIRTEL(?:\\s*MONEY)?").containsMatchIn(it) } == true -> "airtel_money"
-            else -> return MessageParseResult.Rejected(MessageParseResult.Reason.UNSUPPORTED_PROVIDER)
-        }
+        val provider = providerOptions.firstOrNull { it.matcher.containsMatchIn(normalized) }
+            ?: providerHint?.let { hint ->
+                providerOptions.firstOrNull { option ->
+                    option.id.equals(hint.trim(), ignoreCase = true) ||
+                        option.label.equals(hint.trim(), ignoreCase = true) ||
+                        option.matcher.containsMatchIn(hint)
+                }
+            }
+            ?: return MessageParseResult.Rejected(MessageParseResult.Reason.UNSUPPORTED_PROVIDER)
         val type = when {
             outgoingPattern.containsMatchIn(normalized) -> TransactionType.EXPENSE
             incomingPattern.containsMatchIn(normalized) -> TransactionType.INCOME
             else -> return MessageParseResult.Rejected(MessageParseResult.Reason.UNSUPPORTED_MESSAGE)
         }
+        // Prefer a provider reference. If a provider omits one, hash the normalized message
+        // locally so exact re-imports stay idempotent without persisting raw SMS text.
         val reference = referencePattern.find(normalized)?.groupValues?.getOrNull(1)
             ?.uppercase(Locale.ROOT)
-            ?: return MessageParseResult.Rejected(MessageParseResult.Reason.UNSUPPORTED_MESSAGE)
+            ?: generatedMessageReference(provider.id, normalized)
         val actionMatch = (if (type == TransactionType.EXPENSE) outgoingPattern else incomingPattern)
             .find(normalized)
             ?: return MessageParseResult.Rejected(MessageParseResult.Reason.UNSUPPORTED_MESSAGE)
@@ -93,7 +128,7 @@ object TransactionMessageParser {
             ?: return MessageParseResult.Rejected(MessageParseResult.Reason.UNSUPPORTED_MESSAGE)
         val currencyCode = amountMatch.groupValues[1].uppercase(Locale.ROOT)
         val currency = Currencies.byCode(currencyCode)
-        val amountMinor = MoneyFormat.parse(amountMatch.groupValues[2], currency)
+        val amountMinor = parseMessageMoney(amountMatch.groupValues[2], currency)
             ?.takeIf { it in 1..MoneyLimits.MAX_MINOR_AMOUNT }
             ?: return MessageParseResult.Rejected(MessageParseResult.Reason.UNSUPPORTED_MESSAGE)
 
@@ -101,22 +136,31 @@ object TransactionMessageParser {
         val feeMinor = feeMatch?.let { match ->
             val feeCurrencyCode = match.groupValues[1].ifBlank { currencyCode }.uppercase(Locale.ROOT)
             if (feeCurrencyCode != currencyCode) return MessageParseResult.Rejected(MessageParseResult.Reason.UNSUPPORTED_MESSAGE)
-            MoneyFormat.parse(match.groupValues[2], currency)
+            parseMessageMoney(match.groupValues[2], currency)
                 ?.takeIf { it in 0..MoneyLimits.MAX_MINOR_AMOUNT }
                 ?: return MessageParseResult.Rejected(MessageParseResult.Reason.UNSUPPORTED_MESSAGE)
         } ?: 0L
 
-        val payee = if (type == TransactionType.EXPENSE) {
+        val parsedPayee = if (type == TransactionType.EXPENSE) {
             Regex("(?i)\\bto\\s+([\\p{L}][\\p{L} .'’-]{0,79}?)(?=\\s*(?:\\.|,|;|$|transaction\\s+fee|fee|ref(?:erence)?|txn))")
                 .find(normalized)?.groupValues?.getOrNull(1)?.trim()?.take(80).orEmpty()
         } else {
             Regex("(?i)\\bfrom\\s+([\\p{L}][\\p{L} .'’-]{0,79}?)(?=\\s*(?:\\.|,|;|$|ref(?:erence)?|txn))")
                 .find(normalized)?.groupValues?.getOrNull(1)?.trim()?.take(80).orEmpty()
         }
+        val robustIncomingPayee = if (type == TransactionType.INCOME) {
+            Regex("(?i)\\bfrom\\s+([A-Za-z][A-Za-z0-9 .'-]{0,79}?)(?=\\s+(?:on|at|fee|reason|new\\s+balance|id)\\b|[.,;]|$)")
+                .find(normalized)?.groupValues?.getOrNull(1).orEmpty()
+        } else {
+            ""
+        }
+        val payee = Regex("(?is)\\s+(?:on|at|reason|new\\s+balance|fee|id)\\b.*$")
+            .replace(robustIncomingPayee.ifBlank { parsedPayee }, "")
+            .trim()
 
         return MessageParseResult.Parsed(
             ImportedTransactionCandidate(
-                provider = provider,
+                provider = provider.id,
                 reference = reference,
                 type = type,
                 amountMinor = amountMinor,
@@ -129,6 +173,14 @@ object TransactionMessageParser {
     }
 
     private fun parseDate(message: String): LocalDate? {
+        Regex("(?<!\\d)(\\d{4})[-/](\\d{1,2})[-/](\\d{1,2})(?!\\d)").find(message)?.let { match ->
+            val (year, month, day) = match.destructured
+            try {
+                return LocalDate.of(year.toInt(), month.toInt(), day.toInt())
+            } catch (_: DateTimeException) {
+                return null
+            }
+        }
         val match = Regex("(?<!\\d)(\\d{1,2})[/-](\\d{1,2})[/-](\\d{4})(?!\\d)").find(message) ?: return null
         val (first, second, year) = match.destructured
         return try {
@@ -136,5 +188,19 @@ object TransactionMessageParser {
         } catch (_: DateTimeException) {
             null
         }
+    }
+
+    private fun parseMessageMoney(raw: String, currency: Currency): Long? {
+        val fractional = raw.substringAfter('.', missingDelimiterValue = "")
+        if (currency.minorUnits == 0 && fractional.any { it != '0' }) return null
+        return MoneyFormat.parse(raw, currency)
+    }
+
+    private fun generatedMessageReference(provider: String, message: String): String {
+        val normalized = message.trim().replace(Regex("\\s+"), " ").lowercase(Locale.ROOT)
+        val digest = MessageDigest.getInstance("SHA-256")
+            .digest("$provider|$normalized".toByteArray(StandardCharsets.UTF_8))
+            .joinToString("") { byte -> "%02x".format(Locale.ROOT, byte) }
+        return "MSG-${digest.uppercase(Locale.ROOT)}"
     }
 }

@@ -18,7 +18,9 @@ import com.mizani.money.R
 object DailyReminderNotifications {
     const val CHANNEL_ID = "daily_transaction_reminders"
     private const val NOTIFICATION_ID = 7401
+    private const val TEST_NOTIFICATION_ID = 7402
     private const val PENDING_INTENT_REQUEST = 7401
+    private const val TEST_PENDING_INTENT_REQUEST = 7402
 
     fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
@@ -84,6 +86,40 @@ object DailyReminderNotifications {
         }
     }
 
+    /** Sends a user-requested delivery check without affecting the daily reminder state. */
+    fun postTest(context: Context): Boolean {
+        ensureChannel(context)
+        if (!canPost(context)) return false
+
+        val openApp = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        val contentIntent = PendingIntent.getActivity(
+            context,
+            TEST_PENDING_INTENT_REQUEST,
+            openApp,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_stat_mizani)
+            .setContentTitle(context.getString(R.string.notification_test_reminder_title))
+            .setContentText(context.getString(R.string.notification_test_reminder_body))
+            .setContentIntent(contentIntent)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setAutoCancel(true)
+            .setOnlyAlertOnce(true)
+            .build()
+
+        return try {
+            NotificationManagerCompat.from(context).notify(TEST_NOTIFICATION_ID, notification)
+            true
+        } catch (_: SecurityException) {
+            false
+        }
+    }
+
     /** Generic notification copy keeps commitment names and amounts off the lock screen. */
     fun postCommitment(context: Context, commitmentId: String): Boolean {
         ensureChannel(context)
@@ -119,5 +155,6 @@ object DailyReminderNotifications {
 
     fun cancel(context: Context) {
         NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID)
+        NotificationManagerCompat.from(context).cancel(TEST_NOTIFICATION_ID)
     }
 }

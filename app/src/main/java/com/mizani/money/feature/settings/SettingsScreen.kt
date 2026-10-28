@@ -130,6 +130,8 @@ fun SettingsScreen(
     val reminderScheduleError = stringResource(R.string.settings_reminder_schedule_error)
     val reminderPermissionDenied = stringResource(R.string.settings_reminder_permission_denied)
     val reminderNotificationsDisabled = stringResource(R.string.settings_reminder_notifications_disabled)
+    val reminderTestSent = stringResource(R.string.settings_reminder_test_sent)
+    val reminderTestLabel = stringResource(R.string.settings_send_test_reminder)
     val dailyReminderTitle = stringResource(R.string.settings_daily_reminder_title)
 
     var message by remember { mutableStateOf<String?>(null) }
@@ -1112,6 +1114,26 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    if (notificationsAvailable) {
+                        TextButton(
+                            onClick = {
+                                if (DailyReminderNotifications.postTest(context)) {
+                                    message = reminderTestSent
+                                    error = null
+                                    reminderStatus = null
+                                } else {
+                                    notificationSettingsRevision += 1
+                                    reminderStatus = reminderNotificationsDisabled
+                                    showReminderNotificationSettings = true
+                                }
+                            },
+                            modifier = Modifier.semantics {
+                                contentDescription = reminderTestLabel
+                            },
+                        ) {
+                            Text(reminderTestLabel)
+                        }
+                    }
                     if (!notificationsAvailable) {
                         Text(
                             stringResource(R.string.settings_reminder_notifications_disabled),
