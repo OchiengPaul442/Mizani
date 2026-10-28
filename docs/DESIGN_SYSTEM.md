@@ -126,19 +126,21 @@ System sans with tabular figures enabled for money. No custom font is bundled (o
 
 - **Hero card**: selected neutral/accent gradient with warm-gold accents, large watermarked
   mark, currency symbol small, amount large, thin mint progress bar.
-- **Safe-to-spend**: white card with warm-gold icon tile; amount and a one-line basis statement;
-  expandable calculation.
+- **Safe-to-spend**: white card with warm-gold icon tile; amount and a one-line basis statement.
+  Keep detailed methodology in supporting documentation.
 - **Cash-flow summary**: a single card with three columns separated by 1dp dividers, instead of three
   competing cards.
 - **Transaction row**: 42dp rounded-square category tile, title, wallet/date, signed amount;
   transfer icon + destination.
-- **Insight card**: tinted semantic surface, title, body, expandable "How this is calculated".
+- **Insight card**: tinted semantic surface, title and concise body. Show an in-app explanation only
+  when it materially changes how users should interpret the metric.
 - **Dialogs**: `surfaceContainerHighest` container, `onSurface` title/body, and `onSurfaceVariant` for secondary details.
 - **Inputs**: 12dp radius, 56dp height, currency prefix, inline supporting text.
 - **Buttons**: 12dp radius, 52dp primary height, filled primary; outlined secondary; text actions otherwise.
 - **Charts**: category donut and six-month cash-flow bars; every chart has a text summary
   and a TalkBack description.
-- **Navigation**: four-tab Material bar (Home, Activity, Insights, More) and a prominent Add action;
+- **Navigation**: five-tab Material bar (Home, Activity, Insights, Bills, More) and a
+  prominent Add action;
   short, consistent transitions and a translucent-free surface.
 
 ## Accessibility

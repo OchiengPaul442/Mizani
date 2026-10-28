@@ -11,7 +11,6 @@ import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -44,13 +43,6 @@ fun MoreScreen(
                     title = "Wallets",
                     subtitle = "Cash, mobile money and bank balances",
                     onClick = { onNavigate("wallets") },
-                )
-                MizaniSectionDivider()
-                MizaniInfoRow(
-                    icon = Icons.AutoMirrored.Rounded.ReceiptLong,
-                    title = "Bills & commitments",
-                    subtitle = "Track due dates, partial payments and reminders",
-                    onClick = { onNavigate("commitments") },
                 )
                 MizaniSectionDivider()
                 MizaniInfoRow(

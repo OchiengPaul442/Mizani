@@ -52,7 +52,9 @@ This is an offline-first financial application.
 ## Analytics rules
 
 - All financial analytics are deterministic, explainable, locally computed and tested.
-- Every metric that could mislead has an in-app “How this is calculated” explanation.
+- Show the source or basis of estimates in concise in-app copy when it affects interpretation.
+  Keep detailed methodology in supporting documentation. Add an in-app explanation only when it
+  materially helps users understand a decision-relevant metric.
 - Insufficient history is shown honestly: no runway/trend/savings-rate claims without data.
 - Charts are always accompanied by a textual interpretation and TalkBack descriptions.
 - No opaque financial health score, no creditworthiness claim and no AI-generated advice.

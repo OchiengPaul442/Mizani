@@ -34,8 +34,7 @@ Mizani is an Android budgeting app designed to work offline. It needs no account
 - **Check wallets quickly.** Active wallets appear on Home. Their balances stay hidden until you
   confirm with your app PIN or enabled biometrics. If you have no PIN, set up app lock first.
 - **Track one-off commitments.** Add a target and due date for items such as school fees, link
-  payments already recorded as expenses, and optionally receive a generic local reminder. Use
-  recurring schedules for repeated bills and debt records for loans.
+  payments already recorded as expenses, and optionally receive a generic local reminder.
 - **Plan with Money Outlook.** See an estimate based on liquid wallet balances, recorded spending
   and unpaid commitments due within 30 days. Expected income is excluded. If there is not enough
   recorded history, enter a daily spending target instead.
@@ -166,7 +165,7 @@ Mizani is a single Android app module with package boundaries:
 | <code>data/local</code> | Room entities and encrypted database                              |
 | <code>data/repo</code>  | Validated data access, preferences and exchange-rate lookup       |
 | <code>domain</code>     | Analytics, CSV/Excel export and encrypted backup                  |
-| <code>feature</code>    | Compose screens for onboarding, Home, Activity, Insights, commitments and More |
+| <code>feature</code>    | Compose screens for onboarding, Home, Activity, Insights, Bills & commitments and More |
 | <code>ui</code>         | Navigation, theme and reusable components                         |
 
 Start with the [project structure](docs/PROJECT_STRUCTURE.md) and [architecture

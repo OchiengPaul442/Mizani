@@ -4,6 +4,8 @@ import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -41,6 +43,7 @@ class WalletBalancePrivacyEndToEndTest {
                 walletType = WalletType.CASH,
                 openingBalanceMinor = 275_000,
             )
+            app.container.financeRepository.setOutlookDailyTarget(20_000)
             app.container.settingsRepository.completeOnboarding("UG", "UGX")
             app.container.settingsRepository.recordLegalAcceptance(
                 LegalDocuments.TERMS_VERSION,
@@ -55,6 +58,21 @@ class WalletBalancePrivacyEndToEndTest {
     fun tearDown() {
         if (::scenario.isInitialized) scenario.close()
         TestState.reset()
+    }
+
+    @Test
+    fun moneyOutlookMasksDerivedCoverageButKeepsDailyTargetVisible() {
+        compose.waitUntil(timeoutMillis = 20_000) {
+            compose.onAllNodesWithText("Your wallets").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNode(hasText("Insights") and hasClickAction()).performClick()
+        compose.waitUntil(timeoutMillis = 20_000) {
+            compose.onAllNodesWithText("Money Outlook").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        compose.onNodeWithText("Hidden while balances are hidden").assertExists()
+        compose.onNodeWithContentDescription("Daily target UGX 20,000").assertExists()
+        compose.onAllNodesWithText("UGX 275,000").assertCountEquals(0)
     }
 
     @Test
@@ -75,11 +93,16 @@ class WalletBalancePrivacyEndToEndTest {
             compose.onAllNodesWithText("Confirm your PIN").fetchSemanticsNodes().isNotEmpty()
         }
         enterPin("123456")
-        compose.waitUntil(timeoutMillis = 5_000) {
-            compose.onAllNodesWithText("App lock is on.").fetchSemanticsNodes().isNotEmpty()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithText("On · 6-digit PIN").fetchSemanticsNodes().isNotEmpty()
         }
+        compose.onNodeWithText("Change PIN").assertExists()
 
         scenario.recreate()
+        compose.waitUntil(timeoutMillis = 20_000) {
+            compose.onAllNodesWithText("Settings").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithContentDescription("Back").performClick()
         compose.waitUntil(timeoutMillis = 20_000) {
             compose.onAllNodesWithText("Your wallets").fetchSemanticsNodes().isNotEmpty()
         }

@@ -7,8 +7,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -18,7 +22,6 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Payments
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -35,8 +38,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
@@ -53,6 +58,7 @@ import com.mizani.money.ui.AppUiState
 import com.mizani.money.ui.AppViewModel
 import com.mizani.money.ui.components.DateField
 import com.mizani.money.ui.components.MizaniCard
+import com.mizani.money.ui.components.MizaniAlertDialog
 import com.mizani.money.ui.components.MizaniConfirmDialog
 import com.mizani.money.ui.components.MizaniPicker
 import com.mizani.money.ui.components.MizaniTopBar
@@ -67,7 +73,7 @@ import java.time.LocalDate
 fun CommitmentsScreen(
     vm: AppViewModel,
     state: AppUiState,
-    onBack: () -> Unit,
+    onRecordExpense: () -> Unit,
 ) {
     val snapshot = state.snapshot
     val currency = state.currency
@@ -154,11 +160,12 @@ fun CommitmentsScreen(
     Column(Modifier.fillMaxSize()) {
         MizaniTopBar(
             title = "Bills & commitments",
-            subtitle = "Track one-off amounts still to pay",
-            onBack = onBack,
+            subtitle = "Track one-off bills and payment progress",
             actions = {
-                IconButton(onClick = { editor = null; editError = null; editorOpen = true }) {
-                    Icon(Icons.Rounded.Add, contentDescription = "Add commitment")
+                if (active.isNotEmpty()) {
+                    IconButton(onClick = { editor = null; editError = null; editorOpen = true }) {
+                        Icon(Icons.Rounded.Add, contentDescription = "Add commitment")
+                    }
                 }
             },
         )
@@ -171,7 +178,7 @@ fun CommitmentsScreen(
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
             Text(
-                "Track one-off targets such as school fees. Use recurring schedules for regular bills and debt records for loan balances.",
+                "Plan one-off costs with a target and due date. Record each payment as an expense, then link it here to track progress without duplicating it.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -180,10 +187,18 @@ fun CommitmentsScreen(
             }
             if (active.isEmpty()) {
                 MizaniCard {
-                    Text("No commitments yet", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        if (archived.isEmpty()) "No bills or commitments yet"
+                        else "No active bills or commitments",
+                        style = MaterialTheme.typography.titleMedium,
+                    )
                     Spacer(Modifier.height(Spacing.xs))
                     Text(
-                        "Create one to track the target, due date and payments already recorded in your ledger.",
+                        if (archived.isEmpty()) {
+                            "Add a one-off bill or commitment to keep its due date and payment progress in one place."
+                        } else {
+                            "Archived items are saved below. Add a new one when you need to plan another due date."
+                        },
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodyMedium,
                     )
@@ -191,7 +206,7 @@ fun CommitmentsScreen(
                     Button(onClick = { editor = null; editError = null; editorOpen = true }) {
                         Icon(Icons.Rounded.Add, contentDescription = null)
                         Spacer(Modifier.padding(horizontal = 2.dp))
-                        Text("Add a commitment")
+                        Text("Add a one-off bill")
                     }
                 }
             } else {
@@ -202,6 +217,7 @@ fun CommitmentsScreen(
                         linkedTransactions = linkedTransactionsById,
                         unlinkedExpenses = unlinkedExpenses,
                         busy = savingId == item.commitment.id,
+                        onRecordExpense = onRecordExpense,
                         onEdit = { editor = item.commitment; editError = null; editorOpen = true },
                         onArchive = { archivedValue ->
                             savingId = item.commitment.id
@@ -242,6 +258,7 @@ fun CommitmentsScreen(
                         linkedTransactions = linkedTransactionsById,
                         unlinkedExpenses = emptyList(),
                         busy = savingId == item.commitment.id,
+                        onRecordExpense = onRecordExpense,
                         onEdit = { editor = item.commitment; editError = null; editorOpen = true },
                         onArchive = { archivedValue ->
                             savingId = item.commitment.id
@@ -275,6 +292,7 @@ private fun CommitmentCard(
     linkedTransactions: Map<String, com.mizani.money.data.local.TransactionEntity>,
     unlinkedExpenses: List<com.mizani.money.data.local.TransactionEntity>,
     busy: Boolean,
+    onRecordExpense: () -> Unit,
     onEdit: () -> Unit,
     onArchive: (Boolean) -> Unit,
     onDelete: () -> Unit,
@@ -378,11 +396,17 @@ private fun CommitmentCard(
                 modifier = Modifier.fillMaxWidth(),
             )
         } else if (!commitment.archived && item.remainingMinor > 0L) {
-            Text(
-                "Record an expense first, then link it here as a payment.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                Text(
+                    "Record the payment as an expense first, then link it here.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                TextButton(onClick = onRecordExpense, enabled = !busy) {
+                    Icon(Icons.Rounded.Add, contentDescription = null)
+                    Text("Record expense")
+                }
+            }
         }
         Spacer(Modifier.height(Spacing.xs))
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
@@ -420,14 +444,21 @@ private fun CommitmentEditorDialog(
         mutableStateOf(initial?.reminderDaysBefore?.toString() ?: "0")
     }
     var validationError by remember(initial?.id) { mutableStateOf<String?>(null) }
+    val nameFocusRequester = remember(initial?.id) { FocusRequester() }
+    val amountFocusRequester = remember(initial?.id) { FocusRequester() }
+    val reminderFocusRequester = remember(initial?.id) { FocusRequester() }
+    val nameError = validationError?.takeIf { it.startsWith("Enter a name") }
+    val amountError = validationError?.takeIf { it.startsWith("Enter an amount") }
+    val reminderError = validationError?.takeIf { it.startsWith("Choose a reminder") }
 
-    AlertDialog(
+    MizaniAlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
         title = { Text(if (initial == null) "Add commitment" else "Edit commitment") },
         text = {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .heightIn(max = 560.dp)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
@@ -440,16 +471,24 @@ private fun CommitmentEditorDialog(
                     value = name,
                     onValueChange = { name = it.take(80); validationError = null },
                     label = { Text("Name") },
+                    isError = nameError != null,
+                    supportingText = { nameError?.let { message ->
+                        Text(message, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                    } },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().focusRequester(nameFocusRequester),
                 )
                 OutlinedTextField(
                     value = amount,
                     onValueChange = { amount = it; validationError = null },
                     label = { Text("Target (${currency.code})") },
+                    isError = amountError != null,
+                    supportingText = { amountError?.let { message ->
+                        Text(message, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                    } },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().focusRequester(amountFocusRequester),
                 )
                 DateField(label = "Due date", date = dueDate, onDateSelected = { dueDate = it }, modifier = Modifier.fillMaxWidth())
                 val categories = state.snapshot.categories.filter {
@@ -465,19 +504,33 @@ private fun CommitmentEditorDialog(
                     onSelectNone = { categoryId = null; validationError = null },
                     searchable = categories.size > 6,
                     searchHint = "Search expense categories",
+                    fieldLabel = "Category",
                 )
                 OutlinedTextField(
                     value = reminderDays,
                     onValueChange = { value -> reminderDays = value.filter(Char::isDigit).take(2); validationError = null },
                     label = { Text("Reminder days before") },
-                    supportingText = { Text("Enter 0 to turn reminders off (maximum 30 days).") },
+                    isError = reminderError != null,
+                    supportingText = {
+                        Text(
+                            reminderError ?: "Enter 0 to turn reminders off (maximum 30 days).",
+                            modifier = if (reminderError != null) Modifier.semantics {
+                                liveRegion = LiveRegionMode.Polite
+                            } else Modifier,
+                        )
+                    },
                     leadingIcon = { Icon(Icons.Rounded.NotificationsActive, contentDescription = null) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().focusRequester(reminderFocusRequester),
                 )
-                (validationError ?: error)?.let { message ->
-                    Text(message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                error?.let { message ->
+                    Text(
+                        message,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
             }
         },
@@ -488,9 +541,18 @@ private fun CommitmentEditorDialog(
                     val parsedAmount = MoneyFormat.parse(amount, currency)
                     val days = reminderDays.toIntOrNull()
                     when {
-                        name.isBlank() -> validationError = "Enter a name for this commitment."
-                        parsedAmount == null || parsedAmount <= 0L -> validationError = "Enter an amount greater than zero."
-                        days == null || days !in 0..30 -> validationError = "Choose a reminder from 0 to 30 days."
+                        name.isBlank() -> {
+                            validationError = "Enter a name for this commitment."
+                            nameFocusRequester.requestFocus()
+                        }
+                        parsedAmount == null || parsedAmount <= 0L -> {
+                            validationError = "Enter an amount greater than zero."
+                            amountFocusRequester.requestFocus()
+                        }
+                        days == null || days !in 0..30 -> {
+                            validationError = "Choose a reminder from 0 to 30 days."
+                            reminderFocusRequester.requestFocus()
+                        }
                         else -> {
                             validationError = null
                             onSave(
@@ -506,8 +568,16 @@ private fun CommitmentEditorDialog(
                     }
                 },
             ) {
-                if (busy) CircularProgressIndicator()
-                else Text(if (initial == null) "Save commitment" else "Save changes")
+                if (busy) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp).semantics {
+                            contentDescription = "Saving commitment"
+                        },
+                        strokeWidth = 2.dp,
+                    )
+                    Spacer(Modifier.padding(horizontal = 2.dp))
+                    Text("Saving...")
+                } else Text(if (initial == null) "Save commitment" else "Save changes")
             }
         },
         dismissButton = {

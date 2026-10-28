@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -291,62 +292,121 @@ private fun WalletShortcutsSection(
     onOpenWallets: () -> Unit,
     onSetupPin: () -> Unit,
 ) {
+    val visibleWallets = wallets.take(5)
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "Your wallets",
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            WalletBalanceVisibilityControl(vm, state, onSetupPin, showLabel = true)
-            androidx.compose.material3.TextButton(onClick = onOpenWallets) {
-                Text("See all")
-            }
-        }
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            items(wallets.take(5), key = WalletEntity::id) { wallet ->
-                MizaniCard(
-                    modifier = Modifier.width(208.dp),
-                    onClick = onOpenWallets,
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        WalletAvatar(wallet.type, wallet.colorHex, size = 38)
-                        Spacer(Modifier.width(Spacing.sm))
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                wallet.name,
-                                style = MaterialTheme.typography.titleSmall,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            Text(
-                                wallet.type.label,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(Spacing.md))
-                    Text(
-                        if (wallet.type == WalletType.DEBT) "Amount owed" else "Balance",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    ProtectedBalanceValue(
-                        amountMinor = balances[wallet.id] ?: 0L,
+        SectionHeader(
+            title = "Your wallets",
+            actionLabel = "See all",
+            onAction = onOpenWallets,
+        )
+        WalletBalanceVisibilityControl(vm, state, onSetupPin, showLabel = true)
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val cardWidth = if (visibleWallets.size == 1) maxWidth else 208.dp
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                items(visibleWallets, key = WalletEntity::id) { wallet ->
+                    WalletShortcutCard(
+                        wallet = wallet,
+                        balance = balances[wallet.id] ?: 0L,
                         currency = currency,
-                        visible = state.walletBalancesVisible,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = if (state.walletBalancesVisible && (balances[wallet.id] ?: 0L) < 0L) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        },
-                        maxLines = 1,
+                        balanceVisible = state.walletBalancesVisible,
+                        singleWallet = visibleWallets.size == 1,
+                        modifier = Modifier.width(cardWidth),
+                        onClick = onOpenWallets,
                     )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun WalletShortcutCard(
+    wallet: WalletEntity,
+    balance: Long,
+    currency: Currency,
+    balanceVisible: Boolean,
+    singleWallet: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
+    MizaniCard(modifier = modifier, onClick = onClick) {
+        if (singleWallet) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                WalletShortcutIdentity(wallet, Modifier.weight(1f))
+                Spacer(Modifier.width(Spacing.md))
+                WalletShortcutBalance(
+                    wallet = wallet,
+                    balance = balance,
+                    currency = currency,
+                    visible = balanceVisible,
+                    horizontalAlignment = Alignment.End,
+                )
+            }
+        } else {
+            WalletShortcutIdentity(wallet)
+            Spacer(Modifier.height(Spacing.md))
+            WalletShortcutBalance(
+                wallet = wallet,
+                balance = balance,
+                currency = currency,
+                visible = balanceVisible,
+                horizontalAlignment = Alignment.Start,
+            )
+        }
+    }
+}
+
+@Composable
+private fun WalletShortcutIdentity(wallet: WalletEntity, modifier: Modifier = Modifier) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        WalletAvatar(wallet.type, wallet.colorHex, size = 38)
+        Spacer(Modifier.width(Spacing.sm))
+        Column(Modifier.weight(1f)) {
+            Text(
+                wallet.name,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (!wallet.name.trim().equals(wallet.type.label, ignoreCase = true)) {
+                Text(
+                    wallet.type.label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun WalletShortcutBalance(
+    wallet: WalletEntity,
+    balance: Long,
+    currency: Currency,
+    visible: Boolean,
+    horizontalAlignment: Alignment.Horizontal,
+) {
+    val label = if (wallet.type == WalletType.DEBT) "Amount owed" else "Balance"
+    Column(horizontalAlignment = horizontalAlignment) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        ProtectedBalanceValue(
+            amountMinor = balance,
+            currency = currency,
+            visible = visible,
+            style = MaterialTheme.typography.titleMedium,
+            color = if (visible && balance < 0L) {
+                MaterialTheme.colorScheme.error
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            },
+            maxLines = 1,
+            amountLabel = label,
+        )
     }
 }
 

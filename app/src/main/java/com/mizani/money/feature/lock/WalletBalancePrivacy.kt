@@ -99,12 +99,17 @@ fun ProtectedBalanceValue(
     style: TextStyle = MaterialTheme.typography.bodyMedium,
     color: Color = MaterialTheme.colorScheme.onSurface,
     maxLines: Int = Int.MAX_VALUE,
+    amountLabel: String = "Balance",
 ) {
     val formatted = if (visible) MoneyFormat.format(amountMinor, currency) else null
     Text(
         text = formatted ?: "••••••",
         modifier = modifier.semantics {
-            contentDescription = if (formatted == null) "Balance hidden" else "Balance $formatted"
+            contentDescription = if (formatted == null) {
+                "$amountLabel hidden"
+            } else {
+                "$amountLabel $formatted"
+            }
         },
         style = style,
         color = color,

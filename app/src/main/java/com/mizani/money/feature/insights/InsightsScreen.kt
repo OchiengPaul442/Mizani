@@ -19,9 +19,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.ExpandLess
-import androidx.compose.material.icons.rounded.ExpandMore
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -46,7 +43,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -70,6 +66,7 @@ import com.mizani.money.ui.components.DateRangePickerDialog
 import com.mizani.money.ui.components.EmptyState
 import com.mizani.money.ui.components.InsightCard
 import com.mizani.money.ui.components.MizaniCard
+import com.mizani.money.ui.components.MizaniAlertDialog
 import com.mizani.money.ui.components.MizaniCashFlowBars
 import com.mizani.money.ui.components.MizaniDonutChart
 import com.mizani.money.ui.components.MizaniTopBar
@@ -501,7 +498,6 @@ private fun MoneyOutlookCard(
 ) {
     val currency = state.currency
     val dailyCost = outlook.averageDailySpendMinor ?: outlook.dailyTargetMinor
-    var showCalculation by rememberSaveable { mutableStateOf(false) }
     MizaniCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -518,6 +514,7 @@ private fun MoneyOutlookCard(
         if (outlook.daysCovered != null) {
             OutlookEstimatePanel(
                 daysCovered = outlook.daysCovered,
+                visible = state.walletBalancesVisible,
                 basis = if (outlook.usesDailyTarget) {
                     "Using your daily target"
                 } else {
@@ -548,7 +545,7 @@ private fun MoneyOutlookCard(
                 label = if (outlook.usesDailyTarget) "Daily target" else "Average per day",
                 amountMinor = dailyCost,
                 currency = currency,
-                visible = state.walletBalancesVisible,
+                visible = outlook.usesDailyTarget || state.walletBalancesVisible,
             )
         }
         if (outlook.shortfallMinor > 0L) {
@@ -564,15 +561,11 @@ private fun MoneyOutlookCard(
                 Text(if (outlook.usesDailyTarget) "Edit daily target" else "Edit fallback target")
             }
         }
-        OutlookCalculationDisclosure(
-            expanded = showCalculation,
-            onToggle = { showCalculation = !showCalculation },
-        )
     }
 }
 
 @Composable
-private fun OutlookEstimatePanel(daysCovered: Long, basis: String) {
+private fun OutlookEstimatePanel(daysCovered: Long, visible: Boolean, basis: String) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.primaryContainer,
@@ -585,7 +578,7 @@ private fun OutlookEstimatePanel(daysCovered: Long, basis: String) {
         ) {
             Text("Estimated coverage", style = MaterialTheme.typography.labelLarge)
             Text(
-                coverageLabel(daysCovered),
+                if (visible) coverageLabel(daysCovered) else "Hidden while balances are hidden",
                 style = MaterialTheme.typography.headlineMedium,
             )
             Text(basis, style = MaterialTheme.typography.bodySmall)
@@ -663,30 +656,6 @@ private fun OutlookPaymentGap(
 }
 
 @Composable
-private fun OutlookCalculationDisclosure(expanded: Boolean, onToggle: () -> Unit) {
-    TextButton(
-        onClick = onToggle,
-        modifier = Modifier
-            .fillMaxWidth()
-            .semantics { stateDescription = if (expanded) "Expanded" else "Collapsed" },
-    ) {
-        Text("How this estimate is calculated")
-        Spacer(Modifier.weight(1f))
-        Icon(
-            imageVector = if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
-            contentDescription = null,
-        )
-    }
-    if (expanded) {
-        Text(
-            "Starts with balances across your active wallets, excluding debt accounts, then subtracts unpaid bills, debt payments and commitments due within 30 days. With 7 observed days and some spending, daily cost comes from recent expenses. Otherwise, a saved daily target is used if you have one. Future income is excluded. Transfers between your wallets do not count as spending; transfer fees do. Spending and payments can change, so use this as a guide.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
 private fun OutlookAmountRow(
     label: String,
     amountMinor: Long,
@@ -712,6 +681,7 @@ private fun OutlookAmountRow(
             style = MaterialTheme.typography.bodyMedium,
             color = contentColor,
             maxLines = 1,
+            amountLabel = label,
         )
     }
 }
@@ -729,11 +699,14 @@ private fun DailyTargetDialog(
     var error by remember { mutableStateOf<String?>(null) }
     var saving by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    AlertDialog(
+    MizaniAlertDialog(
         onDismissRequest = { if (!saving) onDismiss() },
         title = { Text("Daily spending target") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
                 Text("Used when there is not enough recent history for a spending estimate. Leave blank to remove it.")
                 OutlinedTextField(
                     value = amount,
@@ -742,6 +715,7 @@ private fun DailyTargetDialog(
                     singleLine = true,
                     isError = error != null,
                     supportingText = { error?.let { Text(it) } },
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         },

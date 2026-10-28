@@ -26,6 +26,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.BarChart
+import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.MoreHoriz
@@ -87,6 +88,7 @@ private val tabs = listOf(
     Tab("home", "Home", Icons.Rounded.Home),
     Tab("transactions", "Activity", Icons.AutoMirrored.Rounded.ReceiptLong),
     Tab("insights", "Insights", Icons.Rounded.BarChart),
+    Tab("commitments", "Bills", Icons.Rounded.CalendarMonth),
     Tab("more", "More", Icons.Rounded.MoreHoriz),
 )
 
@@ -138,7 +140,8 @@ private fun depthOf(route: String?): Int = when (route) {
     "home" -> 0
     "transactions" -> 1
     "insights" -> 2
-    "more" -> 3
+    "commitments" -> 3
+    "more" -> 4
     null -> -1
     else -> 10
 }
@@ -154,7 +157,7 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
     val currentRoute = backStackEntry?.destination?.route
     val isTopLevel = currentRoute == null || currentRoute in topLevelRoutes
     val hasTransactions = state.snapshot.transactions.any { it.deletedAt == null }
-    val showGlobalAdd = isTopLevel &&
+    val showGlobalAdd = isTopLevel && currentRoute != "commitments" &&
         (hasTransactions || (currentRoute != "home" && currentRoute != "transactions"))
     var showAddSheet by remember { mutableStateOf(false) }
 
@@ -325,7 +328,11 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popEnterTransition = ::navPopEnter,
                 popExitTransition = ::navPopExit,
             ) {
-                CommitmentsScreen(vm = vm, state = state, onBack = ::navigateBack)
+                CommitmentsScreen(
+                    vm = vm,
+                    state = state,
+                    onRecordExpense = { openDetail("add/EXPENSE") },
+                )
             }
             composable(
                 "add/{type}",
