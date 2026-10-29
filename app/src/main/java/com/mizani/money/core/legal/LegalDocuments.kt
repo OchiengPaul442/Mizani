@@ -25,8 +25,8 @@ data class LegalDocument(
 object LegalDocuments {
     const val EFFECTIVE_DATE = "30 October 2026"
     const val PRIVACY_EFFECTIVE_DATE = "30 October 2026"
-    const val TERMS_VERSION = "2026-10-30-1"
-    const val PRIVACY_VERSION = "2026-10-30-1"
+    const val TERMS_VERSION = "2026-10-30-2"
+    const val PRIVACY_VERSION = "2026-10-30-2"
     const val PRIVACY_CONTACT = "paul.ochieng.dev@gmail.com"
     const val PROVIDER_NAME = "Paul Ochieng"
     const val PROVIDER_ADDRESS = "Kampala, Uganda"
@@ -50,9 +50,11 @@ object LegalDocuments {
             )),
             LegalSection("3. What the app provides", listOf(
                 "Mizani is a personal budgeting and record-keeping tool. It helps you organize financial " +
-                    "information that you choose to enter and view summaries on your device. It is not a bank, " +
+                    "information that you choose to enter, including manual investment snapshots, and view " +
+                    "summaries on your device. It is not a bank, " +
                     "payment service, lender, investment adviser, credit-scoring service, accounting service, " +
-                    "or tax service. It does not move, hold, or safeguard money for you.",
+                    "or tax service. It does not move, hold, or safeguard money for you. Investment snapshots " +
+                    "do not connect to providers, place orders, or change wallet balances.",
                 "The app does not provide financial, investment, legal, accounting, or tax advice. Its displays " +
                     "are not a recommendation or a promise that funds will be available. Check important " +
                     "decisions against your own records and appropriate professional advice.",
@@ -133,8 +135,10 @@ object LegalDocuments {
             LegalSection("2. Information stored on your device", listOf(
                 "The information you enter can include wallet names and balances; transaction types, dates, " +
                     "amounts, fees, currencies, payees and notes; budgets and categories; income sources; goals " +
-                    "and contributions; recurring items; and debt records. Free-text names and notes may contain " +
-                    "personal information if you choose to put it there.",
+                    "and contributions; recurring items; debt records; and manual investment records such as a " +
+                    "holding name, provider or location, broad asset category, cost basis, current value, " +
+                    "valuation date and note. Free-text names and notes may contain personal information if " +
+                    "you choose to put it there.",
                 "If you choose to paste or share a supported mobile-money confirmation, Mizani reads its text " +
                     "on this device. The original message is discarded after review; only the transaction you " +
                     "confirm and its provider reference are stored in your ledger.",
@@ -176,8 +180,10 @@ object LegalDocuments {
             )),
             LegalSection("6. Exports and other services", listOf(
                 "CSV exports and Excel workbooks are unencrypted and may expose your financial details to anyone " +
-                    "who can access the file. The workbook includes multiple sheets such as transactions, wallets, " +
-                    "budgets, recurring schedules, goals, debts and commitments. A Mizani backup is encrypted with the " +
+                    "who can access the file. The CSV is a transaction-ledger export; the Excel workbook and " +
+                    "encrypted backup also include manual investment records. The workbook includes multiple sheets " +
+                    "such as transactions, wallets, investments, budgets, recurring schedules, goals, debts and " +
+                    "commitments. A Mizani backup is encrypted with the " +
                     "passphrase you choose. When you save or restore a file, Android’s file picker and any " +
                     "destination service you select may process or store it under their own terms and privacy " +
                     "notice. Mizani cannot delete those external copies for you.",

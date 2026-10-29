@@ -4,11 +4,13 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.mizani.money.core.model.BudgetPeriodType
 import com.mizani.money.core.model.DefaultCategories
+import com.mizani.money.core.model.InvestmentAssetType
 import com.mizani.money.core.model.TransactionType
 import com.mizani.money.core.model.WalletType
 import com.mizani.money.core.time.Periods
 import com.mizani.money.data.repo.BudgetLineInput
 import com.mizani.money.data.repo.CommitmentDraft
+import com.mizani.money.data.repo.InvestmentHoldingDraft
 import com.mizani.money.data.repo.TransactionDraft
 import com.mizani.money.domain.export.BackupException
 import kotlinx.coroutines.flow.first
@@ -71,6 +73,17 @@ class BackupRestoreTest {
         )
         repo.linkExpenseToCommitment(commitmentId, transactionId)
         repo.setOutlookDailyTarget(5_000)
+        repo.saveInvestmentHolding(
+            null,
+            InvestmentHoldingDraft(
+                name = "Treasury fund",
+                provider = "Example provider",
+                assetType = InvestmentAssetType.FUNDS,
+                costBasisMinor = 100_000,
+                currentValueMinor = 105_000,
+                valuationDate = today,
+            ),
+        )
         repo.saveBudget(
             budgetId = null,
             name = "Backup budget",
@@ -95,6 +108,7 @@ class BackupRestoreTest {
         val summary = exporter.inspectBackup(backup, passphrase)
         assertEquals(1, summary.transactionCount)
         assertEquals("UGX", summary.currencyCode)
+        assertEquals(1, summary.investmentCount)
 
         try {
             exporter.inspectBackup(backup, "wrong-passphrase")
@@ -117,6 +131,8 @@ class BackupRestoreTest {
         assertEquals("BACKUP123", restored.transactions.single().sourceReference)
         assertEquals(1, restored.commitments.size)
         assertEquals(1, restored.commitmentPayments.size)
+        assertEquals(1, restored.investments.size)
+        assertEquals("Treasury fund", restored.investments.single().name)
         assertEquals(5_000L, restored.workspace.outlookDailyTargetMinor)
     }
 

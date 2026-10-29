@@ -32,6 +32,9 @@ Mizani is an Android budgeting app designed to work offline. It needs no account
   duplicates, and never reads SMS in the background.
 - **Organize your money.** Use wallets for cash, mobile money and bank accounts; group records by
   category; search and filter activity.
+- **Track investments manually.** Record where a holding is placed, its broad asset category, cost
+  basis and latest value. Investment snapshots stay encrypted on the device, do not connect to
+  providers or place orders, and do not create duplicate ledger activity.
 - **Understand your cash flow.** Review income, spending, category breakdowns, wallet balances and
   trends in Insights. Charts include accessible text summaries.
 - **Check wallets quickly.** Active wallets appear on Home. Their balances stay hidden until you
@@ -75,7 +78,7 @@ See the [brand guide](docs/brand/BRAND_GUIDE.md) and [design system](docs/DESIGN
 
 ## Data and privacy
 
-The ledger is stored locally in a database encrypted with SQLCipher. Its key is protected with
+The ledger and manual investment records are stored locally in a database encrypted with SQLCipher. Its key is protected with
 Android Keystore. Mizani has no user account, cloud sync, advertising or analytics SDK.
 
 Internet access is used when you request a currency rate or check for an app update. Rate requests
@@ -172,7 +175,7 @@ Mizani is a single Android app module with package boundaries:
 | <code>data/local</code> | Room entities and encrypted database                              |
 | <code>data/repo</code>  | Validated data access, preferences and exchange-rate lookup       |
 | <code>domain</code>     | Analytics, CSV/Excel export and encrypted backup                  |
-| <code>feature</code>    | Compose screens for onboarding, Home, Activity, Insights, Bills & commitments and More |
+| <code>feature</code>    | Compose screens for onboarding, Home, Activity, Insights, Bills & commitments, Investments and More |
 | <code>ui</code>         | Navigation, theme and reusable components                         |
 
 Start with the [project structure](docs/PROJECT_STRUCTURE.md) and [architecture

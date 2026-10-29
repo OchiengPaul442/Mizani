@@ -5,6 +5,7 @@ import com.mizani.money.core.model.BudgetPeriodType
 import com.mizani.money.core.model.CategoryType
 import com.mizani.money.core.model.Frequency
 import com.mizani.money.core.model.IncomeSourceKind
+import com.mizani.money.core.model.InvestmentAssetType
 import com.mizani.money.core.model.RecurringType
 import com.mizani.money.core.model.RolloverRule
 import com.mizani.money.core.model.TransactionType
@@ -42,4 +43,8 @@ class Converters {
     @TypeConverter fun incomeKindToString(value: IncomeSourceKind): String = value.name
     @TypeConverter fun stringToIncomeKind(value: String): IncomeSourceKind =
         runCatching { IncomeSourceKind.valueOf(value) }.getOrDefault(IncomeSourceKind.OTHER)
+
+    @TypeConverter fun investmentAssetTypeToString(value: InvestmentAssetType): String = value.name
+    @TypeConverter fun stringToInvestmentAssetType(value: String): InvestmentAssetType =
+        runCatching { InvestmentAssetType.valueOf(value) }.getOrDefault(InvestmentAssetType.OTHER)
 }

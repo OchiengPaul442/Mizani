@@ -16,6 +16,17 @@ enum class WalletType(val label: String) {
     OTHER("Other"),
 }
 
+/** Broad, user-entered investment categories; this app does not execute trades or give advice. */
+enum class InvestmentAssetType(val label: String) {
+    STOCKS("Stocks"),
+    BONDS("Bonds"),
+    FUNDS("Funds"),
+    REAL_ESTATE("Real estate"),
+    BUSINESS("Business"),
+    CASH_EQUIVALENT("Cash equivalent"),
+    OTHER("Other"),
+}
+
 enum class CategoryType(val label: String) {
     EXPENSE("Expense"),
     INCOME("Income"),

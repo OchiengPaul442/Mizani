@@ -13,6 +13,7 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
     entities = [
         WorkspaceEntity::class,
         WalletEntity::class,
+        InvestmentHoldingEntity::class,
         CategoryEntity::class,
         IncomeSourceEntity::class,
         TransactionEntity::class,
@@ -25,13 +26,14 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         CommitmentEntity::class,
         CommitmentPaymentEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
 abstract class MizaniDatabase : RoomDatabase() {
     abstract fun workspaceDao(): WorkspaceDao
     abstract fun walletDao(): WalletDao
+    abstract fun investmentHoldingDao(): InvestmentHoldingDao
     abstract fun categoryDao(): CategoryDao
     abstract fun incomeSourceDao(): IncomeSourceDao
     abstract fun transactionDao(): TransactionDao
@@ -109,11 +111,33 @@ abstract class MizaniDatabase : RoomDatabase() {
             }
         }
 
+        internal val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `investment_holdings` (" +
+                        "`id` TEXT NOT NULL, `name` TEXT NOT NULL, `provider` TEXT NOT NULL, " +
+                        "`assetType` TEXT NOT NULL, `costBasisMinor` INTEGER NOT NULL, " +
+                        "`currentValueMinor` INTEGER NOT NULL, `currencyCode` TEXT NOT NULL, " +
+                        "`valuationDateEpochDay` INTEGER NOT NULL, `note` TEXT NOT NULL, " +
+                        "`archived` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, " +
+                        "`updatedAt` INTEGER NOT NULL, `revision` INTEGER NOT NULL, `deletedAt` INTEGER, " +
+                        "PRIMARY KEY(`id`))",
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_investment_holdings_deletedAt` ON `investment_holdings` (`deletedAt`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_investment_holdings_provider` ON `investment_holdings` (`provider`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_investment_holdings_assetType` ON `investment_holdings` (`assetType`)")
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_investment_holdings_valuationDateEpochDay` " +
+                        "ON `investment_holdings` (`valuationDateEpochDay`)",
+                )
+            }
+        }
+
         fun build(context: Context, passphrase: ByteArray): MizaniDatabase {
             val factory = SupportOpenHelperFactory(passphrase)
             return Room.databaseBuilder(context, MizaniDatabase::class.java, NAME)
                 .openHelperFactory(factory)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .build()
         }
     }

@@ -10,8 +10,8 @@ actions that cannot be performed from the source tree.
 | --- | --- |
 | App | Mizani |
 | Application ID | `com.mizani.money` |
-| Current version | `1.5.1` |
-| Current derived version code | `1005001`; confirm it is greater than the latest Play version code |
+| Current version | `1.6.0` |
+| Current derived version code | `1006000`; confirm it is greater than the latest Play version code |
 | Provider | Paul Ochieng; confirm legal authority to publish |
 | Privacy contact | `paul.ochieng.dev@gmail.com`; confirm it is monitored |
 | Release address | Kampala, Uganda; owner-confirmed release value |
@@ -28,6 +28,7 @@ actions that cannot be performed from the source tree.
 - [x] The app has an in-app local-data deletion flow.
 - [x] The in-app Terms and Privacy Notice now use the supplied provider, email, address, and 30 October 2026 document revisions.
 - [x] Navigation regression fix is covered by unit/build checks and a compiled Android UI regression test.
+- [x] Manual offline investment snapshots are isolated from ledger transactions, protected by the existing value-visibility control, and included in encrypted backups and Excel exports.
 
 ## Mandatory owner actions before upload
 
@@ -42,7 +43,7 @@ actions that cannot be performed from the source tree.
 ### 2. Complete Play Console declarations
 
 - [ ] Register `com.mizani.money` and create the app entry.
-- [ ] Complete the Financial features declaration for this budgeting/money-management app.
+- [ ] Complete the Financial features declaration for this budgeting and manual investment-record app. Review the exact Play category for portfolio management and do not claim trading, brokerage connectivity, or advice that the app does not provide.
 - [ ] Complete the Data Safety form from the actual release behavior. Review local-only ledger data, exchange-rate currency-code requests, non-Play update checks, and user-selected exports/backups.
 - [ ] Complete the Content rating questionnaire; do not leave the app unrated.
 - [ ] Declare target audience and whether the app contains ads. The source indicates no ads.
@@ -76,7 +77,7 @@ actions that cannot be performed from the source tree.
 - [ ] Install the signed release build on a clean device.
 - [ ] Test an upgrade over the previous signed build.
 - [ ] Test API 24, a current Android device, API 35/36+, ARM64, and a 16 KB page-size environment.
-- [ ] Exercise onboarding, offline startup, expense/income/transfer entry, editing, deletion, import, exports, backup restore, app lock, biometric unlock, reminders, and local-data deletion.
+- [ ] Exercise onboarding, offline startup, expense/income/transfer entry, editing, deletion, import, manual investment create/edit/archive/value masking, exports, backup restore, app lock, biometric unlock, reminders, and local-data deletion.
 - [ ] Exercise TalkBack, large fonts, compact screens, landscape, keyboard/IME flows, and back navigation.
 - [ ] Test the exact Play reviewer journey using disposable data only.
 - [ ] Review the Play pre-launch report and resolve all blocking issues.

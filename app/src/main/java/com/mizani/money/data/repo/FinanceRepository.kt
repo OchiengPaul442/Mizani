@@ -22,6 +22,7 @@ import com.mizani.money.data.local.DebtEntity
 import com.mizani.money.data.local.GoalContributionEntity
 import com.mizani.money.data.local.GoalEntity
 import com.mizani.money.data.local.IncomeSourceEntity
+import com.mizani.money.data.local.InvestmentHoldingEntity
 import com.mizani.money.data.local.MizaniDatabase
 import com.mizani.money.data.local.RecurringRuleEntity
 import com.mizani.money.data.local.TransactionEntity
@@ -38,6 +39,9 @@ import java.time.ZoneId
 
 private const val MAX_COMMITMENT_NAME_LENGTH = 80
 private const val MAX_COMMITMENT_REMINDER_DAYS = 30
+private const val MAX_INVESTMENT_NAME_LENGTH = 80
+private const val MAX_INVESTMENT_PROVIDER_LENGTH = 80
+private const val MAX_INVESTMENT_NOTE_LENGTH = 240
 
 /**
  * The single write boundary for financial data. Every mutation is validated and executed
@@ -48,6 +52,7 @@ class FinanceRepository(private val database: MizaniDatabase) {
 
     private val workspaceDao = database.workspaceDao()
     private val walletDao = database.walletDao()
+    private val investmentHoldingDao = database.investmentHoldingDao()
     private val categoryDao = database.categoryDao()
     private val incomeSourceDao = database.incomeSourceDao()
     private val transactionDao = database.transactionDao()
@@ -62,13 +67,18 @@ class FinanceRepository(private val database: MizaniDatabase) {
 
     val snapshot: Flow<LedgerSnapshot> = combine(
         combine(
-            workspaceDao.observe(),
-            walletDao.observe(),
-            categoryDao.observe(),
-            incomeSourceDao.observe(),
-            transactionDao.observe(),
-        ) { workspace, wallets, categories, sources, transactions ->
-            CorePart(workspace, wallets, categories, sources, transactions)
+            combine(
+                workspaceDao.observe(),
+                walletDao.observe(),
+                categoryDao.observe(),
+                incomeSourceDao.observe(),
+                transactionDao.observe(),
+            ) { workspace, wallets, categories, sources, transactions ->
+                CorePart(workspace, wallets, emptyList(), categories, sources, transactions)
+            },
+            investmentHoldingDao.observe(),
+        ) { core, investments ->
+            core.copy(investments = investments)
         },
         combine(
             budgetDao.observe(),
@@ -90,6 +100,7 @@ class FinanceRepository(private val database: MizaniDatabase) {
         LedgerSnapshot(
             workspace = core.workspace,
             wallets = core.wallets,
+            investments = core.investments,
             categories = core.categories,
             incomeSources = core.incomeSources,
             transactions = core.transactions,
@@ -238,6 +249,65 @@ class FinanceRepository(private val database: MizaniDatabase) {
             }
             require(!used) { "This wallet has transactions. Archive it instead." }
             walletDao.softDelete(id, System.currentTimeMillis())
+        }
+    }
+
+    // -------------------------------------------------------- investments
+
+    suspend fun saveInvestmentHolding(id: String?, draft: InvestmentHoldingDraft): String =
+        database.withTransaction {
+            val workspace = workspaceDao.get() ?: error("No workspace")
+            val existing = id?.let { investmentHoldingDao.getById(it) }
+            if (id != null) require(existing != null) { "Investment not found" }
+            val name = draft.name.trim()
+            val provider = draft.provider.trim()
+            val note = draft.note.trim()
+            require(name.isNotBlank()) { "Give this investment a name" }
+            require(name.length <= MAX_INVESTMENT_NAME_LENGTH) { "Investment name is too long" }
+            require(provider.isNotBlank()) { "Enter where this investment is held" }
+            require(provider.length <= MAX_INVESTMENT_PROVIDER_LENGTH) { "Provider name is too long" }
+            require(note.length <= MAX_INVESTMENT_NOTE_LENGTH) { "Investment note is too long" }
+            require(draft.costBasisMinor in 1L..MoneyLimits.MAX_MINOR_AMOUNT) {
+                "Cost basis must be greater than zero"
+            }
+            require(draft.currentValueMinor in 0L..MoneyLimits.MAX_MINOR_AMOUNT) {
+                "Current value is outside the supported range"
+            }
+            require(!draft.valuationDate.isAfter(LocalDate.now())) {
+                "Valuation date cannot be in the future"
+            }
+            val now = System.currentTimeMillis()
+            val entity = InvestmentHoldingEntity(
+                id = existing?.id ?: id ?: Ids.newId(),
+                name = name,
+                provider = provider,
+                assetType = draft.assetType,
+                costBasisMinor = draft.costBasisMinor,
+                currentValueMinor = draft.currentValueMinor,
+                currencyCode = workspace.currencyCode,
+                valuationDateEpochDay = draft.valuationDate.toEpochDay(),
+                note = note,
+                archived = existing?.archived ?: false,
+                createdAt = existing?.createdAt ?: now,
+                updatedAt = now,
+                revision = (existing?.revision ?: 0L) + 1L,
+                deletedAt = existing?.deletedAt,
+            )
+            investmentHoldingDao.upsert(entity)
+            entity.id
+        }
+
+    suspend fun setInvestmentHoldingArchived(id: String, archived: Boolean) {
+        database.withTransaction {
+            require(investmentHoldingDao.getById(id) != null) { "Investment not found" }
+            investmentHoldingDao.setArchived(id, archived, System.currentTimeMillis())
+        }
+    }
+
+    suspend fun deleteInvestmentHolding(id: String) {
+        database.withTransaction {
+            require(investmentHoldingDao.getById(id) != null) { "Investment not found" }
+            investmentHoldingDao.softDelete(id, System.currentTimeMillis())
         }
     }
 
@@ -1005,6 +1075,7 @@ class FinanceRepository(private val database: MizaniDatabase) {
         RestoreBundle(
             workspace = workspace,
             wallets = walletDao.getAll(),
+            investments = investmentHoldingDao.getAll(),
             categories = categoryDao.getAll(),
             incomeSources = incomeSourceDao.getAll(),
             transactions = transactionDao.getAll(),
@@ -1024,6 +1095,7 @@ class FinanceRepository(private val database: MizaniDatabase) {
         database.withTransaction {
             commitmentPaymentDao.clear()
             commitmentDao.clear()
+            investmentHoldingDao.clear()
             transactionDao.clear()
             contributionDao.clear()
             budgetLineDao.clear()
@@ -1040,6 +1112,7 @@ class FinanceRepository(private val database: MizaniDatabase) {
             bundle.categories.forEach { categoryDao.upsert(it) }
             bundle.incomeSources.forEach { incomeSourceDao.upsert(it) }
             bundle.wallets.forEach { walletDao.upsert(it) }
+            bundle.investments.forEach { investmentHoldingDao.upsert(it) }
             bundle.transactions.forEach { transactionDao.upsert(it) }
             bundle.budgets.forEach { budgetDao.upsert(it) }
             bundle.budgetLines.forEach { budgetLineDao.upsertAll(listOf(it)) }
@@ -1065,6 +1138,7 @@ class FinanceRepository(private val database: MizaniDatabase) {
         database.withTransaction {
             commitmentPaymentDao.clear()
             commitmentDao.clear()
+            investmentHoldingDao.clear()
             transactionDao.clear()
             contributionDao.clear()
             budgetLineDao.clear()

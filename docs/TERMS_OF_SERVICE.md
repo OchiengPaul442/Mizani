@@ -1,6 +1,6 @@
 # Mizani Terms of Service
 
-**Version:** 2026-10-30-1
+**Version:** 2026-10-30-2
 **Effective:** 30 October 2026
 **Provider:** Paul Ochieng
 **Address:** Kampala, Uganda
@@ -18,7 +18,7 @@ You must be able to enter a binding agreement under the law where you live. If y
 
 ## 3. What the app provides
 
-Mizani is a personal budgeting and record-keeping tool. It helps you organize financial information that you choose to enter and view summaries on your device. It is not a bank, payment service, lender, investment adviser, credit-scoring service, accounting service, or tax service. It does not move, hold, or safeguard money for you.
+Mizani is a personal budgeting and record-keeping tool. It helps you organize financial information that you choose to enter, including manual investment snapshots, and view summaries on your device. It is not a bank, payment service, lender, investment adviser, credit-scoring service, accounting service, or tax service. It does not move, hold, or safeguard money for you. Investment snapshots do not connect to providers, place orders, or change wallet balances.
 
 The app does not provide financial, investment, legal, accounting, or tax advice. Its displays are not a recommendation or a promise that funds will be available. Check important decisions against your own records and appropriate professional advice.
 
@@ -44,7 +44,7 @@ You are responsible for the accuracy and lawful use of information you enter, fo
 
 ## 7. Exports and backups
 
-A CSV export and an Excel workbook are human-readable and are not encrypted. The workbook contains multiple sheets of your financial records for analysis. A Mizani backup is encrypted with the passphrase you choose; if you lose that passphrase, the backup cannot be restored. Files you save outside Mizani may be copied, backed up, or processed by the destination service under its own terms. The app cannot remove copies outside its private storage.
+A CSV export and an Excel workbook are human-readable and are not encrypted. The CSV contains transaction-ledger records; the workbook and encrypted backup also contain manual investment snapshots. Files you save outside Mizani may be copied, backed up, or processed by the destination service under its own terms. The app cannot remove copies outside its private storage. A Mizani backup is encrypted with the passphrase you choose; if you lose that passphrase, the backup cannot be restored.
 
 Automatic device backup is disabled. Deleting all local data cannot be undone without a backup. Uninstalling Mizani can permanently remove your records. Export a backup first if you want to keep a copy.
 

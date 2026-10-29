@@ -153,6 +153,45 @@ Doze, OEM battery restrictions, reboot and timezone changes remains physical-dev
 9. Repeat the 10,000-row stress scenario at 50,000+ rows on representative low-end physical devices
    before making a hard capacity claim; the current automated gate covers 10,000 rows on the API 36.1
    emulator.
+### Investment tracking validation (2026-10-30)
+
+The manual investment snapshot feature was added as Room schema version 5 with a forward-only
+4→5 migration. The focused JVM suite and Android test-source compilation passed after the feature,
+backup, legal, and migration changes:
+
+```powershell
+.\gradlew.bat :app:testDebugUnitTest :app:compileDebugAndroidTestKotlin --no-daemon
+```
+
+The checked-in Room schema is `app/schemas/com.mizani.money.data.local.MizaniDatabase/5.json`.
+The repository now includes unit coverage for active/archive filtering, zero-value holdings,
+checked aggregate arithmetic, a real encrypted repository investment invariant test, backup summary
+and restore assertions, and a v4→v5 migration test. The migration, repository, investment UI,
+navigation, reminder, backup, privacy, and performance instrumentation tests were run on the
+disposable `Medium_Phone_API_36.1` emulator (API 36, x86_64): 30 tests passed with zero failures,
+errors, or skips. The 100-scenario matrix is tracked in `docs/INVESTMENT_QA_MATRIX.md`; manual
+physical-device and Play Console rows remain release-owner gates.
+
+### Reminder time validation (2026-10-30)
+
+Reminder times are stored as minute-of-day values and scheduled against the device's current local
+`ZonedDateTime`. The Settings picker and summary now use an explicit locale-aware 12-hour display,
+including `12:00 AM` and `12:00 PM`, while the worker compares the full scheduled instant so a
+worker that runs just before the selected minute does not wait for the retry backoff window. System
+time, date, and timezone changes continue to invalidate and rebuild the pending schedule.
+
+Verified with:
+
+```powershell
+.\gradlew.bat :app:testDebugUnitTest :app:compileDebugAndroidTestKotlin --no-daemon
+.\gradlew.bat :app:connectedDebugAndroidTest --no-daemon
+.\gradlew.bat :app:assembleDebug :app:lintRelease :app:bundleRelease --no-daemon
+```
+
+The release lint/build completed successfully. Android background scheduling remains best-effort:
+Doze, OEM restrictions, and battery saving can delay a notification. The app intentionally does
+not request exact-alarm access for a non-critical budgeting reminder.
+
 ## Scope and data compatibility
 
 The active app flow includes Home, Activity, Insights, wallets, categories, data export, user-reviewed

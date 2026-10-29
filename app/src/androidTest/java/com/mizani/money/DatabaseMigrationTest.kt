@@ -117,6 +117,40 @@ class DatabaseMigrationTest {
         }
     }
 
+    @Test
+    fun version4ToVersion5AddsInvestmentsWithoutChangingExistingLedgerRows() {
+        helper.createDatabase(DATABASE_V4, 4).apply {
+            seedWorkspaceAndWallet("v4")
+            execSQL(
+                "INSERT INTO transactions (id,type,amountMinor,feeMinor,currencyCode,walletId,toWalletId," +
+                    "categoryId,feeCategoryId,incomeSourceId,linkedTransactionId,note,payee,localDateEpochDay," +
+                    "occurredAt,createdAt,updatedAt,revision,deletedAt,sourceAmountMinor,sourceFeeMinor," +
+                    "sourceCurrencyCode,exchangeRate,exchangeRateDate,sourceProvider,sourceReference) VALUES " +
+                    "('txn-v4','EXPENSE',75000,250,'UGX','wallet-v4',NULL,NULL,NULL,NULL,NULL,'old','market'," +
+                    "20000,1,1,1,1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)",
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(DATABASE_V4, 5, true, MizaniDatabase.MIGRATION_4_5).use { database ->
+            database.query("SELECT amountMinor, feeMinor FROM transactions WHERE id = 'txn-v4'").use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(75_000L, cursor.getLong(0))
+                assertEquals(250L, cursor.getLong(1))
+            }
+            database.query("SELECT COUNT(*) FROM investment_holdings").use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(0, cursor.getInt(0))
+            }
+            database.query(
+                "SELECT name FROM sqlite_master WHERE type = 'index' " +
+                    "AND name = 'index_investment_holdings_provider'",
+            ).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+            }
+        }
+    }
+
     private fun SupportSQLiteDatabase.seedWorkspaceAndWallet(suffix: String, currency: String = "UGX") {
         execSQL(
             "INSERT INTO workspace (id,name,countryCode,currencyCode,createdAt,updatedAt,revision,deletedAt) " +
@@ -133,5 +167,6 @@ class DatabaseMigrationTest {
         const val DATABASE_V1 = "mizani_migration_v1_test.db"
         const val DATABASE_V2 = "mizani_migration_v2_test.db"
         const val DATABASE_V3 = "mizani_migration_v3_test.db"
+        const val DATABASE_V4 = "mizani_migration_v4_test.db"
     }
 }

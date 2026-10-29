@@ -5,6 +5,7 @@ import org.junit.Test
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
+import java.util.Locale
 
 class DailyReminderScheduleTest {
 
@@ -40,5 +41,26 @@ class DailyReminderScheduleTest {
 
         assertEquals(LocalTime.of(3, 30), next.toLocalTime())
         assertEquals(zone, next.zone)
+    }
+
+    @Test
+    fun reminderDisplayMakesAmAndPmExplicit() {
+        assertEquals("12:00 AM", DailyReminderSchedule.formatForDisplay(0, Locale.US))
+        assertEquals("12:00 PM", DailyReminderSchedule.formatForDisplay(12 * 60, Locale.US))
+        assertEquals("8:00 PM", DailyReminderSchedule.formatForDisplay(20 * 60, Locale.US))
+    }
+
+    @Test
+    fun occurrenceOnUsesTheRequestedLocalZoneAndMinute() {
+        val zone = ZoneId.of("Africa/Kampala")
+
+        val occurrence = DailyReminderSchedule.occurrenceOn(
+            ZonedDateTime.of(2026, 10, 26, 0, 0, 0, 0, zone).toLocalDate().toEpochDay(),
+            20 * 60,
+            zone,
+        )
+
+        assertEquals(zone, occurrence.zone)
+        assertEquals(LocalTime.of(20, 0), occurrence.toLocalTime())
     }
 }

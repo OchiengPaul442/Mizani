@@ -6,7 +6,6 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings as AndroidSettings
-import android.text.format.DateFormat
 import android.app.TimePickerDialog
 import android.graphics.Color as AndroidColor
 import android.view.WindowManager
@@ -69,6 +68,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -81,6 +81,7 @@ import com.mizani.money.core.model.DarkThemeStyle
 import com.mizani.money.core.model.ThemeMode
 import com.mizani.money.R
 import com.mizani.money.core.time.DateText
+import com.mizani.money.core.time.DailyReminderSchedule
 import com.mizani.money.domain.export.BackupSummary
 import com.mizani.money.domain.export.BackupFileReader
 import com.mizani.money.feature.lock.PinSetupDialog
@@ -108,7 +109,6 @@ import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.time.Instant
 import java.time.ZoneId
-import java.util.Calendar
 import java.util.Locale
 
 private enum class SensitiveDataAction(val description: String) {
@@ -125,6 +125,7 @@ fun SettingsScreen(
     dataToolsOnly: Boolean = false,
 ) {
     val context = LocalContext.current
+    val locale = LocalConfiguration.current.locales[0]
     val scope = rememberCoroutineScope()
     val settings = state.settings
     val reminderScheduleError = stringResource(R.string.settings_reminder_schedule_error)
@@ -696,6 +697,7 @@ fun SettingsScreen(
                     )
                     Text("Currency: ${summary.currencyCode}")
                     Text("Wallets: ${summary.walletCount}")
+                    Text("Investments: ${summary.investmentCount}")
                     Text("Categories: ${summary.categoryCount}")
                     Text("Transactions: ${summary.transactionCount}")
                     Text(
@@ -1053,7 +1055,10 @@ fun SettingsScreen(
                 modifier = Modifier.padding(top = Spacing.xs),
             )
             MizaniCard {
-                val reminderTimeLabel = formatReminderTime(context, settings.dailyReminderMinuteOfDay)
+                val reminderTimeLabel = DailyReminderSchedule.formatForDisplay(
+                    settings.dailyReminderMinuteOfDay,
+                    locale,
+                )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(
@@ -1097,7 +1102,7 @@ fun SettingsScreen(
                                     },
                                     settings.dailyReminderMinuteOfDay / 60,
                                     settings.dailyReminderMinuteOfDay % 60,
-                                    DateFormat.is24HourFormat(context),
+                                    false,
                                 ).apply {
                                     window?.setFlags(
                                         WindowManager.LayoutParams.FLAG_SECURE,
@@ -1312,15 +1317,6 @@ private fun normalizedPickerHex(value: String): String? {
 
 private fun ComposeColor.toHexString(): String =
     String.format(Locale.ROOT, "#%06X", 0xFFFFFF and toArgb())
-
-private fun formatReminderTime(context: Context, minuteOfDay: Int): String {
-    val time = Calendar.getInstance().apply {
-        set(Calendar.HOUR_OF_DAY, minuteOfDay / 60)
-        set(Calendar.MINUTE, minuteOfDay % 60)
-        set(Calendar.SECOND, 0)
-    }
-    return DateFormat.getTimeFormat(context).format(time.time)
-}
 
 @Composable
 private fun CountryCurrencyDialog(

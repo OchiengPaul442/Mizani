@@ -36,7 +36,7 @@ com.mizani.money
 │   ├── theme/                     colour, type, shapes, palette tokens
 │   └── components/                reusable Compose primitives (cards, charts, pickers)
 └── feature/
-    ├── onboarding/ home/ transactions/ commitments/ wallets/ categories/
+    ├── onboarding/ home/ transactions/ commitments/ investments/ wallets/ categories/
     ├── insights/ more/ settings/ legal/ lock/
 ```
 

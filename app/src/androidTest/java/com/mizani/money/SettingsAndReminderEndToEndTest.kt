@@ -139,6 +139,11 @@ class SettingsAndReminderEndToEndTest {
         runBlocking {
             app.container.settingsRepository.setDailyReminderMinuteOfDay(0)
         }
+        compose.waitUntil(timeoutMillis = 5_000) {
+            compose.onAllNodesWithText(
+                "At 12:00 AM local time, remind me to review today's money activity if nothing has been recorded.",
+            ).fetchSemanticsNodes().isNotEmpty()
+        }
         val reminderToggle = compose.onNodeWithContentDescription("Daily money check-in")
         reminderToggle.performScrollTo()
         reminderToggle.assertIsOff()

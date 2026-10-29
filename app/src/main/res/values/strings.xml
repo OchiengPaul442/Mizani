@@ -51,9 +51,9 @@
     <!-- Daily reminders -->
     <string name="settings_reminders_title">Reminders</string>
     <string name="settings_daily_reminder_title">Daily money check-in</string>
-    <string name="settings_daily_reminder_description">Around %1$s, remind me to review today\'s money activity if nothing has been recorded.</string>
+    <string name="settings_daily_reminder_description">At %1$s local time, remind me to review today\'s money activity if nothing has been recorded.</string>
     <string name="settings_reminder_time_label">Reminder time</string>
-    <string name="settings_reminder_local_note">Mizani checks your records on this phone. Android may delay alerts when battery saving or background restrictions are active.</string>
+    <string name="settings_reminder_local_note">The time uses this phone\'s current local time zone and is shown with AM or PM. Android may delay alerts when battery saving or background restrictions are active.</string>
     <string name="settings_reminder_permission_denied">Notification permission was declined. Allow notifications to receive reminders.</string>
     <string name="settings_reminder_notifications_disabled">Notifications are turned off for Mizani. Turn them on in Android settings to receive reminders.</string>
     <string name="settings_open_notification_settings">Open notification settings</string>

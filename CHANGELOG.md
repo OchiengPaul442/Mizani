@@ -6,6 +6,23 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-10-30
+
+### Added
+
+- Add offline investment snapshots so users can record a holding's name, provider or location,
+  asset category, cost basis, current manual value, valuation date and note without creating a
+  duplicate ledger transaction.
+- Add protected Investments navigation, archive handling, checked gain/loss summaries, Room
+  migration coverage, encrypted-backup portability and an Investments Excel sheet.
+
+### Changed
+
+- Update the in-app Terms and Privacy Notice to describe local investment records and keep the
+  feature explicitly separate from brokerage connectivity, trading and financial advice.
+- Show reminder times in an explicit locale-aware 12-hour AM/PM format and compare scheduled
+  delivery against the full local wall-clock instant so boundary timing is not delayed by a retry window.
+
 ## [1.5.1] - 2026-10-30
 
 ### Changed

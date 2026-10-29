@@ -4,6 +4,7 @@ import com.mizani.money.core.model.CategoryType
 import com.mizani.money.core.model.TransactionType
 import com.mizani.money.core.importing.ImportIdentifiers
 import com.mizani.money.core.money.MoneyLimits
+import java.time.LocalDate
 
 /**
  * Structural validation for a [RestoreBundle] before it replaces the local ledger.
@@ -16,6 +17,9 @@ internal object BackupValidator {
         require(bundle.wallets.isNotEmpty()) { "Backup has no wallets" }
         require(bundle.wallets.map { it.id }.toSet().size == bundle.wallets.size) {
             "Backup contains duplicate wallet ids"
+        }
+        require(bundle.investments.map { it.id }.toSet().size == bundle.investments.size) {
+            "Backup contains duplicate investment ids"
         }
         require(bundle.categories.map { it.id }.toSet().size == bundle.categories.size) {
             "Backup contains duplicate category ids"
@@ -63,6 +67,25 @@ internal object BackupValidator {
         val workspaceCurrency = bundle.workspace.currencyCode
         bundle.wallets.forEach { wallet ->
             require(wallet.currencyCode == workspaceCurrency) { "Wallet currency does not match the workspace" }
+        }
+        bundle.investments.forEach { investment ->
+            require(investment.currencyCode == workspaceCurrency) {
+                "Investment currency does not match the workspace"
+            }
+            require(investment.name.isNotBlank()) { "Investment has no name" }
+            require(investment.name.length <= 80) { "Investment name is too long" }
+            require(investment.provider.isNotBlank()) { "Investment has no provider" }
+            require(investment.provider.length <= 80) { "Investment provider is too long" }
+            require(investment.note.length <= 240) { "Investment note is too long" }
+            require(investment.costBasisMinor in 1L..MoneyLimits.MAX_MINOR_AMOUNT) {
+                "Investment cost basis is invalid"
+            }
+            require(investment.currentValueMinor in 0L..MoneyLimits.MAX_MINOR_AMOUNT) {
+                "Investment current value is invalid"
+            }
+            require(investment.valuationDateEpochDay <= LocalDate.now().toEpochDay()) {
+                "Investment valuation date cannot be in the future"
+            }
         }
 
         val walletIds = bundle.wallets.map { it.id }.toSet()

@@ -1,6 +1,6 @@
 # Mizani Privacy Notice
 
-**Version:** 2026-10-30-1
+**Version:** 2026-10-30-2
 **Effective:** 30 October 2026
 **Provider:** Paul Ochieng
 **Address:** Kampala, Uganda
@@ -14,7 +14,7 @@ Provider: Paul Ochieng. Address: Kampala, Uganda. Contact: paul.ochieng.dev@gmai
 
 ## 2. Information stored on your device
 
-The information you enter can include wallet names and balances; transaction types, dates, amounts, fees, currencies, payees and notes; budgets and categories; income sources; goals and contributions; recurring items; and debt records. Free-text names and notes may contain personal information if you choose to put it there.
+The information you enter can include wallet names and balances; transaction types, dates, amounts, fees, currencies, payees and notes; budgets and categories; income sources; goals and contributions; recurring items; debt records; and manual investment records such as a holding name, provider or location, broad asset category, cost basis, current value, valuation date and note. Free-text names and notes may contain personal information if you choose to put it there.
 
 If you choose to paste or share a supported mobile-money confirmation, Mizani reads its text on this device. The original message is discarded after review; only the transaction you confirm and its provider reference are stored in your ledger.
 
@@ -44,7 +44,7 @@ Mizani keeps no online copy of your ledger. Local records remain in the app unti
 
 ## 6. Exports and other services
 
-CSV exports and Excel workbooks are unencrypted and may expose your financial details to anyone who can access the file. The workbook includes multiple sheets such as transactions, wallets, budgets, recurring schedules, goals, debts and commitments. Imported transactions may include the provider and reference needed to prevent importing the same confirmation twice. A Mizani backup is encrypted with the passphrase you choose. When you save or restore a file, Android’s file picker and any destination service you select may process or store it under their own terms and privacy notice. Mizani cannot delete those external copies for you.
+CSV exports and Excel workbooks are unencrypted and may expose your financial details to anyone who can access the file. The CSV is a transaction-ledger export; the Excel workbook and encrypted backup also include manual investment records. The workbook includes multiple sheets such as transactions, wallets, investments, budgets, recurring schedules, goals, debts and commitments. Imported transactions may include the provider and reference needed to prevent importing the same confirmation twice. A Mizani backup is encrypted with the passphrase you choose. When you save or restore a file, Android’s file picker and any destination service you select may process or store it under their own terms and privacy notice. Mizani cannot delete those external copies for you.
 
 ## 7. Other services
 

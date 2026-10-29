@@ -50,6 +50,30 @@ interface WalletDao {
 }
 
 @Dao
+interface InvestmentHoldingDao {
+    @Query("SELECT * FROM investment_holdings WHERE deletedAt IS NULL ORDER BY archived, provider, name")
+    fun observe(): Flow<List<InvestmentHoldingEntity>>
+
+    @Query("SELECT * FROM investment_holdings WHERE deletedAt IS NULL ORDER BY archived, provider, name")
+    suspend fun getAll(): List<InvestmentHoldingEntity>
+
+    @Query("SELECT * FROM investment_holdings WHERE id = :id AND deletedAt IS NULL")
+    suspend fun getById(id: String): InvestmentHoldingEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(holding: InvestmentHoldingEntity)
+
+    @Query("UPDATE investment_holdings SET archived = :archived, updatedAt = :now, revision = revision + 1 WHERE id = :id")
+    suspend fun setArchived(id: String, archived: Boolean, now: Long)
+
+    @Query("UPDATE investment_holdings SET deletedAt = :now, updatedAt = :now, revision = revision + 1 WHERE id = :id")
+    suspend fun softDelete(id: String, now: Long)
+
+    @Query("DELETE FROM investment_holdings")
+    suspend fun clear()
+}
+
+@Dao
 interface CategoryDao {
     @Query("SELECT * FROM categories WHERE deletedAt IS NULL ORDER BY sortOrder, name")
     fun observe(): Flow<List<CategoryEntity>>

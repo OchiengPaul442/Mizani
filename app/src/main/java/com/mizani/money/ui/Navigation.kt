@@ -62,6 +62,7 @@ import com.mizani.money.feature.categories.CategoriesScreen
 import com.mizani.money.feature.commitments.CommitmentsScreen
 import com.mizani.money.feature.home.HomeScreen
 import com.mizani.money.feature.insights.InsightsScreen
+import com.mizani.money.feature.investments.InvestmentsScreen
 import com.mizani.money.feature.more.MoreScreen
 import com.mizani.money.feature.settings.AboutScreen
 import com.mizani.money.feature.settings.SettingsScreen
@@ -313,6 +314,20 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
             ) {
                 MoreScreen(
                     onNavigate = ::openDetail,
+                )
+            }
+            composable(
+                "investments",
+                enterTransition = ::navEnter,
+                exitTransition = ::navExit,
+                popEnterTransition = ::navPopEnter,
+                popExitTransition = ::navPopExit,
+            ) {
+                InvestmentsScreen(
+                    vm = vm,
+                    state = state,
+                    onBack = ::navigateBack,
+                    onSetupPin = { openDetail("settings") },
                 )
             }
             composable(

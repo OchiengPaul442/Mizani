@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.mizani.money.MizaniApplication
+import com.mizani.money.core.time.DailyReminderSchedule
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
@@ -51,8 +52,14 @@ class DailyTransactionReminderWorker(
                 return Result.retry()
             }
 
-            val minuteOfDay = now.hour * 60 + now.minute
-            if (minuteOfDay < settings.dailyReminderMinuteOfDay) return Result.retry()
+            val scheduledFor = DailyReminderSchedule.occurrenceOn(
+                targetEpochDay,
+                settings.dailyReminderMinuteOfDay,
+                now.zone,
+            )
+            // Compare the full instant rather than only hour/minute so a worker that runs a few
+            // milliseconds early does not fall into the 15-minute retry backoff window.
+            if (now.isBefore(scheduledFor)) return Result.retry()
 
             if (settings.lastDailyReminderEpochDay != today.toEpochDay()) {
                 DailyReminderNotifications.ensureChannel(applicationContext)

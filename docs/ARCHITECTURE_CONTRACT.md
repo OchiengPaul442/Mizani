@@ -93,7 +93,11 @@ This is an offline-first financial application.
   provider reference exists—for deduplication. Incoming money must be assigned an explicit income
   category during import review because the message cannot prove whether it is salary, a transfer,
   a reimbursement, a loan or a gift.
-- No bank APIs, payment processing, lending, credit scoring, investments or tax advice.
+- Manual investment snapshots are supported for record-keeping only: name, provider/location,
+  broad asset category, cost basis, current manual value, valuation date and note are stored in the
+  encrypted local database. They do not create ledger transactions, alter wallet balances, fetch
+  market prices, connect to providers, execute trades, or provide investment/tax advice. A future
+  trade-history feature must define canonical ledger links and transactionally update both domains.
 - No cloud sync implementation in this build; the UI states this and offers encrypted backup.
 - Single base currency per workspace; expense and income entry may be converted from another
   supported currency using the latest available daily Frankfurter reference rate. Bills and

@@ -2,6 +2,7 @@ package com.mizani.money.data.repo
 
 import com.mizani.money.core.model.Frequency
 import com.mizani.money.core.model.Ids
+import com.mizani.money.core.model.InvestmentAssetType
 import com.mizani.money.core.model.RecurringType
 import com.mizani.money.core.model.RolloverRule
 import com.mizani.money.core.model.TransactionType
@@ -15,6 +16,7 @@ import com.mizani.money.data.local.DebtEntity
 import com.mizani.money.data.local.GoalContributionEntity
 import com.mizani.money.data.local.GoalEntity
 import com.mizani.money.data.local.IncomeSourceEntity
+import com.mizani.money.data.local.InvestmentHoldingEntity
 import com.mizani.money.data.local.RecurringRuleEntity
 import com.mizani.money.data.local.TransactionEntity
 import com.mizani.money.data.local.WalletEntity
@@ -24,6 +26,7 @@ import java.time.LocalDate
 data class LedgerSnapshot(
     val workspace: WorkspaceEntity? = null,
     val wallets: List<WalletEntity> = emptyList(),
+    val investments: List<InvestmentHoldingEntity> = emptyList(),
     val categories: List<CategoryEntity> = emptyList(),
     val incomeSources: List<IncomeSourceEntity> = emptyList(),
     val transactions: List<TransactionEntity> = emptyList(),
@@ -40,6 +43,18 @@ data class LedgerSnapshot(
 
     val activeWallets: List<WalletEntity>
         get() = wallets.filter { !it.archived && it.deletedAt == null }
+
+    val activeInvestments: List<InvestmentHoldingEntity>
+        get() = investments.filter { !it.archived && it.deletedAt == null }
+
+    fun investmentSummary(): InvestmentSummary {
+        val active = activeInvestments
+        return InvestmentSummary(
+            holdingCount = active.size,
+            costBasisMinor = active.sumExact { it.costBasisMinor },
+            currentValueMinor = active.sumExact { it.currentValueMinor },
+        )
+    }
 
     val activeCategories: List<CategoryEntity>
         get() = categories.filter { !it.archived && it.deletedAt == null }
@@ -174,6 +189,18 @@ data class LedgerSnapshot(
     private fun add(map: MutableMap<String, Long>, key: String, delta: Long) {
         map[key] = (map[key] ?: 0L) + delta
     }
+
+    private fun <T> List<T>.sumExact(selector: (T) -> Long): Long =
+        fold(0L) { total, item -> Math.addExact(total, selector(item)) }
+}
+
+data class InvestmentSummary(
+    val holdingCount: Int,
+    val costBasisMinor: Long,
+    val currentValueMinor: Long,
+) {
+    val gainLossMinor: Long
+        get() = Math.subtractExact(currentValueMinor, costBasisMinor)
 }
 
 data class TransactionDraft(
@@ -212,6 +239,16 @@ data class CommitmentDraft(
     val exchangeRateDate: LocalDate? = null,
 )
 
+data class InvestmentHoldingDraft(
+    val name: String,
+    val provider: String,
+    val assetType: InvestmentAssetType,
+    val costBasisMinor: Long,
+    val currentValueMinor: Long,
+    val valuationDate: LocalDate,
+    val note: String = "",
+)
+
 data class CommitmentProgress(
     val commitment: CommitmentEntity,
     val paidMinor: Long,
@@ -246,6 +283,7 @@ data class RecurringDraft(
 data class RestoreBundle(
     val workspace: WorkspaceEntity,
     val wallets: List<WalletEntity>,
+    val investments: List<InvestmentHoldingEntity> = emptyList(),
     val categories: List<CategoryEntity>,
     val incomeSources: List<IncomeSourceEntity>,
     val transactions: List<TransactionEntity>,
@@ -262,6 +300,7 @@ data class RestoreBundle(
 internal data class CorePart(
     val workspace: WorkspaceEntity?,
     val wallets: List<WalletEntity>,
+    val investments: List<InvestmentHoldingEntity>,
     val categories: List<CategoryEntity>,
     val incomeSources: List<IncomeSourceEntity>,
     val transactions: List<TransactionEntity>,

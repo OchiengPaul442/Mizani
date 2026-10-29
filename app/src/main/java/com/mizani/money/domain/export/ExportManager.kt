@@ -5,6 +5,7 @@ import com.mizani.money.core.model.BudgetPeriodType
 import com.mizani.money.core.model.CategoryType
 import com.mizani.money.core.model.Frequency
 import com.mizani.money.core.model.IncomeSourceKind
+import com.mizani.money.core.model.InvestmentAssetType
 import com.mizani.money.core.model.RecurringType
 import com.mizani.money.core.model.RolloverRule
 import com.mizani.money.core.model.TransactionType
@@ -20,6 +21,7 @@ import com.mizani.money.data.local.DebtEntity
 import com.mizani.money.data.local.GoalContributionEntity
 import com.mizani.money.data.local.GoalEntity
 import com.mizani.money.data.local.IncomeSourceEntity
+import com.mizani.money.data.local.InvestmentHoldingEntity
 import com.mizani.money.data.local.RecurringRuleEntity
 import com.mizani.money.data.local.TransactionEntity
 import com.mizani.money.data.local.WalletEntity
@@ -42,6 +44,7 @@ data class BackupSummary(
     val createdAt: Long,
     val currencyCode: String,
     val walletCount: Int,
+    val investmentCount: Int,
     val transactionCount: Int,
     val categoryCount: Int,
     val firstDate: LocalDate?,
@@ -130,6 +133,7 @@ class ExportManager(
                     listOf(ExcelCell.Text("Transactions"), ExcelCell.Number(snapshot.transactions.size.toString())),
                     listOf(ExcelCell.Text("Recurring schedules"), ExcelCell.Number(snapshot.recurring.size.toString())),
                     listOf(ExcelCell.Text("Wallets"), ExcelCell.Number(snapshot.wallets.size.toString())),
+                    listOf(ExcelCell.Text("Investments"), ExcelCell.Number(snapshot.activeInvestments.size.toString())),
                     listOf(ExcelCell.Text("Budgets"), ExcelCell.Number(snapshot.budgets.size.toString())),
                     listOf(
                         ExcelCell.Text("How to read this workbook"),
@@ -211,6 +215,22 @@ class ExportManager(
                         money(wallet.openingBalanceMinor, wallet.currencyCode), text(wallet.currencyCode),
                         text(wallet.colorHex), text(wallet.icon), number(wallet.sortOrder),
                         text(if (wallet.archived) "Yes" else "No"), timestamp(wallet.deletedAt),
+                    )
+                },
+            ),
+            ExcelSheet(
+                name = "Investments",
+                headers = listOf(
+                    "ID", "Name", "Provider / where held", "Asset type", "Cost basis", "Current value",
+                    "Currency", "Valuation date", "Note", "Archived", "Deleted at",
+                ),
+                rows = snapshot.investments.sortedWith(compareBy<InvestmentHoldingEntity> { it.archived }.thenBy { it.provider }.thenBy { it.name }).map { investment ->
+                    listOf(
+                        text(investment.id), text(investment.name), text(investment.provider),
+                        text(investment.assetType.label), money(investment.costBasisMinor, investment.currencyCode),
+                        money(investment.currentValueMinor, investment.currencyCode), text(investment.currencyCode),
+                        date(investment.valuationDateEpochDay), text(investment.note),
+                        text(if (investment.archived) "Yes" else "No"), timestamp(investment.deletedAt),
                     )
                 },
             ),
@@ -363,6 +383,7 @@ class ExportManager(
             createdAt = bundle.workspace.updatedAt,
             currencyCode = bundle.workspace.currencyCode,
             walletCount = bundle.wallets.size,
+            investmentCount = bundle.investments.size,
             transactionCount = transactions.size,
             categoryCount = bundle.categories.size,
             firstDate = transactions.minOfOrNull { it.localDateEpochDay }?.let { LocalDate.ofEpochDay(it) },
@@ -406,6 +427,7 @@ class ExportManager(
         put("createdAt", System.currentTimeMillis())
         put("workspace", encodeWorkspace(bundle.workspace))
         put("wallets", bundle.wallets.map(::encodeWallet).toJsonArray())
+        put("investments", bundle.investments.map(::encodeInvestment).toJsonArray())
         put("categories", bundle.categories.map(::encodeCategory).toJsonArray())
         put("incomeSources", bundle.incomeSources.map(::encodeIncomeSource).toJsonArray())
         put("transactions", bundle.transactions.map(::encodeTransaction).toJsonArray())
@@ -435,6 +457,7 @@ class ExportManager(
         val bundle = RestoreBundle(
             workspace = workspace,
             wallets = root.getJSONArray("wallets").mapObjects(::decodeWallet),
+            investments = root.optJSONArray("investments")?.mapObjects(::decodeInvestment) ?: emptyList(),
             categories = root.getJSONArray("categories").mapObjects(::decodeCategory),
             incomeSources = root.optJSONArray("incomeSources")?.mapObjects(::decodeIncomeSource) ?: emptyList(),
             transactions = root.getJSONArray("transactions").mapObjects(::decodeTransaction),
@@ -504,6 +527,40 @@ class ExportManager(
         colorHex = json.optString("colorHex", "#2F6B5E"),
         icon = json.optString("icon", "wallet"),
         sortOrder = json.optInt("sortOrder"),
+        archived = json.optBoolean("archived"),
+        createdAt = json.optLong("createdAt"),
+        updatedAt = json.optLong("updatedAt"),
+        revision = json.optLong("revision", 1),
+        deletedAt = json.optNullableLong("deletedAt"),
+    )
+
+    private fun encodeInvestment(investment: InvestmentHoldingEntity) = JSONObject().apply {
+        put("id", investment.id)
+        put("name", investment.name)
+        put("provider", investment.provider)
+        put("assetType", investment.assetType.name)
+        put("costBasisMinor", investment.costBasisMinor)
+        put("currentValueMinor", investment.currentValueMinor)
+        put("currencyCode", investment.currencyCode)
+        put("valuationDateEpochDay", investment.valuationDateEpochDay)
+        put("note", investment.note)
+        put("archived", investment.archived)
+        put("createdAt", investment.createdAt)
+        put("updatedAt", investment.updatedAt)
+        put("revision", investment.revision)
+        putNullable("deletedAt", investment.deletedAt)
+    }
+
+    private fun decodeInvestment(json: JSONObject) = InvestmentHoldingEntity(
+        id = json.getString("id"),
+        name = json.optString("name"),
+        provider = json.optString("provider"),
+        assetType = json.enumOrDefault("assetType", InvestmentAssetType.OTHER),
+        costBasisMinor = json.optLong("costBasisMinor"),
+        currentValueMinor = json.optLong("currentValueMinor"),
+        currencyCode = json.optString("currencyCode"),
+        valuationDateEpochDay = json.optLong("valuationDateEpochDay"),
+        note = json.optString("note"),
         archived = json.optBoolean("archived"),
         createdAt = json.optLong("createdAt"),
         updatedAt = json.optLong("updatedAt"),
@@ -878,10 +935,10 @@ class ExportManager(
 
     companion object {
         private const val FORMAT = "mizani-backup"
-        private const val VERSION = 2
+        private const val VERSION = 3
         private const val MAX_BACKUP_RECORDS = 100_000L
         private val RECORD_ARRAY_NAMES = listOf(
-            "wallets", "categories", "incomeSources", "transactions", "budgets", "budgetLines",
+            "wallets", "investments", "categories", "incomeSources", "transactions", "budgets", "budgetLines",
             "goals", "contributions", "recurring", "debts", "commitments", "commitmentPayments",
         )
     }

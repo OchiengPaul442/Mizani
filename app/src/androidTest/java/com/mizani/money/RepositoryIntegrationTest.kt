@@ -6,6 +6,7 @@ import com.mizani.money.core.model.BudgetPeriodType
 import com.mizani.money.core.model.CategoryType
 import com.mizani.money.core.model.DefaultCategories
 import com.mizani.money.core.model.Frequency
+import com.mizani.money.core.model.InvestmentAssetType
 import com.mizani.money.core.model.RecurringType
 import com.mizani.money.core.model.RolloverRule
 import com.mizani.money.core.model.TransactionType
@@ -14,6 +15,7 @@ import com.mizani.money.core.time.DateRange
 import com.mizani.money.core.time.Periods
 import com.mizani.money.data.repo.BudgetLineInput
 import com.mizani.money.data.repo.CommitmentDraft
+import com.mizani.money.data.repo.InvestmentHoldingDraft
 import com.mizani.money.data.repo.RecurringDraft
 import com.mizani.money.data.repo.TransactionDraft
 import com.mizani.money.domain.analytics.AnalyticsEngine
@@ -339,5 +341,53 @@ class RepositoryIntegrationTest {
         repo.restoreTransaction(transactionId)
         assertTrue(repo.snapshot.first().commitmentPayments.isEmpty())
         assertTrue(repo.hasImportedReference("mtn_momo", "ABC-123"))
+    }
+
+    @Test
+    fun investmentSnapshotsDoNotCreateLedgerActivityAndArchiveCleanly() = runBlocking {
+        val app = ApplicationProvider.getApplicationContext<MizaniApplication>()
+        val repo = app.container.financeRepository
+        val today = LocalDate.now()
+        repo.createWorkspace("UG", "UGX", "Cash", WalletType.CASH, 50_000)
+        val before = repo.snapshot.first()
+        val walletId = before.wallets.single().id
+        val investmentId = repo.saveInvestmentHolding(
+            null,
+            InvestmentHoldingDraft(
+                name = "Balanced fund",
+                provider = "Example fund manager",
+                assetType = InvestmentAssetType.FUNDS,
+                costBasisMinor = 20_000,
+                currentValueMinor = 21_500,
+                valuationDate = today,
+                note = "Manual monthly check",
+            ),
+        )
+
+        val saved = repo.snapshot.first()
+        assertEquals(0, saved.transactions.size)
+        assertEquals(50_000L, saved.walletBalances()[walletId])
+        assertEquals(1, saved.activeInvestments.size)
+        assertEquals(1_500L, saved.investmentSummary().gainLossMinor)
+        assertEquals(investmentId, saved.activeInvestments.single().id)
+
+        repo.saveInvestmentHolding(
+            investmentId,
+            InvestmentHoldingDraft(
+                name = "Balanced fund",
+                provider = "Example fund manager",
+                assetType = InvestmentAssetType.FUNDS,
+                costBasisMinor = 20_000,
+                currentValueMinor = 19_000,
+                valuationDate = today,
+            ),
+        )
+        assertEquals(-1_000L, repo.snapshot.first().investmentSummary().gainLossMinor)
+
+        repo.setInvestmentHoldingArchived(investmentId, true)
+        val archived = repo.snapshot.first()
+        assertTrue(archived.activeInvestments.isEmpty())
+        assertEquals(1, archived.investments.size)
+        assertEquals(0, archived.transactions.size)
     }
 }

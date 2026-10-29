@@ -7,6 +7,7 @@ import com.mizani.money.core.model.BudgetPeriodType
 import com.mizani.money.core.model.CategoryType
 import com.mizani.money.core.model.Frequency
 import com.mizani.money.core.model.IncomeSourceKind
+import com.mizani.money.core.model.InvestmentAssetType
 import com.mizani.money.core.model.RecurringType
 import com.mizani.money.core.model.RolloverRule
 import com.mizani.money.core.model.TransactionType
@@ -44,6 +45,32 @@ data class WalletEntity(
     val colorHex: String,
     val icon: String,
     val sortOrder: Int,
+    val archived: Boolean = false,
+    val createdAt: Long,
+    val updatedAt: Long,
+    val revision: Long = 1L,
+    val deletedAt: Long? = null,
+)
+
+/**
+ * A manually maintained snapshot of an investment position. It is intentionally separate from
+ * the cash-flow ledger: recording a holding must never create a second income, expense, or
+ * transfer. Funding can be recorded independently as a transfer between the user's wallets.
+ */
+@Entity(
+    tableName = "investment_holdings",
+    indices = [Index("deletedAt"), Index("provider"), Index("assetType"), Index("valuationDateEpochDay")],
+)
+data class InvestmentHoldingEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val provider: String,
+    val assetType: InvestmentAssetType,
+    val costBasisMinor: Long,
+    val currentValueMinor: Long,
+    val currencyCode: String,
+    val valuationDateEpochDay: Long,
+    val note: String = "",
     val archived: Boolean = false,
     val createdAt: Long,
     val updatedAt: Long,

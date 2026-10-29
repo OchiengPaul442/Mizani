@@ -11,12 +11,14 @@ import com.mizani.money.data.local.DebtEntity
 import com.mizani.money.data.local.GoalContributionEntity
 import com.mizani.money.data.local.GoalEntity
 import com.mizani.money.data.local.IncomeSourceEntity
+import com.mizani.money.data.local.InvestmentHoldingEntity
 import com.mizani.money.data.local.RecurringRuleEntity
 import com.mizani.money.data.local.TransactionEntity
 import com.mizani.money.data.local.WalletEntity
 import com.mizani.money.data.local.WorkspaceEntity
 import com.mizani.money.core.model.BudgetPeriodType
 import com.mizani.money.core.model.IncomeSourceKind
+import com.mizani.money.core.model.InvestmentAssetType
 import com.mizani.money.core.model.RecurringType
 import com.mizani.money.domain.Fixtures
 import org.junit.Assert.assertTrue
@@ -330,6 +332,45 @@ class BackupValidatorTest {
             validBundle().copy(incomeSources = listOf(source, source)),
             "duplicate income source",
         )
+    }
+
+    @Test
+    fun `accepts valid investment holding`() {
+        BackupValidator.validate(
+            validBundle().copy(
+                investments = listOf(
+                    InvestmentHoldingEntity(
+                        id = "i1",
+                        name = "Treasury fund",
+                        provider = "Provider",
+                        assetType = InvestmentAssetType.FUNDS,
+                        costBasisMinor = 100,
+                        currentValueMinor = 125,
+                        currencyCode = currency,
+                        valuationDateEpochDay = LocalDate.now().toEpochDay(),
+                        createdAt = now,
+                        updatedAt = now,
+                    ),
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun `rejects investment with future valuation`() {
+        val investment = InvestmentHoldingEntity(
+            id = "i1",
+            name = "Future fund",
+            provider = "Provider",
+            assetType = InvestmentAssetType.FUNDS,
+            costBasisMinor = 100,
+            currentValueMinor = 125,
+            currencyCode = currency,
+            valuationDateEpochDay = LocalDate.now().plusDays(1).toEpochDay(),
+            createdAt = now,
+            updatedAt = now,
+        )
+        assertRejected(validBundle().copy(investments = listOf(investment)), "future")
     }
 
     private fun assertRejected(bundle: RestoreBundle, expectedPhrase: String) {
