@@ -92,13 +92,25 @@ private val tabs = listOf(
 
 private val topLevelRoutes = tabs.map { it.route }.toSet()
 
-// Keep every route change consistent and restrained: full-screen-width movement caused a visible
-// jump between tabs and made details feel as if they were thrown off screen. Destinations remain
-// opaque during transitions so a quick Back press never exposes the Scaffold background as a gray
-// scrim while the outgoing route is being removed.
+/**
+ * Bottom-bar destinations are peers, not a drill-down stack. Switching between peers should
+ * replace the content immediately: keeping two full screens composed for an animation makes the
+ * previous page visible and delays interaction on slower devices. Nested destinations retain a
+ * restrained slide so hierarchy is still clear when opening a detail screen.
+ */
+internal fun shouldAnimateNavigation(initialRoute: String?, targetRoute: String?): Boolean =
+    initialRoute !in topLevelRoutes || targetRoute !in topLevelRoutes
+
 private fun navEnter(
     scope: androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>,
 ): EnterTransition {
+    if (!shouldAnimateNavigation(
+            initialRoute = scope.initialState.destination.route,
+            targetRoute = scope.targetState.destination.route,
+        )
+    ) {
+        return EnterTransition.None
+    }
     val from = depthOf(scope.initialState.destination.route)
     val to = depthOf(scope.targetState.destination.route)
     val towardsEnd = to >= from
@@ -110,6 +122,13 @@ private fun navEnter(
 private fun navExit(
     scope: androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>,
 ): ExitTransition {
+    if (!shouldAnimateNavigation(
+            initialRoute = scope.initialState.destination.route,
+            targetRoute = scope.targetState.destination.route,
+        )
+    ) {
+        return ExitTransition.None
+    }
     val from = depthOf(scope.initialState.destination.route)
     val to = depthOf(scope.targetState.destination.route)
     val towardsEnd = to >= from
@@ -123,15 +142,33 @@ private fun navExit(
 // slides in from the left and the outgoing one exits to the right.
 private fun navPopEnter(
     scope: androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>,
-): EnterTransition = slideInHorizontally(
-    animationSpec = tween(220, easing = FastOutSlowInEasing),
-) { fullWidth -> -fullWidth / 14 }
+): EnterTransition {
+    if (!shouldAnimateNavigation(
+            initialRoute = scope.initialState.destination.route,
+            targetRoute = scope.targetState.destination.route,
+        )
+    ) {
+        return EnterTransition.None
+    }
+    return slideInHorizontally(
+        animationSpec = tween(220, easing = FastOutSlowInEasing),
+    ) { fullWidth -> -fullWidth / 14 }
+}
 
 private fun navPopExit(
     scope: androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>,
-): ExitTransition = slideOutHorizontally(
-    animationSpec = tween(220, easing = FastOutSlowInEasing),
-) { fullWidth -> fullWidth / 14 }
+): ExitTransition {
+    if (!shouldAnimateNavigation(
+            initialRoute = scope.initialState.destination.route,
+            targetRoute = scope.targetState.destination.route,
+        )
+    ) {
+        return ExitTransition.None
+    }
+    return slideOutHorizontally(
+        animationSpec = tween(220, easing = FastOutSlowInEasing),
+    ) { fullWidth -> fullWidth / 14 }
+}
 
 // Maps a route to an integer depth used to decide slide direction. Bottom tabs use their index;
 // everything else (detail screens) is pushed below the deepest tab so navigating into any detail
