@@ -30,7 +30,9 @@ import com.mizani.money.ui.components.MizaniTopBar
 import com.mizani.money.ui.components.MizaniPicker
 import com.mizani.money.ui.components.PickerOption
 import com.mizani.money.ui.components.Spacing
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun MessageImportScreen(
@@ -106,13 +108,18 @@ fun MessageImportScreen(
                     reading = true
                     error = null
                     scope.launch {
-                        vm.prepareTransactionImport(message, providerHint)
-                            .onSuccess {
-                                message = ""
-                                onReview()
-                            }
-                            .onFailure { error = it.message ?: "Could not read this transaction message." }
-                        reading = false
+                        val result = vm.prepareTransactionImport(message, providerHint)
+                        // Room may resume the suspend call on its transaction executor. Return to
+                        // the UI dispatcher before mutating Compose state or navigating.
+                        withContext(Dispatchers.Main.immediate) {
+                            result
+                                .onSuccess {
+                                    message = ""
+                                    onReview()
+                                }
+                                .onFailure { error = it.message ?: "Could not read this transaction message." }
+                            reading = false
+                        }
                     }
                 },
                 enabled = message.isNotBlank() && !reading,

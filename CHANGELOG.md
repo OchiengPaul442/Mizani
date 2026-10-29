@@ -6,6 +6,8 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-29
+
 ### Fixed
 
 - Expand offline mobile-money import detection beyond MTN MoMo and Airtel Money to include
@@ -22,6 +24,8 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
 - Support bills and commitments in a currency different from the workspace, saving the daily
   reference rate and converted workspace target so progress, Money Outlook, exports, and backups
   remain consistent.
+- Stabilize the reviewed-import handoff by returning background parsing results to the main UI
+  thread before updating Compose state or navigating.
 
 ### Changed
 
@@ -34,6 +38,8 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
   appearance, with regression coverage for Wallets and Categories navigation.
 - Improve reminder wording, explain Android background-delivery limits, and add a test-notification
   action so users can verify permission and channel delivery immediately.
+- Improve commitment-card spacing so payment summaries, progress details, and payment guidance are
+  easier to scan without lines appearing crowded or touching.
 
 ## [1.4.0] - 2026-10-28
 
