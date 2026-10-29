@@ -23,14 +23,13 @@ data class LegalDocument(
  * accept the revised document once before opening their ledger.
  */
 object LegalDocuments {
-    const val EFFECTIVE_DATE = "28 October 2026"
-    const val PRIVACY_EFFECTIVE_DATE = "28 October 2026"
-    const val TERMS_VERSION = "2026-10-28-4"
-    const val PRIVACY_VERSION = "2026-10-28-3"
+    const val EFFECTIVE_DATE = "30 October 2026"
+    const val PRIVACY_EFFECTIVE_DATE = "30 October 2026"
+    const val TERMS_VERSION = "2026-10-30-1"
+    const val PRIVACY_VERSION = "2026-10-30-1"
     const val PRIVACY_CONTACT = "paul.ochieng.dev@gmail.com"
     const val PROVIDER_NAME = "Paul Ochieng"
-    const val PROVIDER_ADDRESS_DRAFT =
-        "Kampala, Uganda (provisional; full physical or postal address required before public release)"
+    const val PROVIDER_ADDRESS = "Kampala, Uganda"
 
     val terms = LegalDocument(
         id = LegalDocumentId.TERMS,
@@ -43,7 +42,7 @@ object LegalDocuments {
                 "Read them before proceeding.",
         sections = listOf(
             LegalSection("1. Provider and contact", listOf(
-                "Provider: $PROVIDER_NAME. Address: $PROVIDER_ADDRESS_DRAFT. Contact: $PRIVACY_CONTACT.",
+                "Provider: $PROVIDER_NAME. Address: $PROVIDER_ADDRESS. Contact: $PRIVACY_CONTACT.",
             )),
             LegalSection("2. Who may use Mizani", listOf(
                 "You must be able to enter a binding agreement under the law where you live. If you are " +
@@ -129,7 +128,7 @@ object LegalDocuments {
             "This Notice explains how Mizani stores your information and the choices you have.",
         sections = listOf(
             LegalSection("1. Who is responsible", listOf(
-                "Provider: $PROVIDER_NAME. Address: $PROVIDER_ADDRESS_DRAFT. Contact: $PRIVACY_CONTACT.",
+                "Provider: $PROVIDER_NAME. Address: $PROVIDER_ADDRESS. Contact: $PRIVACY_CONTACT.",
             )),
             LegalSection("2. Information stored on your device", listOf(
                 "The information you enter can include wallet names and balances; transaction types, dates, " +

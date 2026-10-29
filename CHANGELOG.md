@@ -6,6 +6,14 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-10-30
+
+### Changed
+
+- Update the in-app Terms and Privacy Notice provider details to Paul Ochieng, the supplied
+  `paul.ochieng.dev@gmail.com` contact, and Kampala, Uganda; the legal documents now require
+  renewed acceptance at their 30 October 2026 revisions.
+
 ### Fixed
 
 - Make all application route changes immediate so the previous page is not composited behind the

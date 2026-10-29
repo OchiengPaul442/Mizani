@@ -158,7 +158,9 @@ Set <code>mizaniVersionName</code> in <code>gradle.properties</code> using
 build is unsigned unless all four <code>MIZANI*RELEASE*\*</code> signing properties are configured.
 Keep signing credentials outside the repository. See [security guidance](docs/SECURITY.md) before
 preparing a release. Track pending changes in the [changelog](CHANGELOG.md); during release
-preparation, move them into a dated section matching the Gradle version.
+preparation, move them into a dated section matching the Gradle version. Use the [Play Store
+release checklist](docs/PLAY_STORE_RELEASE_CHECKLIST.md) for the account, legal, signing, QA,
+listing, and staged-rollout gates.
 
 ## Project structure
 

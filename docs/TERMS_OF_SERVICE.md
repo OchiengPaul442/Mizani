@@ -1,16 +1,16 @@
 # Mizani Terms of Service
 
-**Version:** 2026-10-28-4
-**Effective:** 28 October 2026
+**Version:** 2026-10-30-1
+**Effective:** 30 October 2026
 **Provider:** Paul Ochieng
-**Address:** Kampala, Uganda (provisional; full physical or postal address required before public release)
+**Address:** Kampala, Uganda
 **Contact:** paul.ochieng.dev@gmail.com
 
 These Terms apply when you install or use Mizani. By tapping **Agree and continue** during setup, or after accepting a new version in the app, you agree to these Terms. Read them before proceeding.
 
 ## 1. Provider and contact
 
-Provider: Paul Ochieng. Address: Kampala, Uganda (provisional; full physical or postal address required before public release). Contact: paul.ochieng.dev@gmail.com.
+Provider: Paul Ochieng. Address: Kampala, Uganda. Contact: paul.ochieng.dev@gmail.com.
 
 ## 2. Who may use Mizani
 
