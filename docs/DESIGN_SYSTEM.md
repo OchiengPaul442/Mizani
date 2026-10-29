@@ -140,8 +140,8 @@ System sans with tabular figures enabled for money. No custom font is bundled (o
 - **Charts**: category donut and six-month cash-flow bars; every chart has a text summary
   and a TalkBack description.
 - **Navigation**: five-tab Material bar (Home, Activity, Insights, Bills, More) and a
-  prominent Add action. Peer-tab switches are immediate so the previous page never shows through;
-  nested screens use a short, consistent slide on a translucent-free surface.
+  prominent Add action. Application route changes are immediate so the previous page never shows
+  through during Back or CTA navigation; onboarding keeps its local page animation.
 
 ## Accessibility
 

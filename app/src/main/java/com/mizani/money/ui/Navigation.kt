@@ -2,9 +2,6 @@ package com.mizani.money.ui
 
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -12,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -39,6 +37,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,7 +53,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import androidx.compose.animation.core.tween
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -75,6 +73,7 @@ import com.mizani.money.core.model.TransactionType
 import com.mizani.money.ui.components.Spacing
 import com.mizani.money.ui.components.mizaniSurfaceBorderColor
 import com.mizani.money.ui.theme.LocalMizaniThemeTokens
+import kotlinx.coroutines.launch
 
 private data class Tab(
     val route: String,
@@ -92,96 +91,21 @@ private val tabs = listOf(
 
 private val topLevelRoutes = tabs.map { it.route }.toSet()
 
-/**
- * Bottom-bar destinations are peers, not a drill-down stack. Switching between peers should
- * replace the content immediately: keeping two full screens composed for an animation makes the
- * previous page visible and delays interaction on slower devices. Nested destinations retain a
- * restrained slide so hierarchy is still clear when opening a detail screen.
- */
-internal fun shouldAnimateNavigation(initialRoute: String?, targetRoute: String?): Boolean =
-    initialRoute !in topLevelRoutes || targetRoute !in topLevelRoutes
-
 private fun navEnter(
     scope: androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>,
-): EnterTransition {
-    if (!shouldAnimateNavigation(
-            initialRoute = scope.initialState.destination.route,
-            targetRoute = scope.targetState.destination.route,
-        )
-    ) {
-        return EnterTransition.None
-    }
-    val from = depthOf(scope.initialState.destination.route)
-    val to = depthOf(scope.targetState.destination.route)
-    val towardsEnd = to >= from
-    return slideInHorizontally(
-        animationSpec = tween(220, easing = FastOutSlowInEasing),
-    ) { fullWidth -> if (towardsEnd) fullWidth / 14 else -fullWidth / 14 }
-}
+): EnterTransition = EnterTransition.None
 
 private fun navExit(
     scope: androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>,
-): ExitTransition {
-    if (!shouldAnimateNavigation(
-            initialRoute = scope.initialState.destination.route,
-            targetRoute = scope.targetState.destination.route,
-        )
-    ) {
-        return ExitTransition.None
-    }
-    val from = depthOf(scope.initialState.destination.route)
-    val to = depthOf(scope.targetState.destination.route)
-    val towardsEnd = to >= from
-    return slideOutHorizontally(
-        animationSpec = tween(220, easing = FastOutSlowInEasing),
-    ) { fullWidth -> if (towardsEnd) -fullWidth / 14 else fullWidth / 14 }
-}
+): ExitTransition = ExitTransition.None
 
-// Pop transitions: backing out of a detail always feels like "going back", regardless of
-// depthOf() tying (e.g. detail -> detail such as Settings -> About). The incoming screen
-// slides in from the left and the outgoing one exits to the right.
 private fun navPopEnter(
     scope: androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>,
-): EnterTransition {
-    if (!shouldAnimateNavigation(
-            initialRoute = scope.initialState.destination.route,
-            targetRoute = scope.targetState.destination.route,
-        )
-    ) {
-        return EnterTransition.None
-    }
-    return slideInHorizontally(
-        animationSpec = tween(220, easing = FastOutSlowInEasing),
-    ) { fullWidth -> -fullWidth / 14 }
-}
+): EnterTransition = EnterTransition.None
 
 private fun navPopExit(
     scope: androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>,
-): ExitTransition {
-    if (!shouldAnimateNavigation(
-            initialRoute = scope.initialState.destination.route,
-            targetRoute = scope.targetState.destination.route,
-        )
-    ) {
-        return ExitTransition.None
-    }
-    return slideOutHorizontally(
-        animationSpec = tween(220, easing = FastOutSlowInEasing),
-    ) { fullWidth -> fullWidth / 14 }
-}
-
-// Maps a route to an integer depth used to decide slide direction. Bottom tabs use their index;
-// everything else (detail screens) is pushed below the deepest tab so navigating into any detail
-// always slides forward, and popping back reverses it.
-private fun depthOf(route: String?): Int = when (route) {
-    "home" -> 0
-    "transactions" -> 1
-    "insights" -> 2
-    "commitments" -> 3
-    "more" -> 4
-    null -> -1
-    else -> 10
-}
+): ExitTransition = ExitTransition.None
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -197,6 +121,8 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
     val showGlobalAdd = isTopLevel && currentRoute != "commitments" &&
         (hasTransactions || (currentRoute != "home" && currentRoute != "transactions"))
     var showAddSheet by remember { mutableStateOf(false) }
+    val addSheetState = rememberModalBottomSheetState()
+    val sheetScope = androidx.compose.runtime.rememberCoroutineScope()
 
     LaunchedEffect(currentRoute) {
         vm.hideWalletBalances()
@@ -232,6 +158,14 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
         showAddSheet = false
         navController.navigate(route) {
             launchSingleTop = true
+        }
+    }
+
+    fun openFromAddSheet(destination: () -> Unit) {
+        sheetScope.launch {
+            addSheetState.hide()
+            showAddSheet = false
+            destination()
         }
     }
 
@@ -317,7 +251,10 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
         NavHost(
             navController = navController,
             startDestination = "home",
-            modifier = Modifier.padding(padding),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(padding),
         ) {
             composable(
                 "home",
@@ -546,7 +483,10 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
     }
 
     if (showAddSheet) {
-        ModalBottomSheet(onDismissRequest = { showAddSheet = false }) {
+        ModalBottomSheet(
+            onDismissRequest = { showAddSheet = false },
+            sheetState = addSheetState,
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -568,21 +508,21 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                     iconTint = tokens.expense,
                     title = "Record expense",
                     supportingText = "Money spent from a wallet",
-                    onClick = { openAdd(TransactionType.EXPENSE) },
+                    onClick = { openFromAddSheet { openAdd(TransactionType.EXPENSE) } },
                 )
                 AddActionButton(
                     icon = Icons.Rounded.ArrowDownward,
                     iconTint = tokens.income,
                     title = "Record income",
                     supportingText = "Money received into a wallet",
-                    onClick = { openAdd(TransactionType.INCOME) },
+                    onClick = { openFromAddSheet { openAdd(TransactionType.INCOME) } },
                 )
                 AddActionButton(
                     icon = Icons.Rounded.SwapHoriz,
                     iconTint = tokens.transfer,
                     title = "Move between wallets",
                     supportingText = "Does not affect income or spending",
-                    onClick = { openAdd(TransactionType.TRANSFER) },
+                    onClick = { openFromAddSheet { openAdd(TransactionType.TRANSFER) } },
                 )
                 AddActionButton(
                     icon = Icons.Rounded.ContentPaste,
@@ -591,7 +531,7 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                     supportingText = "Review an MTN or Airtel confirmation",
                     onClick = {
                         vm.clearPendingImport()
-                        openDetail("import-message")
+                        openFromAddSheet { openDetail("import-message") }
                     },
                 )
             }

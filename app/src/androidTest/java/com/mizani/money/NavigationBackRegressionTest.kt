@@ -15,6 +15,7 @@ import com.mizani.money.core.model.WalletType
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -77,5 +78,23 @@ class NavigationBackRegressionTest {
             compose.onAllNodesWithText("Manage money").fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNode(hasText("Settings") and hasClickAction()).assertExists()
+    }
+
+    @Test
+    fun addExpenseCtaReturnsToHomeWithoutRetainingTheFormRoute() {
+        compose.waitUntil(timeoutMillis = 15_000) {
+            compose.onAllNodesWithText("Home").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        compose.onNodeWithText("Add expense").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithText("New transaction").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        compose.onNodeWithContentDescription("Back").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithText("Add expense").fetchSemanticsNodes().isNotEmpty()
+        }
+        assertTrue(compose.onAllNodesWithText("New transaction").fetchSemanticsNodes().isEmpty())
     }
 }

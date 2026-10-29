@@ -8,8 +8,8 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
 
 ### Fixed
 
-- Make bottom-tab changes immediate so the previous page is not composited behind the destination
-  during a delayed transition; nested detail navigation keeps its short slide for hierarchy.
+- Make all application route changes immediate so the previous page is not composited behind the
+  destination during Back, CTA, or detail navigation; onboarding keeps its local page animation.
 
 ## [1.5.0] - 2026-10-29
 
