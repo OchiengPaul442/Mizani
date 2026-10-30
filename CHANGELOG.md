@@ -6,6 +6,8 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-10-30
+
 ### Added
 
 - Add optional on-device money check-ins for weekly spending, expected income, investment valuation,

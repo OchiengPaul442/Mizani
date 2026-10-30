@@ -12,8 +12,8 @@ The policy-specific evidence review is tracked in [Google Play policy audit](GOO
 | --- | --- |
 | App | Mizani |
 | Application ID | `com.mizani.money` |
-| Current version | `1.6.0` |
-| Current derived version code | `1006000`; confirm it is greater than the latest Play version code |
+| Current version | `1.7.0` |
+| Current derived version code | `1007000`; confirm it is greater than the latest Play version code |
 | Provider | Paul Ochieng; confirm legal authority to publish |
 | Privacy contact | `paul.ochieng.dev@gmail.com`; confirm it is monitored |
 | Release address | Kampala, Uganda; owner-confirmed release value |
