@@ -33,6 +33,11 @@ class SettingsPersistenceTest {
     }
 
     @Test
+    fun newSettingsDefaultToLightTheme() = runBlocking {
+        assertEquals(ThemeMode.LIGHT, app.container.settingsRepository.settings.first().themeMode)
+    }
+
+    @Test
     fun appLockPreferencesAndLegalAcceptanceSurviveRepositoryRecreation() = runBlocking {
         val original = app.container.settingsRepository
         original.completeOnboarding("UG", "UGX")

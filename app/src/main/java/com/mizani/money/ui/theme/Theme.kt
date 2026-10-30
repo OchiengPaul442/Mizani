@@ -261,7 +261,7 @@ val LocalMizaniThemeTokens = staticCompositionLocalOf {
 
 @Composable
 fun MizaniTheme(
-    themeMode: ThemeMode = ThemeMode.SYSTEM,
+    themeMode: ThemeMode = ThemeMode.LIGHT,
     colorTheme: ColorTheme = ColorTheme.MIZANI,
     customAccentColorHex: String? = null,
     darkThemeStyle: DarkThemeStyle = DarkThemeStyle.DEFAULT,

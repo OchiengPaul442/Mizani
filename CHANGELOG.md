@@ -6,6 +6,13 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
 
 ## [Unreleased]
 
+## [1.7.1] - 2026-10-30
+
+### Changed
+
+- Default the app theme to Light instead of following the system appearance; users can still choose
+  Light, Dark or Follow system in Settings.
+
 ## [1.7.0] - 2026-10-30
 
 ### Added

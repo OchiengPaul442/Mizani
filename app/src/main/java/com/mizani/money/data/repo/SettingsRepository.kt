@@ -34,7 +34,7 @@ data class AppSettings(
     val onboardingComplete: Boolean = false,
     val countryCode: String = "UG",
     val currencyCode: String = "UGX",
-    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val themeMode: ThemeMode = ThemeMode.LIGHT,
     val colorTheme: ColorTheme = ColorTheme.MIZANI,
     val customAccentColorHex: String? = null,
     val darkThemeStyle: DarkThemeStyle = DarkThemeStyle.DEFAULT,
@@ -104,8 +104,8 @@ class SettingsRepository(context: Context) {
                 countryCode = preferences[Keys.COUNTRY] ?: "UG",
                 currencyCode = preferences[Keys.CURRENCY] ?: "UGX",
                 themeMode = runCatching {
-                    ThemeMode.valueOf(preferences[Keys.THEME] ?: ThemeMode.SYSTEM.name)
-                }.getOrDefault(ThemeMode.SYSTEM),
+                    ThemeMode.valueOf(preferences[Keys.THEME] ?: ThemeMode.LIGHT.name)
+                }.getOrDefault(ThemeMode.LIGHT),
                 colorTheme = runCatching {
                     ColorTheme.valueOf(preferences[Keys.COLOR_THEME] ?: ColorTheme.MIZANI.name)
                 }.getOrDefault(ColorTheme.MIZANI),
