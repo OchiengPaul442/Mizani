@@ -18,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Feedback
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Shield
 import com.google.android.gms.oss.licenses.v2.OssLicensesMenuActivity
@@ -57,7 +58,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-fun AboutScreen(state: AppUiState, onBack: () -> Unit) {
+fun AboutScreen(
+    state: AppUiState,
+    onBack: () -> Unit,
+    onFeedback: () -> Unit,
+) {
     var legalDocument by rememberSaveable { mutableStateOf<LegalDocumentId?>(null) }
     var showThirdPartyNotices by rememberSaveable { mutableStateOf(false) }
     var isCheckingForUpdate by remember { mutableStateOf(false) }
@@ -160,6 +165,15 @@ fun AboutScreen(state: AppUiState, onBack: () -> Unit) {
                         }
                     }
                 }
+            }
+
+            MizaniSectionCard {
+                MizaniInfoRow(
+                    icon = Icons.Rounded.Feedback,
+                    title = "Send feedback",
+                    subtitle = "Share a suggestion, report a problem or ask a question",
+                    onClick = onFeedback,
+                )
             }
 
             MizaniCard {

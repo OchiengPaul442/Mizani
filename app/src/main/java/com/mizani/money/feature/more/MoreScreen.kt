@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Feedback
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.automirrored.rounded.ShowChart
 import androidx.compose.material.icons.rounded.Settings
@@ -85,6 +86,13 @@ fun MoreScreen(
                     title = "About and privacy",
                     subtitle = "How Mizani stores and protects your records",
                     onClick = { onNavigate("about") },
+                )
+                MizaniSectionDivider()
+                MizaniInfoRow(
+                    icon = Icons.Rounded.Feedback,
+                    title = "Send feedback",
+                    subtitle = "Help improve Mizani",
+                    onClick = { onNavigate("feedback") },
                 )
             }
         }

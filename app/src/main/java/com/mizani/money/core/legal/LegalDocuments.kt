@@ -26,7 +26,7 @@ object LegalDocuments {
     const val EFFECTIVE_DATE = "30 October 2026"
     const val PRIVACY_EFFECTIVE_DATE = "30 October 2026"
     const val TERMS_VERSION = "2026-10-30-2"
-    const val PRIVACY_VERSION = "2026-10-30-2"
+    const val PRIVACY_VERSION = "2026-10-30-3"
     const val PRIVACY_CONTACT = "paul.ochieng.dev@gmail.com"
     const val PROVIDER_NAME = "Paul Ochieng"
     const val PROVIDER_ADDRESS = "Kampala, Uganda"
@@ -153,6 +153,9 @@ object LegalDocuments {
                     "send ledger information off the device.",
                 "Mizani does not require a name, email address, phone number, bank login, or account. Your " +
                     "ledger is not used for advertising or usage tracking.",
+                "If you choose Send feedback, Mizani opens your device's email app with your message addressed " +
+                    "to the Mizani team. The app does not attach ledger records or send the message itself. " +
+                    "Your email provider receives anything you choose to send and controls delivery and spam filtering.",
             )),
             LegalSection("4. Optional requests", listOf(
                 "When you convert a foreign-currency transaction, Mizani sends the two currency codes to " +
@@ -165,6 +168,10 @@ object LegalDocuments {
                     "public release information from GitHub and compares the release version on your device. It " +
                     "does not send your installed version or ledger. GitHub may receive your IP address and request " +
                     "details under its Privacy Statement. You can skip the check.",
+                "When you use Send feedback, the email app you choose may process and retain the message under its " +
+                    "own terms. The feedback message includes the text you write and basic Mizani and Android " +
+                    "version information; it does not include transaction amounts, balances, wallet names, or " +
+                    "backup data unless you put them in the message yourself.",
             )),
             LegalSection("5. Storage, security and retention", listOf(
                 "Your financial records are encrypted and stored on this phone. Device security helps protect " +
@@ -192,7 +199,8 @@ object LegalDocuments {
                 "The provider does not receive or sell an online copy of your ledger, or use it for advertising. " +
                     "External services receive only the information described above or a file you choose to " +
                     "save. The operating system, app marketplace, and network providers may process " +
-                    "technical information under their own terms.",
+                    "technical information under their own terms. Feedback sent through your email provider is " +
+                    "not a copy of the Mizani ledger; avoid including financial details in it.",
             )),
             LegalSection("8. Your choices and privacy rights", listOf(
                 "You can view and correct entries in the app, export your ledger from Settings, and delete local " +

@@ -6,6 +6,17 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
 
 ## [Unreleased]
 
+### Added
+
+- Add an accessible Send feedback flow from More and About & privacy that prepares a privacy-safe
+  message for the official Mizani contact through the user's email app, with clear delivery and
+  sensitive-data guidance.
+
+### Changed
+
+- Update the Privacy Notice to explain the optional feedback email handoff and email-provider
+  processing.
+
 ## [1.6.0] - 2026-10-30
 
 ### Added

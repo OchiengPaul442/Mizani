@@ -65,6 +65,7 @@ import com.mizani.money.feature.insights.InsightsScreen
 import com.mizani.money.feature.investments.InvestmentsScreen
 import com.mizani.money.feature.more.MoreScreen
 import com.mizani.money.feature.settings.AboutScreen
+import com.mizani.money.feature.settings.FeedbackScreen
 import com.mizani.money.feature.settings.SettingsScreen
 import com.mizani.money.feature.transactions.AddTransactionScreen
 import com.mizani.money.feature.transactions.MessageImportScreen
@@ -478,7 +479,20 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popEnterTransition = ::navPopEnter,
                 popExitTransition = ::navPopExit,
             ) {
-                AboutScreen(state = state, onBack = ::navigateBack)
+                AboutScreen(
+                    state = state,
+                    onBack = ::navigateBack,
+                    onFeedback = { openDetail("feedback") },
+                )
+            }
+            composable(
+                "feedback",
+                enterTransition = ::navEnter,
+                exitTransition = ::navExit,
+                popEnterTransition = ::navPopEnter,
+                popExitTransition = ::navPopExit,
+            ) {
+                FeedbackScreen(onBack = ::navigateBack)
             }
             composable(
                 "export",
