@@ -95,7 +95,7 @@ class FeedbackEndToEndTest {
 
         assertEquals(Intent.ACTION_SENDTO, intent.action)
         assertEquals("mailto", intent.data?.scheme)
-        assertEquals(FeedbackComposer.OFFICIAL_EMAIL, intent.data?.schemeSpecificPart)
+        assertEquals("", intent.data?.schemeSpecificPart)
         assertArrayEquals(
             arrayOf(FeedbackComposer.OFFICIAL_EMAIL),
             intent.getStringArrayExtra(Intent.EXTRA_EMAIL),

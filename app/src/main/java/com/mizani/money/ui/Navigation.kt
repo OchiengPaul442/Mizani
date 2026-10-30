@@ -50,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -93,6 +94,8 @@ private val tabs = listOf(
 
 private val topLevelRoutes = tabs.map { it.route }.toSet()
 
+private fun isTopLevelRoute(route: String?): Boolean = route != null && route in topLevelRoutes
+
 private fun navEnter(
     scope: androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>,
 ): EnterTransition = EnterTransition.None
@@ -109,6 +112,22 @@ private fun navPopExit(
     scope: androidx.compose.animation.AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>,
 ): ExitTransition = ExitTransition.None
 
+/**
+ * NavHost keeps the previous entry composed for at least one frame while it settles a route
+ * change. Every destination must therefore paint an opaque, full-size surface; otherwise a
+ * transparent screen root can reveal the previous destination underneath it.
+ */
+@Composable
+private fun MizaniRouteSurface(content: @Composable () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+    ) {
+        content()
+    }
+}
+
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
@@ -118,7 +137,10 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
     val sharedImportNotice by vm.sharedImportNotice.collectAsState()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
-    val isTopLevel = currentRoute == null || currentRoute in topLevelRoutes
+    // The back stack entry is briefly null while NavHost attaches its start destination. Do not
+    // render route-scoped controls during that frame, or the bottom bar/FAB can flash over an
+    // otherwise empty surface on first entry.
+    val isTopLevel = isTopLevelRoute(currentRoute)
     val hasTransactions = state.snapshot.transactions.any { it.deletedAt == null }
     val showGlobalAdd = isTopLevel && currentRoute != "commitments" &&
         (hasTransactions || (currentRoute != "home" && currentRoute != "transactions"))
@@ -255,6 +277,7 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
             startDestination = "home",
             modifier = Modifier
                 .fillMaxSize()
+                .clipToBounds()
                 .background(MaterialTheme.colorScheme.background)
                 .padding(padding),
         ) {
@@ -265,18 +288,20 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popEnterTransition = ::navPopEnter,
                 popExitTransition = ::navPopExit,
             ) {
-                HomeScreen(
-                    vm = vm,
-                    state = state,
-                    onOpenTransactions = { openTopLevel("transactions") },
-                    onEditTransaction = { id -> openDetail("edit/$id") },
-                    onOpenInsights = { openTopLevel("insights") },
-                    onOpenWallets = { openDetail("wallets") },
-                    onSetupPin = { openDetail("settings") },
-                    onAdd = { showAddSheet = true },
-                    onAddIncome = { openAdd(TransactionType.INCOME) },
-                    onAddExpense = { openAdd(TransactionType.EXPENSE) },
-                )
+                MizaniRouteSurface {
+                    HomeScreen(
+                        vm = vm,
+                        state = state,
+                        onOpenTransactions = { openTopLevel("transactions") },
+                        onEditTransaction = { id -> openDetail("edit/$id") },
+                        onOpenInsights = { openTopLevel("insights") },
+                        onOpenWallets = { openDetail("wallets") },
+                        onSetupPin = { openDetail("settings") },
+                        onAdd = { showAddSheet = true },
+                        onAddIncome = { openAdd(TransactionType.INCOME) },
+                        onAddExpense = { openAdd(TransactionType.EXPENSE) },
+                    )
+                }
             }
             composable(
                 "transactions",
@@ -285,12 +310,14 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popEnterTransition = ::navPopEnter,
                 popExitTransition = ::navPopExit,
             ) {
-                TransactionsScreen(
-                    vm = vm,
-                    state = state,
-                    onEdit = { id -> openDetail("edit/$id") },
-                    onAdd = { showAddSheet = true },
-                )
+                MizaniRouteSurface {
+                    TransactionsScreen(
+                        vm = vm,
+                        state = state,
+                        onEdit = { id -> openDetail("edit/$id") },
+                        onAdd = { showAddSheet = true },
+                    )
+                }
             }
             composable(
                 "insights",
@@ -299,12 +326,14 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popEnterTransition = ::navPopEnter,
                 popExitTransition = ::navPopExit,
             ) {
-                InsightsScreen(
-                    vm = vm,
-                    state = state,
-                    onExportData = { openDetail("export") },
-                    onSetupPin = { openDetail("settings") },
-                )
+                MizaniRouteSurface {
+                    InsightsScreen(
+                        vm = vm,
+                        state = state,
+                        onExportData = { openDetail("export") },
+                        onSetupPin = { openDetail("settings") },
+                    )
+                }
             }
             composable(
                 "more",
@@ -313,9 +342,11 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popEnterTransition = ::navPopEnter,
                 popExitTransition = ::navPopExit,
             ) {
-                MoreScreen(
-                    onNavigate = ::openDetail,
-                )
+                MizaniRouteSurface {
+                    MoreScreen(
+                        onNavigate = ::openDetail,
+                    )
+                }
             }
             composable(
                 "investments",
@@ -324,12 +355,14 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popEnterTransition = ::navPopEnter,
                 popExitTransition = ::navPopExit,
             ) {
-                InvestmentsScreen(
-                    vm = vm,
-                    state = state,
-                    onBack = ::navigateBack,
-                    onSetupPin = { openDetail("settings") },
-                )
+                MizaniRouteSurface {
+                    InvestmentsScreen(
+                        vm = vm,
+                        state = state,
+                        onBack = ::navigateBack,
+                        onSetupPin = { openDetail("settings") },
+                    )
+                }
             }
             composable(
                 "commitments",
@@ -338,11 +371,13 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popEnterTransition = ::navPopEnter,
                 popExitTransition = ::navPopExit,
             ) {
-                CommitmentsScreen(
-                    vm = vm,
-                    state = state,
-                    onRecordExpense = { openDetail("add/EXPENSE") },
-                )
+                MizaniRouteSurface {
+                    CommitmentsScreen(
+                        vm = vm,
+                        state = state,
+                        onRecordExpense = { openDetail("add/EXPENSE") },
+                    )
+                }
             }
             composable(
                 "add/{type}",
@@ -353,18 +388,20 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popEnterTransition = { EnterTransition.None },
                 popExitTransition = { ExitTransition.None },
             ) { entry ->
-                val initialType = entry.arguments?.getString("type")
-                    ?.let { runCatching { TransactionType.valueOf(it) }.getOrNull() }
-                    ?.takeIf { it == TransactionType.EXPENSE || it == TransactionType.INCOME || it == TransactionType.TRANSFER }
-                    ?: TransactionType.EXPENSE
-                AddTransactionScreen(
-                    vm = vm,
-                    state = state,
-                    initialTransactionId = null,
-                    initialType = initialType,
-                    onDone = ::navigateBack,
-                    onBack = ::navigateBack,
-                )
+                MizaniRouteSurface {
+                    val initialType = entry.arguments?.getString("type")
+                        ?.let { runCatching { TransactionType.valueOf(it) }.getOrNull() }
+                        ?.takeIf { it == TransactionType.EXPENSE || it == TransactionType.INCOME || it == TransactionType.TRANSFER }
+                        ?: TransactionType.EXPENSE
+                    AddTransactionScreen(
+                        vm = vm,
+                        state = state,
+                        initialTransactionId = null,
+                        initialType = initialType,
+                        onDone = ::navigateBack,
+                        onBack = ::navigateBack,
+                    )
+                }
             }
             composable(
                 "import-message",
@@ -376,15 +413,17 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popEnterTransition = { EnterTransition.None },
                 popExitTransition = { ExitTransition.None },
             ) {
-                MessageImportScreen(
-                    vm = vm,
-                    initialNotice = sharedImportNotice,
-                    onReview = { navController.navigate("import-review") { launchSingleTop = true } },
-                    onBack = {
-                        vm.clearPendingImport()
-                        navigateBack()
-                    },
-                )
+                MizaniRouteSurface {
+                    MessageImportScreen(
+                        vm = vm,
+                        initialNotice = sharedImportNotice,
+                        onReview = { navController.navigate("import-review") { launchSingleTop = true } },
+                        onBack = {
+                            vm.clearPendingImport()
+                            navigateBack()
+                        },
+                    )
+                }
             }
             composable(
                 "import-review",
@@ -393,32 +432,34 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popEnterTransition = { EnterTransition.None },
                 popExitTransition = { ExitTransition.None },
             ) {
-                val candidate = pendingImport
-                if (candidate == null) {
-                    MessageImportScreen(
-                        vm = vm,
-                        initialNotice = "Paste a transaction message to begin.",
-                        onReview = { navController.navigate("import-review") { launchSingleTop = true } },
-                        onBack = ::navigateBack,
-                    )
-                } else {
-                    AddTransactionScreen(
-                        vm = vm,
-                        state = state,
-                        initialTransactionId = null,
-                        initialType = candidate.type,
-                        importCandidate = candidate,
-                        onDone = {
-                            // Saving an import completes the whole flow and returns to Activity,
-                            // rather than leaving the user on the paste screen. Replace the
-                            // detail stack first, then clear the candidate so the review entry is
-                            // removed without a transient re-composition.
-                            finishImportedTransaction()
-                        },
-                        onBack = {
-                            navigateBack()
-                        },
-                    )
+                MizaniRouteSurface {
+                    val candidate = pendingImport
+                    if (candidate == null) {
+                        MessageImportScreen(
+                            vm = vm,
+                            initialNotice = "Paste a transaction message to begin.",
+                            onReview = { navController.navigate("import-review") { launchSingleTop = true } },
+                            onBack = ::navigateBack,
+                        )
+                    } else {
+                        AddTransactionScreen(
+                            vm = vm,
+                            state = state,
+                            initialTransactionId = null,
+                            initialType = candidate.type,
+                            importCandidate = candidate,
+                            onDone = {
+                                // Saving an import completes the whole flow and returns to Activity,
+                                // rather than leaving the user on the paste screen. Replace the
+                                // detail stack first, then clear the candidate so the review entry is
+                                // removed without a transient re-composition.
+                                finishImportedTransaction()
+                            },
+                            onBack = {
+                                navigateBack()
+                            },
+                        )
+                    }
                 }
             }
             composable(
@@ -428,13 +469,15 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popEnterTransition = ::navPopEnter,
                 popExitTransition = ::navPopExit,
             ) { entry ->
-                AddTransactionScreen(
-                    vm = vm,
-                    state = state,
-                    initialTransactionId = entry.arguments?.getString("id"),
-                    onDone = ::navigateBack,
-                    onBack = ::navigateBack,
-                )
+                MizaniRouteSurface {
+                    AddTransactionScreen(
+                        vm = vm,
+                        state = state,
+                        initialTransactionId = entry.arguments?.getString("id"),
+                        onDone = ::navigateBack,
+                        onBack = ::navigateBack,
+                    )
+                }
             }
             composable(
                 "wallets",
@@ -443,12 +486,14 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popEnterTransition = ::navPopEnter,
                 popExitTransition = ::navPopExit,
             ) {
-                WalletsScreen(
-                    vm = vm,
-                    state = state,
-                    onBack = ::navigateBack,
-                    onSetupPin = { openDetail("settings") },
-                )
+                MizaniRouteSurface {
+                    WalletsScreen(
+                        vm = vm,
+                        state = state,
+                        onBack = ::navigateBack,
+                        onSetupPin = { openDetail("settings") },
+                    )
+                }
             }
             composable(
                 "categories",
@@ -457,7 +502,9 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popEnterTransition = ::navPopEnter,
                 popExitTransition = ::navPopExit,
             ) {
-                CategoriesScreen(vm = vm, state = state, onBack = ::navigateBack)
+                MizaniRouteSurface {
+                    CategoriesScreen(vm = vm, state = state, onBack = ::navigateBack)
+                }
             }
             composable(
                 "settings",
@@ -466,11 +513,13 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popEnterTransition = ::navPopEnter,
                 popExitTransition = ::navPopExit,
             ) {
-                SettingsScreen(
-                    vm = vm,
-                    state = state,
-                    onBack = ::navigateBack,
-                )
+                MizaniRouteSurface {
+                    SettingsScreen(
+                        vm = vm,
+                        state = state,
+                        onBack = ::navigateBack,
+                    )
+                }
             }
             composable(
                 "about",
@@ -479,11 +528,13 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popEnterTransition = ::navPopEnter,
                 popExitTransition = ::navPopExit,
             ) {
-                AboutScreen(
-                    state = state,
-                    onBack = ::navigateBack,
-                    onFeedback = { openDetail("feedback") },
-                )
+                MizaniRouteSurface {
+                    AboutScreen(
+                        state = state,
+                        onBack = ::navigateBack,
+                        onFeedback = { openDetail("feedback") },
+                    )
+                }
             }
             composable(
                 "feedback",
@@ -492,7 +543,9 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popEnterTransition = ::navPopEnter,
                 popExitTransition = ::navPopExit,
             ) {
-                FeedbackScreen(onBack = ::navigateBack)
+                MizaniRouteSurface {
+                    FeedbackScreen(onBack = ::navigateBack)
+                }
             }
             composable(
                 "export",
@@ -501,12 +554,14 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                 popEnterTransition = ::navPopEnter,
                 popExitTransition = ::navPopExit,
             ) {
-                SettingsScreen(
-                    vm = vm,
-                    state = state,
-                    onBack = ::navigateBack,
-                    dataToolsOnly = true,
-                )
+                MizaniRouteSurface {
+                    SettingsScreen(
+                        vm = vm,
+                        state = state,
+                        onBack = ::navigateBack,
+                        dataToolsOnly = true,
+                    )
+                }
             }
         }
     }

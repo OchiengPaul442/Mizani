@@ -53,8 +53,9 @@ Mizani is an Android budgeting app designed to work offline. It needs no account
 - **Keep and move your records.** Export transactions to CSV or Excel, or create and restore a
   Mizani backup encrypted with a passphrase. CSV and Excel files are not encrypted.
 - **Get a gentle reminder.** An optional daily local reminder defaults to 8:00 p.m. and can be
-  changed in Settings. Commitment reminders are also local and show no names or amounts on the
-  lock screen.
+  changed in Settings. You can also opt in to local money check-ins for weekly spending, expected
+  income, investment valuation, debt payments and savings goals. Check-ins are frequency-limited,
+  use generic private notification copy, and show no names or amounts on the lock screen.
 - **Protect access.** Use an optional six digit app PIN or biometric unlock.
 
 ## Brand
@@ -79,11 +80,14 @@ See the [brand guide](docs/brand/BRAND_GUIDE.md) and [design system](docs/DESIGN
 ## Data and privacy
 
 The ledger and manual investment records are stored locally in a database encrypted with SQLCipher. Its key is protected with
-Android Keystore. Mizani has no user account, cloud sync, advertising or analytics SDK.
+Android Keystore. Mizani has no user account, cloud sync, advertising or analytics SDK. Money check-ins are calculated on-device
+from the local ledger and do not upload financial data or provide investment or debt advice.
 
 Internet access is used when you request a currency rate or check for an app update. Rate requests
-send currency codes only, not transaction amounts or details. Update checks show the public release
-page; Mizani does not silently download or install updates.
+send currency codes only, not transaction amounts or details. Play-installed builds use Google
+Play's in-app update flow: Play checks availability and Mizani can prompt while the app is active;
+Google Play controls download and installation. Sideloaded builds use the optional public GitHub
+release check and do not silently download or install updates.
 
 Encrypted backups are intended for recovery and moving to another device. CSV and Excel exports are
 readable files, so choose a trusted place to save them. See the [security and recovery

@@ -76,3 +76,9 @@ The Google OSS Licenses Gradle plugin generates an in-app list from resolved
 Maven dependency metadata at build time. Review that list for each release,
 especially for libraries with missing or incomplete POM license metadata. It does
 not replace the asset notices above.
+
+Mizani uses Google Play Core's App Update library (`com.google.android.play:app-update`)
+for Play-installed in-app updates. The library is distributed under the [Play Core
+Software Development Kit Terms of Service](https://developer.android.com/guide/playcore/license),
+and its generated dependency entry is available from **Settings > About & privacy >
+Open-source licenses**.

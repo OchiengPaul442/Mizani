@@ -93,6 +93,7 @@ import com.mizani.money.ui.PIN_RETRY_MESSAGE
 import com.mizani.money.ui.components.MizaniCard
 import com.mizani.money.ui.components.MizaniConfirmDialog
 import com.mizani.money.ui.components.MizaniInfoRow
+import com.mizani.money.ui.components.MizaniInfoButton
 import com.mizani.money.ui.components.MizaniPicker
 import com.mizani.money.ui.components.MizaniSectionCard
 import com.mizani.money.ui.components.MizaniSectionDivider
@@ -134,6 +135,7 @@ fun SettingsScreen(
     val reminderTestSent = stringResource(R.string.settings_reminder_test_sent)
     val reminderTestLabel = stringResource(R.string.settings_send_test_reminder)
     val dailyReminderTitle = stringResource(R.string.settings_daily_reminder_title)
+    val habitNotificationTitle = stringResource(R.string.settings_habit_notifications_title)
 
     var message by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -162,8 +164,10 @@ fun SettingsScreen(
     var checkingBackup by remember { mutableStateOf(false) }
     var restoringBackup by remember { mutableStateOf(false) }
     var reminderStatus by rememberSaveable { mutableStateOf<String?>(null) }
+    var habitStatus by rememberSaveable { mutableStateOf<String?>(null) }
     var showReminderNotificationSettings by rememberSaveable { mutableStateOf(false) }
     var notificationSettingsRevision by remember { mutableStateOf(0) }
+    var pendingNotificationEnable by rememberSaveable { mutableStateOf("daily") }
 
     fun requestSensitiveAction(action: SensitiveDataAction) {
         error = null
@@ -239,14 +243,28 @@ fun SettingsScreen(
                 }
         }
     }
+    val enableHabitNotifications: () -> Unit = {
+        scope.launch {
+            vm.setHabitNotificationsEnabled(true)
+                .onSuccess {
+                    habitStatus = null
+                    showReminderNotificationSettings = false
+                }
+                .onFailure {
+                    habitStatus = reminderScheduleError
+                }
+        }
+    }
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
         notificationSettingsRevision += 1
         if (granted) {
-            enableDailyReminder()
+            if (pendingNotificationEnable == "habit") enableHabitNotifications()
+            else enableDailyReminder()
         } else {
-            reminderStatus = reminderPermissionDenied
+            if (pendingNotificationEnable == "habit") habitStatus = reminderPermissionDenied
+            else reminderStatus = reminderPermissionDenied
             showReminderNotificationSettings = true
         }
     }
@@ -263,6 +281,7 @@ fun SettingsScreen(
         runCatching { context.startActivity(intent) }
     }
     val onDailyReminderChanged: (Boolean) -> Unit = { enabled ->
+        pendingNotificationEnable = "daily"
         reminderStatus = null
         showReminderNotificationSettings = false
         if (!enabled) {
@@ -282,6 +301,30 @@ fun SettingsScreen(
                 showReminderNotificationSettings = true
             } else {
                 enableDailyReminder()
+            }
+        }
+    }
+    val onHabitNotificationsChanged: (Boolean) -> Unit = { enabled ->
+        pendingNotificationEnable = "habit"
+        habitStatus = null
+        showReminderNotificationSettings = false
+        if (!enabled) {
+            scope.launch {
+                vm.setHabitNotificationsEnabled(false)
+                    .onFailure { habitStatus = reminderScheduleError }
+            }
+        } else {
+            DailyReminderNotifications.ensureChannel(context)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+                android.content.pm.PackageManager.PERMISSION_GRANTED
+            ) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else if (!DailyReminderNotifications.canPost(context)) {
+                habitStatus = reminderNotificationsDisabled
+                showReminderNotificationSettings = true
+            } else {
+                enableHabitNotifications()
             }
         }
     }
@@ -721,7 +764,7 @@ fun SettingsScreen(
                         restoringBackup = true
                         scope.launch {
                             try {
-                                vm.exporter.restore(bytes, passphrase)
+                                vm.restoreBackup(bytes, passphrase).getOrThrow()
                                 discardPendingRestore()
                                 message = "Backup restored. Your local ledger was replaced."
                                 error = null
@@ -1043,7 +1086,7 @@ fun SettingsScreen(
                     onClick = { showCountryDialog = true },
                 )
                 Text(
-                    "Country changes suggestions and labels, not your primary currency.",
+                    "Country updates suggestions and labels. Your primary currency is fixed for this workspace and is not changed here.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1154,6 +1197,111 @@ fun SettingsScreen(
                     Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                 }
                 if (showReminderNotificationSettings && !settings.dailyReminderEnabled) {
+                    TextButton(onClick = openReminderNotificationSettings) {
+                        Text(stringResource(R.string.settings_open_notification_settings))
+                    }
+                }
+            }
+
+            MizaniCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.settings_habit_notifications_title),
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                        Text(
+                            stringResource(R.string.settings_habit_notifications_description),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    MizaniInfoButton(
+                        infoTitle = stringResource(R.string.info_personalised_checkins_title),
+                        infoBody = stringResource(R.string.info_personalised_checkins_body),
+                        contentDescription = stringResource(R.string.info_personalised_checkins_title),
+                    )
+                    Switch(
+                        checked = settings.habitNotificationsEnabled,
+                        onCheckedChange = onHabitNotificationsChanged,
+                        modifier = Modifier.semantics {
+                            contentDescription = habitNotificationTitle
+                        },
+                    )
+                }
+                if (settings.habitNotificationsEnabled) {
+                    Spacer(Modifier.height(Spacing.md))
+                    Text(
+                        stringResource(R.string.settings_habit_notifications_choose),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                    Spacer(Modifier.height(Spacing.xs))
+                    HabitNotificationToggle(
+                        title = stringResource(R.string.settings_habit_spending_title),
+                        description = stringResource(R.string.settings_habit_spending_description),
+                        checked = settings.habitSpendingNotificationsEnabled,
+                        onCheckedChange = { enabled ->
+                            scope.launch {
+                                vm.setHabitSpendingNotificationsEnabled(enabled)
+                                    .onFailure { reminderStatus = reminderScheduleError }
+                            }
+                        },
+                    )
+                    HabitNotificationToggle(
+                        title = stringResource(R.string.settings_habit_income_title),
+                        description = stringResource(R.string.settings_habit_income_description),
+                        checked = settings.habitIncomeNotificationsEnabled,
+                        onCheckedChange = { enabled ->
+                            scope.launch {
+                                vm.setHabitIncomeNotificationsEnabled(enabled)
+                                    .onFailure { reminderStatus = reminderScheduleError }
+                            }
+                        },
+                    )
+                    HabitNotificationToggle(
+                        title = stringResource(R.string.settings_habit_investment_title),
+                        description = stringResource(R.string.settings_habit_investment_description),
+                        checked = settings.habitInvestmentNotificationsEnabled,
+                        onCheckedChange = { enabled ->
+                            scope.launch {
+                                vm.setHabitInvestmentNotificationsEnabled(enabled)
+                                    .onFailure { reminderStatus = reminderScheduleError }
+                            }
+                        },
+                    )
+                    HabitNotificationToggle(
+                        title = stringResource(R.string.settings_habit_debt_title),
+                        description = stringResource(R.string.settings_habit_debt_description),
+                        checked = settings.habitDebtNotificationsEnabled,
+                        onCheckedChange = { enabled ->
+                            scope.launch {
+                                vm.setHabitDebtNotificationsEnabled(enabled)
+                                    .onFailure { reminderStatus = reminderScheduleError }
+                            }
+                        },
+                    )
+                    HabitNotificationToggle(
+                        title = stringResource(R.string.settings_habit_goal_title),
+                        description = stringResource(R.string.settings_habit_goal_description),
+                        checked = settings.habitGoalNotificationsEnabled,
+                        onCheckedChange = { enabled ->
+                            scope.launch {
+                                vm.setHabitGoalNotificationsEnabled(enabled)
+                                    .onFailure { reminderStatus = reminderScheduleError }
+                            }
+                        },
+                    )
+                    Spacer(Modifier.height(Spacing.xs))
+                    Text(
+                        stringResource(R.string.settings_habit_notifications_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                habitStatus?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
+                if (habitStatus != null && showReminderNotificationSettings && !settings.habitNotificationsEnabled) {
                     TextButton(onClick = openReminderNotificationSettings) {
                         Text(stringResource(R.string.settings_open_notification_settings))
                     }
@@ -1319,6 +1467,35 @@ private fun ComposeColor.toHexString(): String =
     String.format(Locale.ROOT, "#%06X", 0xFFFFFF and toArgb())
 
 @Composable
+private fun HabitNotificationToggle(
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.semantics { contentDescription = title },
+        )
+    }
+}
+
+@Composable
 private fun CountryCurrencyDialog(
     initialCountry: String,
     workspaceCurrency: String,
@@ -1353,7 +1530,7 @@ private fun CountryCurrencyDialog(
                     )
                 }
                 Text(
-                        "Primary currency is fixed after setup. Export your data before resetting the app to change it.",
+                        "Primary currency is fixed for this workspace. Changing the country updates suggestions and labels only. Mizani cannot currently convert an existing ledger to another primary currency. Export files are for analysis and are not importable; resetting the app deletes local data unless you have a backup.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

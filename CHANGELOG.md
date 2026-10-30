@@ -8,14 +8,33 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
 
 ### Added
 
+- Add optional on-device money check-ins for weekly spending, expected income, investment valuation,
+  debt payments and savings goals. Check-ins use category controls, a single daily notification
+  budget and generic private copy so financial details stay out of notification surfaces.
 - Add an accessible Send feedback flow from More and About & privacy that prepares a privacy-safe
   message for the official Mizani contact through the user's email app, with clear delivery and
   sensitive-data guidance.
 
 ### Changed
 
+- Prevent previous pages from showing through during route changes by giving every navigation
+  destination an opaque, clipped surface and adding a top-level tab regression check.
+- Add concise, accessible in-app help popups for unfamiliar money concepts and clarify primary-currency,
+  conversion-rate, investment, transaction-type, message-import and notification wording.
+- Extend the existing WorkManager reminder schedule to evaluate local habit signals without a
+  network, analytics SDK or new account/backend dependency; update the Privacy Notice and security
+  guidance to document the local processing and descriptive-only behavior.
+- Use Google Play's in-app update flow for Play-installed builds: ordinary releases can download
+  flexibly in the background and high-priority releases can request an immediate update when the
+  app is active. Sideloaded builds retain the manual GitHub release check.
 - Update the Privacy Notice to explain the optional feedback email handoff and email-provider
   processing.
+
+### Fixed
+
+- Ensure feedback emails open with the official recipient, subject and user-entered message
+  populated in compatible email clients.
+- Prevent the bottom navigation and Add control from flashing before the first route is attached.
 
 ## [1.6.0] - 2026-10-30
 

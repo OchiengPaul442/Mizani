@@ -48,6 +48,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.mizani.money.R
 import com.mizani.money.core.model.CategoryType
 import com.mizani.money.core.model.TransactionType
 import com.mizani.money.core.money.CurrencyConversion
@@ -65,6 +67,7 @@ import com.mizani.money.ui.components.DateField
 import com.mizani.money.ui.components.MizaniCard
 import com.mizani.money.ui.components.MizaniAlertDialog
 import com.mizani.money.ui.components.MizaniConfirmDialog
+import com.mizani.money.ui.components.MizaniInfoButton
 import com.mizani.money.ui.components.MizaniPicker
 import com.mizani.money.ui.components.MizaniTopBar
 import com.mizani.money.ui.components.PickerOption
@@ -410,11 +413,19 @@ private fun CommitmentCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (commitment.currencyCode != workspaceCurrency.code) {
-                Text(
-                    "Target saved at 1 ${commitment.currencyCode} = ${MoneyFormat.formatBare(commitment.targetWorkspaceMinor, workspaceCurrency)} ${workspaceCurrency.code} · ${commitment.exchangeRateDate ?: "reference rate"}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Converted planning target: ${MoneyFormat.format(commitment.targetWorkspaceMinor, workspaceCurrency)} · rate ${commitment.exchangeRate ?: "not saved"} · ${commitment.exchangeRateDate ?: "reference date unavailable"}",
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    MizaniInfoButton(
+                        infoTitle = stringResource(R.string.info_commitment_rate_title),
+                        infoBody = stringResource(R.string.info_commitment_rate_body),
+                        contentDescription = stringResource(R.string.info_commitment_rate_title),
+                    )
+                }
             }
         }
         if (links.isNotEmpty()) {

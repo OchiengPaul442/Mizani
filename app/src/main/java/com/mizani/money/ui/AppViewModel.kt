@@ -396,17 +396,63 @@ class AppViewModel(private val container: AppContainer) : ViewModel() {
     suspend fun setDailyReminderMinuteOfDay(minuteOfDay: Int): Result<Unit> = runCatching {
         settingsRepository.setDailyReminderMinuteOfDay(minuteOfDay)
         val updatedSettings = settingsRepository.settings.first()
-        if (updatedSettings.dailyReminderEnabled) {
+        if (updatedSettings.dailyReminderEnabled || updatedSettings.habitNotificationsEnabled) {
             container.dailyReminderScheduler.update(updatedSettings)
         }
     }
 
+    suspend fun setHabitNotificationsEnabled(enabled: Boolean): Result<Unit> = runCatching {
+        settingsRepository.setHabitNotificationsEnabled(enabled)
+        container.dailyReminderScheduler.update(settingsRepository.settings.first())
+    }
+
+    suspend fun setHabitSpendingNotificationsEnabled(enabled: Boolean): Result<Unit> =
+        updateHabitNotificationCategory { settingsRepository.setHabitSpendingNotificationsEnabled(enabled) }
+
+    suspend fun setHabitIncomeNotificationsEnabled(enabled: Boolean): Result<Unit> =
+        updateHabitNotificationCategory { settingsRepository.setHabitIncomeNotificationsEnabled(enabled) }
+
+    suspend fun setHabitInvestmentNotificationsEnabled(enabled: Boolean): Result<Unit> =
+        updateHabitNotificationCategory { settingsRepository.setHabitInvestmentNotificationsEnabled(enabled) }
+
+    suspend fun setHabitDebtNotificationsEnabled(enabled: Boolean): Result<Unit> =
+        updateHabitNotificationCategory { settingsRepository.setHabitDebtNotificationsEnabled(enabled) }
+
+    suspend fun setHabitGoalNotificationsEnabled(enabled: Boolean): Result<Unit> =
+        updateHabitNotificationCategory { settingsRepository.setHabitGoalNotificationsEnabled(enabled) }
+
+    private suspend fun updateHabitNotificationCategory(update: suspend () -> Unit): Result<Unit> =
+        runCatching {
+            update()
+            container.dailyReminderScheduler.update(settingsRepository.settings.first())
+        }
+
+    suspend fun restoreBackup(bytes: ByteArray, passphrase: String): Result<Unit> = runCatching {
+        stopReminderDelivery()
+        try {
+            exporter.restore(bytes, passphrase)
+        } finally {
+            restoreReminderDelivery()
+        }
+    }
+
+    private suspend fun stopReminderDelivery() {
+        container.dailyReminderScheduler.cancelAll()
+        container.commitmentReminderScheduler.cancelAll()
+    }
+
+    private suspend fun restoreReminderDelivery() {
+        container.dailyReminderScheduler.ensureScheduled(settingsRepository.settings.first())
+        container.financeRepository.snapshot.first().let { snapshot ->
+            container.commitmentReminderScheduler.reconcile(snapshot)
+        }
+    }
+
     suspend fun deleteAllData(): Result<Unit> = runCatching {
+        stopReminderDelivery()
         container.exchangeRateRepository.clearCache()
         finance.clearAllFinancialData()
         settingsRepository.resetAll()
-        // Clearing preferences disables the worker even if cancellation is delayed.
-        runCatching { container.dailyReminderScheduler.cancel() }
         unlocked.value = false
     }
 

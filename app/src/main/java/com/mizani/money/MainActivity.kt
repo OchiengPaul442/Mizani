@@ -3,6 +3,7 @@ package com.mizani.money
 import android.os.Bundle
 import android.content.Intent
 import android.view.WindowManager
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -28,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -43,6 +45,14 @@ import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.android.play.core.appupdate.AppUpdateInfo
+import com.google.android.play.core.appupdate.AppUpdateManager
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory
+import com.google.android.play.core.appupdate.AppUpdateOptions
+import com.google.android.play.core.install.InstallStateUpdatedListener
+import com.google.android.play.core.install.model.AppUpdateType
+import com.google.android.play.core.install.model.InstallStatus
+import com.google.android.play.core.install.model.UpdateAvailability
 import com.mizani.money.feature.lock.LockScreen
 import com.mizani.money.feature.legal.LegalConsentScreen
 import com.mizani.money.feature.onboarding.OnboardingScreen
@@ -61,6 +71,31 @@ class MainActivity : FragmentActivity() {
         AppViewModel.factory((application as MizaniApplication).container)
     }
 
+    private val appUpdateManager: AppUpdateManager by lazy {
+        AppUpdateManagerFactory.create(this)
+    }
+
+    private val updateFlowLauncher = registerForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult(),
+    ) { result ->
+        if (result.resultCode != RESULT_OK) {
+            // A declined or failed update is non-fatal. Play can offer it again on a later
+            // foreground check, subject to the user's update settings and Play policy.
+            playUpdateRequestedThisProcess = false
+        }
+    }
+
+    private val flexibleUpdateListener = InstallStateUpdatedListener { state ->
+        if (state.installStatus() == InstallStatus.DOWNLOADED) {
+            // Play displays its own confirmation UI before restarting for a flexible update.
+            appUpdateManager.completeUpdate()
+        }
+    }
+
+    private var appReadyForUpdateCheck = false
+    private var playUpdateCheckInFlight = false
+    private var playUpdateRequestedThisProcess = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Financial records must not appear in screenshots, screen recordings, or recents previews.
@@ -75,7 +110,11 @@ class MainActivity : FragmentActivity() {
                 customAccentColorHex = state.settings.customAccentColorHex,
                 darkThemeStyle = state.settings.darkThemeStyle,
             ) {
-                MizaniRoot(appViewModel, state)
+                MizaniRoot(
+                    vm = appViewModel,
+                    state = state,
+                    onAppReadyForUpdateCheck = ::onAppReadyForUpdateCheck,
+                )
             }
         }
     }
@@ -84,6 +123,12 @@ class MainActivity : FragmentActivity() {
         super.onResume()
         // Reassert after returning from external activities or system UI.
         setSecureWindow()
+        if (appReadyForUpdateCheck) checkForPlayUpdate()
+    }
+
+    override fun onDestroy() {
+        appUpdateManager.unregisterListener(flexibleUpdateListener)
+        super.onDestroy()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -120,6 +165,69 @@ class MainActivity : FragmentActivity() {
         )
     }
 
+    private fun onAppReadyForUpdateCheck() {
+        if (appReadyForUpdateCheck) return
+        appReadyForUpdateCheck = true
+        checkForPlayUpdate()
+    }
+
+    /**
+     * Google Play performs availability checks and controls download/install policy. Mizani only
+     * starts the Play-owned UI while this Activity is visible; Android does not permit an app to
+     * display a dialog from the background. Sideloaded builds continue to use the manual GitHub
+     * release check in About & privacy.
+     */
+    private fun checkForPlayUpdate() {
+        if (!appReadyForUpdateCheck || playUpdateCheckInFlight || playUpdateRequestedThisProcess) return
+        playUpdateCheckInFlight = true
+        appUpdateManager.appUpdateInfo
+            .addOnSuccessListener { info ->
+                playUpdateCheckInFlight = false
+                when {
+                    info.installStatus() == InstallStatus.DOWNLOADED -> {
+                        appUpdateManager.completeUpdate()
+                    }
+                    info.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS -> {
+                        startPlayUpdate(info, AppUpdateType.IMMEDIATE)
+                    }
+                    info.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE -> {
+                        val updateType = if (
+                            info.updatePriority() >= HIGH_PRIORITY_UPDATE &&
+                            info.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)
+                        ) {
+                            AppUpdateType.IMMEDIATE
+                        } else {
+                            AppUpdateType.FLEXIBLE
+                        }
+                        if (info.isUpdateTypeAllowed(updateType)) {
+                            startPlayUpdate(info, updateType)
+                        }
+                    }
+                }
+            }
+            .addOnFailureListener {
+                // Sideloaded builds and offline devices commonly fail this Play-only query.
+                // The existing manual release check remains available for sideloaded installs.
+                playUpdateCheckInFlight = false
+            }
+    }
+
+    private fun startPlayUpdate(info: AppUpdateInfo, updateType: Int) {
+        playUpdateRequestedThisProcess = true
+        if (updateType == AppUpdateType.FLEXIBLE) {
+            appUpdateManager.registerListener(flexibleUpdateListener)
+        }
+        val started = appUpdateManager.startUpdateFlowForResult(
+            info,
+            updateFlowLauncher,
+            AppUpdateOptions.newBuilder(updateType).build(),
+        )
+        if (!started) {
+            appUpdateManager.unregisterListener(flexibleUpdateListener)
+            playUpdateRequestedThisProcess = false
+        }
+    }
+
     override fun onStart() {
         super.onStart()
         appViewModel.onForeground()
@@ -131,13 +239,28 @@ class MainActivity : FragmentActivity() {
             appViewModel.onBackgrounded()
         }
     }
+
+    private companion object {
+        const val HIGH_PRIORITY_UPDATE = 4
+    }
 }
 
 @Composable
-fun MizaniRoot(vm: AppViewModel, state: AppUiState) {
+fun MizaniRoot(
+    vm: AppViewModel,
+    state: AppUiState,
+    onAppReadyForUpdateCheck: () -> Unit = {},
+) {
     var acceptingLegal by remember { mutableStateOf(false) }
     var legalError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val readyForUpdateCheck = !state.loading && !state.startupError &&
+        state.settings.onboardingComplete && state.snapshot.workspace != null &&
+        state.settings.hasAcceptedCurrentLegalDocuments && !state.locked
+
+    LaunchedEffect(readyForUpdateCheck) {
+        if (readyForUpdateCheck) onAppReadyForUpdateCheck()
+    }
     // Wrap in a Surface so non-Scaffold screens (splash, onboarding, lock) inherit the
     // theme's contentColor. Without this, LocalContentColor defaults to black in dark mode,
     // which fails contrast on the dark page background.

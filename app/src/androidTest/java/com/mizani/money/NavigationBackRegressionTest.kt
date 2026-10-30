@@ -97,4 +97,41 @@ class NavigationBackRegressionTest {
         }
         assertTrue(compose.onAllNodesWithText("New transaction").fetchSemanticsNodes().isEmpty())
     }
+
+    @Test
+    fun switchingTopLevelTabsDoesNotKeepThePreviousPageComposed() {
+        compose.waitUntil(timeoutMillis = 15_000) {
+            compose.onAllNodesWithText("Start tracking your money").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        compose.onNodeWithText("Activity").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithText("0 transactions").fetchSemanticsNodes().isNotEmpty()
+        }
+        assertTrue(compose.onAllNodesWithText("Start tracking your money").fetchSemanticsNodes().isEmpty())
+
+        compose.onNodeWithText("Insights").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithText("Money Outlook").fetchSemanticsNodes().isNotEmpty()
+        }
+        assertTrue(compose.onAllNodesWithText("0 transactions").fetchSemanticsNodes().isEmpty())
+
+        compose.onNodeWithText("Bills").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithText("Bills & commitments").fetchSemanticsNodes().isNotEmpty()
+        }
+        assertTrue(compose.onAllNodesWithText("Money Outlook").fetchSemanticsNodes().isEmpty())
+
+        compose.onNodeWithText("More").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithText("Manage money").fetchSemanticsNodes().isNotEmpty()
+        }
+        assertTrue(compose.onAllNodesWithText("Bills & commitments").fetchSemanticsNodes().isEmpty())
+
+        compose.onNodeWithText("Home").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithText("Start tracking your money").fetchSemanticsNodes().isNotEmpty()
+        }
+        assertTrue(compose.onAllNodesWithText("Manage money").fetchSemanticsNodes().isEmpty())
+    }
 }

@@ -1,6 +1,8 @@
 package com.mizani.money.ui.components
 
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -30,6 +32,8 @@ fun MizaniStatCard(
     icon: ImageVector? = null,
     onClick: (() -> Unit)? = null,
     valueContentDescription: String? = null,
+    infoTitle: String? = null,
+    infoBody: String? = null,
 ) {
     MizaniCard(
         modifier = modifier,
@@ -45,11 +49,23 @@ fun MizaniStatCard(
             )
             Spacer(Modifier.height(Spacing.xs))
         }
-        Text(
-            label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Row(
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (infoTitle != null && infoBody != null) {
+                MizaniInfoButton(
+                    infoTitle = infoTitle,
+                    infoBody = infoBody,
+                    contentDescription = "About $label",
+                )
+            }
+        }
         Text(
             value,
             modifier = if (valueContentDescription == null) Modifier else Modifier.semantics {

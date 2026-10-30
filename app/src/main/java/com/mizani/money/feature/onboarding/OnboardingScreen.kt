@@ -71,6 +71,7 @@ import com.mizani.money.core.money.Currency
 import com.mizani.money.core.money.MoneyFormat
 import com.mizani.money.ui.AppViewModel
 import com.mizani.money.ui.components.MizaniAmountField
+import com.mizani.money.ui.components.MizaniInfoButton
 import com.mizani.money.ui.components.MizaniIcons
 import com.mizani.money.ui.components.MizaniPicker
 import com.mizani.money.ui.components.PickerOption
@@ -477,7 +478,14 @@ private fun MoneySetupStep(
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(Spacing.md))
-        Text(stringResource(R.string.primary_currency), style = MaterialTheme.typography.labelLarge)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.primary_currency), style = MaterialTheme.typography.labelLarge)
+            MizaniInfoButton(
+                infoTitle = stringResource(R.string.onboarding_currency_info_title),
+                infoBody = stringResource(R.string.onboarding_currency_info_body),
+                contentDescription = stringResource(R.string.onboarding_currency_info_title),
+            )
+        }
         Spacer(Modifier.height(6.dp))
         MizaniPicker(
             selectedText = "${currency.code} | ${currency.name}",

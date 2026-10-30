@@ -6,6 +6,8 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.mizani.money.MizaniApplication
 import com.mizani.money.core.time.DailyReminderSchedule
+import com.mizani.money.domain.notifications.HabitNotificationEngine
+import com.mizani.money.domain.notifications.HabitNotificationPreferences
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
@@ -22,7 +24,7 @@ class DailyTransactionReminderWorker(
             val container = app.container
             val settingsRepository = container.settingsRepository
             val settings = settingsRepository.settings.first()
-            if (!settings.dailyReminderEnabled) return Result.success()
+            if (!settings.dailyReminderEnabled && !settings.habitNotificationsEnabled) return Result.success()
 
             val scheduleVersion = inputData.getLong(
                 DailyReminderScheduler.INPUT_SCHEDULE_VERSION,
@@ -61,24 +63,56 @@ class DailyTransactionReminderWorker(
             // milliseconds early does not fall into the 15-minute retry backoff window.
             if (now.isBefore(scheduledFor)) return Result.retry()
 
-            if (settings.lastDailyReminderEpochDay != today.toEpochDay()) {
-                DailyReminderNotifications.ensureChannel(applicationContext)
-                if (DailyReminderNotifications.canPost(applicationContext)) {
-                    container.awaitSqlCipherReady()
-                    val hasTrackedMoneyToday = container.database.transactionDao()
-                        .hasIncomeExpenseOrRefundOn(today.toEpochDay())
-                    if (!hasTrackedMoneyToday) {
-                        // Recheck opt-in after the database query so a concurrent settings change
-                        // cannot leave a stale worker posting a reminder after it was disabled.
-                        val latestSettings = settingsRepository.settings.first()
-                        val scheduleIsStillCurrent = latestSettings.dailyReminderEnabled &&
-                            latestSettings.dailyReminderScheduleVersion == scheduleVersion &&
-                            latestSettings.dailyReminderMinuteOfDay == reminderMinute &&
-                            latestSettings.lastDailyReminderEpochDay != today.toEpochDay()
-                        if (scheduleIsStillCurrent && DailyReminderNotifications.post(applicationContext)) {
-                            settingsRepository.markDailyReminderShown(today.toEpochDay())
-                        }
+            var habitNotificationPosted = false
+            val needsDatabase = settings.habitNotificationsEnabled ||
+                (settings.dailyReminderEnabled && settings.lastDailyReminderEpochDay != today.toEpochDay())
+            if (needsDatabase) {
+                container.awaitSqlCipherReady()
+                val snapshot = container.financeRepository.snapshot.first()
+                val hasTrackedMoneyToday = if (settings.dailyReminderEnabled) {
+                    container.database.transactionDao().hasIncomeExpenseOrRefundOn(today.toEpochDay())
+                } else {
+                    false
+                }
+
+                // Recheck opt-in after the encrypted read so a concurrent settings change cannot
+                // leave a stale worker posting after the user disabled the category. One daily
+                // work item may deliver one habit check-in OR the regular daily check-in, avoiding
+                // a burst of two reminders for the same local run.
+                val latestSettings = settingsRepository.settings.first()
+                val scheduleIsStillCurrent = latestSettings.dailyReminderScheduleVersion == scheduleVersion &&
+                    latestSettings.dailyReminderMinuteOfDay == reminderMinute
+                if (scheduleIsStillCurrent && latestSettings.habitNotificationsEnabled &&
+                    latestSettings.lastHabitNotificationEpochDay != today.toEpochDay() &&
+                    DailyReminderNotifications.canPost(applicationContext)
+                ) {
+                    val preferences = HabitNotificationPreferences(
+                        enabled = latestSettings.habitNotificationsEnabled,
+                        spendingEnabled = latestSettings.habitSpendingNotificationsEnabled,
+                        incomeEnabled = latestSettings.habitIncomeNotificationsEnabled,
+                        investmentEnabled = latestSettings.habitInvestmentNotificationsEnabled,
+                        debtEnabled = latestSettings.habitDebtNotificationsEnabled,
+                        goalEnabled = latestSettings.habitGoalNotificationsEnabled,
+                    )
+                    val kind = HabitNotificationEngine.choose(
+                        snapshot = snapshot,
+                        today = today,
+                        preferences = preferences,
+                        lastShownEpochDay = latestSettings.lastHabitNotificationEpochDay,
+                    )
+                    if (kind != null && DailyReminderNotifications.postHabit(applicationContext, kind)) {
+                        settingsRepository.markHabitNotificationShown(today.toEpochDay())
+                        habitNotificationPosted = true
                     }
+                }
+
+                if (!habitNotificationPosted && scheduleIsStillCurrent &&
+                    latestSettings.dailyReminderEnabled &&
+                    latestSettings.lastDailyReminderEpochDay != today.toEpochDay() &&
+                    !hasTrackedMoneyToday && DailyReminderNotifications.canPost(applicationContext) &&
+                    DailyReminderNotifications.post(applicationContext)
+                ) {
+                    settingsRepository.markDailyReminderShown(today.toEpochDay())
                 }
             }
             scheduleNextIfCurrent(settingsRepository, scheduleVersion)
@@ -96,7 +130,7 @@ class DailyTransactionReminderWorker(
         scheduleVersion: Long,
     ) {
         val latestSettings = settingsRepository.settings.first()
-        if (latestSettings.dailyReminderEnabled &&
+        if ((latestSettings.dailyReminderEnabled || latestSettings.habitNotificationsEnabled) &&
             latestSettings.dailyReminderScheduleVersion == scheduleVersion
         ) {
             val app = applicationContext as MizaniApplication

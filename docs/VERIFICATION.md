@@ -192,6 +192,47 @@ The release lint/build completed successfully. Android background scheduling rem
 Doze, OEM restrictions, and battery saving can delay a notification. The app intentionally does
 not request exact-alarm access for a non-critical budgeting reminder.
 
+### Local habit check-ins (2026-10-30)
+
+The optional local money check-in feature now evaluates spending, expected income, manual
+investment valuations, debt payment dates and savings goals from the encrypted Room snapshot. The
+master switch and every category are opt-in, notifications use neutral private copy, and delete or
+restore paths cancel posted notifications and queued reminder work.
+
+Verified with:
+
+```powershell
+.\gradlew.bat :app:testDebugUnitTest :app:compileDebugAndroidTestKotlin --no-daemon
+.\gradlew.bat --% :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.mizani.money.SettingsAndReminderEndToEndTest --no-daemon
+```
+
+Results: 143 JVM tests passed; Android test sources compiled; and all 5 tests in
+`SettingsAndReminderEndToEndTest` passed on the disposable API 36.1 `Medium_Phone_API_36.1`
+emulator. The emulator tests covered Settings placement, explicit debt-category opt-in, a real
+generic private debt check-in, no debt name or amount in notification extras, repeated-worker
+suppression, delayed daily delivery, and existing commitment reminder behavior. Exact delivery
+under Doze, OEM battery restrictions, reboot and timezone changes remains follow-up coverage.
+
+### Google Play update flow (2026-10-30)
+
+Play-installed builds now use Google Play's in-app update service when the app is active. Normal
+releases use the flexible flow so Play can download in the background; releases with Play priority
+4 or higher use the immediate flow. A downloaded flexible update is completed through Play's own
+confirmation UI. Sideloaded builds retain the manual GitHub release check in About & privacy.
+
+Verified with:
+
+```powershell
+.\gradlew.bat :app:testDebugUnitTest :app:compileDebugAndroidTestKotlin --no-daemon
+.\gradlew.bat --% :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.mizani.money.FeedbackEndToEndTest --no-daemon
+.\gradlew.bat :app:assembleDebug :app:lintDebug --no-daemon
+```
+
+The unit tests, Android test compilation, focused feedback emulator suite, debug assembly and lint
+passed. The emulator was a sideloaded debug build, so Google Play's real availability response and
+download UI require a Play internal-test track with a signed published artifact; that release-owner
+gate remains unverified here.
+
 ## Scope and data compatibility
 
 The active app flow includes Home, Activity, Insights, wallets, categories, data export, user-reviewed

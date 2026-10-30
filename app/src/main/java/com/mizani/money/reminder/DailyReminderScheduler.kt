@@ -21,7 +21,7 @@ class DailyReminderScheduler(context: Context) {
     private val workManager = WorkManager.getInstance(appContext)
 
     suspend fun ensureScheduled(settings: AppSettings) = withContext(Dispatchers.IO) {
-        if (!settings.dailyReminderEnabled) {
+        if (!hasAnyReminderEnabled(settings)) {
             cancelExisting()
             cancelLegacyPeriodicWork()
             DailyReminderNotifications.cancel(appContext)
@@ -37,7 +37,7 @@ class DailyReminderScheduler(context: Context) {
         cancelExisting()
         cancelLegacyPeriodicWork()
         DailyReminderNotifications.cancel(appContext)
-        if (settings.dailyReminderEnabled) enqueueNextOccurrence(settings)
+        if (hasAnyReminderEnabled(settings)) enqueueNextOccurrence(settings)
     }
 
     suspend fun cancel() = withContext(Dispatchers.IO) {
@@ -46,9 +46,16 @@ class DailyReminderScheduler(context: Context) {
         DailyReminderNotifications.cancel(appContext)
     }
 
+    /** Cancels daily/habit work and every app notification during data deletion or restore. */
+    suspend fun cancelAll() = withContext(Dispatchers.IO) {
+        cancelExisting()
+        cancelLegacyPeriodicWork()
+        DailyReminderNotifications.cancelAll(appContext)
+    }
+
     internal suspend fun scheduleNext(settings: AppSettings, scheduleVersion: Long) =
         withContext(Dispatchers.IO) {
-            if (!settings.dailyReminderEnabled || settings.dailyReminderScheduleVersion != scheduleVersion) {
+            if (!hasAnyReminderEnabled(settings) || settings.dailyReminderScheduleVersion != scheduleVersion) {
                 return@withContext
             }
             enqueueNextOccurrence(settings)
@@ -93,6 +100,9 @@ class DailyReminderScheduler(context: Context) {
 
     private fun workName(scheduleVersion: Long, epochDay: Long): String =
         "$WORK_NAME_PREFIX-$scheduleVersion-$epochDay"
+
+    private fun hasAnyReminderEnabled(settings: AppSettings): Boolean =
+        settings.dailyReminderEnabled || settings.habitNotificationsEnabled
 
     companion object {
         const val WORK_TAG = "mizani_daily_transaction_reminder"

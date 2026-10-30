@@ -4,6 +4,8 @@ Status as of 30 October 2026: **NO-GO until the owner completes the external Pla
 legal, signing, and device-testing gates below.** This document separates repository evidence from
 actions that cannot be performed from the source tree.
 
+The policy-specific evidence review is tracked in [Google Play policy audit](GOOGLE_PLAY_POLICY_AUDIT.md).
+
 ## Release identity
 
 | Item | Value/status |
@@ -15,7 +17,7 @@ actions that cannot be performed from the source tree.
 | Provider | Paul Ochieng; confirm legal authority to publish |
 | Privacy contact | `paul.ochieng.dev@gmail.com`; confirm it is monitored |
 | Release address | Kampala, Uganda; owner-confirmed release value |
-| Privacy policy candidate | `https://github.com/OchiengPaul442/Mizani/blob/main/docs/PRIVACY_NOTICE.md`; use only after pushing the current policy and confirming the file is publicly accessible without login |
+| Privacy policy candidate | `https://github.com/OchiengPaul442/budgeting-application/blob/main/docs/PRIVACY_NOTICE.md`; use only after pushing the current policy and confirming the file is publicly accessible without login |
 
 ## Completed repository gates
 
@@ -79,6 +81,9 @@ actions that cannot be performed from the source tree.
 - [ ] Test API 24, a current Android device, API 35/36+, ARM64, and a 16 KB page-size environment.
 - [ ] Exercise onboarding, offline startup, expense/income/transfer entry, editing, deletion, import, manual investment create/edit/archive/value masking, exports, backup restore, app lock, biometric unlock, reminders, and local-data deletion.
 - [ ] Exercise TalkBack, large fonts, compact screens, landscape, keyboard/IME flows, and back navigation.
+- [ ] Test the Play in-app update flow from an internal-test track: a normal release uses the flexible
+  flow, a priority-4-or-higher release uses the immediate flow, cancellation is non-destructive, and
+  a downloaded flexible update resumes and completes after returning to the app.
 - [ ] Test the exact Play reviewer journey using disposable data only.
 - [ ] Review the Play pre-launch report and resolve all blocking issues.
 

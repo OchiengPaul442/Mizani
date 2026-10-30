@@ -209,6 +209,34 @@ class SettingsAndReminderEndToEndTest {
     }
 
     @Test
+    fun habitCheckInControlsAreVisibleAndRequireExplicitCategoryOptIn() {
+        compose.waitUntil(timeoutMillis = 20_000) {
+            compose.onAllNodesWithText("Home").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("More").performClick()
+        compose.onNodeWithText("Settings").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithText("Reminders").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        val habitMaster = compose.onNodeWithContentDescription("Personalised money check-ins")
+        habitMaster.performScrollTo()
+        habitMaster.assertIsOff()
+        habitMaster.performClick()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            runBlocking { app.container.settingsRepository.settings.first().habitNotificationsEnabled }
+        }
+
+        val debtCategory = compose.onNodeWithContentDescription("Debt payment review")
+        debtCategory.performScrollTo()
+        debtCategory.assertIsOff()
+        debtCategory.performClick()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            runBlocking { app.container.settingsRepository.settings.first().habitDebtNotificationsEnabled }
+        }
+    }
+
+    @Test
     fun delayedDailyReminderStillPostsAfterItsScheduledDate() {
         DailyReminderNotifications.ensureChannel(app)
         assertTrue(DailyReminderNotifications.canPost(app))
@@ -284,5 +312,69 @@ class SettingsAndReminderEndToEndTest {
             posted.notification.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString(),
         )
         assertEquals(Notification.VISIBILITY_PRIVATE, posted.notification.visibility)
+    }
+
+    @Test
+    fun habitNotificationWorkerPostsPrivateGenericDebtCheckInOnce() {
+        DailyReminderNotifications.ensureChannel(app)
+        assertTrue(DailyReminderNotifications.canPost(app))
+        val today = LocalDate.now()
+        runBlocking {
+            app.container.financeRepository.saveDebt(
+                debtId = null,
+                name = "Private loan name",
+                lender = "Private lender",
+                balanceMinor = 900_000,
+                originalMinor = 1_000_000,
+                periodicPaymentMinor = 100_000,
+                nextDue = today,
+                interestRatePercent = null,
+                note = "Private note",
+            )
+            app.container.settingsRepository.setDailyReminderMinuteOfDay(0)
+            app.container.settingsRepository.setHabitNotificationsEnabled(true)
+            app.container.settingsRepository.setHabitDebtNotificationsEnabled(true)
+        }
+        val settings = runBlocking { app.container.settingsRepository.settings.first() }
+        val input = workDataOf(
+            DailyReminderScheduler.INPUT_REMINDER_MINUTE_OF_DAY to settings.dailyReminderMinuteOfDay,
+            DailyReminderScheduler.INPUT_TARGET_EPOCH_DAY to today.toEpochDay(),
+            DailyReminderScheduler.INPUT_SCHEDULE_VERSION to settings.dailyReminderScheduleVersion,
+        )
+        val notifications = app.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notifications.cancelAll()
+
+        val worker = TestListenableWorkerBuilder<DailyTransactionReminderWorker>(app)
+            .setInputData(input)
+            .build()
+        runBlocking { worker.doWork() }
+
+        assertEquals(
+            today.toEpochDay(),
+            runBlocking { app.container.settingsRepository.settings.first().lastHabitNotificationEpochDay },
+        )
+        val posted = notifications.activeNotifications.single { it.packageName == app.packageName }
+        assertEquals(
+            app.getString(R.string.notification_habit_title),
+            posted.notification.extras.getString(Notification.EXTRA_TITLE),
+        )
+        assertEquals(
+            app.getString(R.string.notification_habit_body),
+            posted.notification.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString(),
+        )
+        assertEquals(Notification.VISIBILITY_PRIVATE, posted.notification.visibility)
+        val notificationText = posted.notification.extras.toString()
+        assertTrue(!notificationText.contains("Private loan name"))
+        assertTrue(!notificationText.contains("900000"))
+
+        val duplicateWorker = TestListenableWorkerBuilder<DailyTransactionReminderWorker>(app)
+            .setInputData(input)
+            .build()
+        runBlocking { duplicateWorker.doWork() }
+        assertEquals(
+            "Repeated work for the same day must not duplicate a habit notification",
+            1,
+            notifications.activeNotifications.count { it.packageName == app.packageName },
+        )
     }
 }

@@ -59,6 +59,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -89,6 +90,7 @@ import com.mizani.money.ui.components.MizaniCelebration
 import com.mizani.money.ui.components.MizaniAmountField
 import com.mizani.money.ui.components.MizaniConfirmDialog
 import com.mizani.money.ui.components.MizaniIcons
+import com.mizani.money.ui.components.MizaniInfoButton
 import com.mizani.money.ui.components.MizaniPicker
 import com.mizani.money.ui.components.MizaniTopBar
 import com.mizani.money.ui.components.PickerOption
@@ -535,12 +537,19 @@ fun AddTransactionScreen(
                     }
                 }
                 if (type != TransactionType.REFUND && type != TransactionType.ADJUSTMENT) {
-                    TextButton(onClick = { showAdvancedTypes = !showAdvancedTypes }) {
-                        Text(if (showAdvancedTypes) "Fewer types" else "More types")
-                        Icon(
-                            imageVector = if (showAdvancedTypes) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(onClick = { showAdvancedTypes = !showAdvancedTypes }) {
+                            Text(if (showAdvancedTypes) "Fewer types" else "More types")
+                            Icon(
+                                imageVector = if (showAdvancedTypes) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                        MizaniInfoButton(
+                            infoTitle = stringResource(R.string.info_transaction_types_title),
+                            infoBody = stringResource(R.string.info_transaction_types_body),
+                            contentDescription = stringResource(R.string.info_transaction_types_title),
                         )
                     }
                 }
@@ -674,6 +683,16 @@ fun AddTransactionScreen(
                             MoneyFormat.format(enteredAmountMinor, entryCurrency),
                             style = MaterialTheme.typography.labelMedium,
                             color = Color.White,
+                        )
+                    }
+                    if (amountText.isNotBlank() && amountMinor <= 0L) {
+                        Text(
+                            "Enter a valid amount greater than zero",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFFFFB4AB),
+                            modifier = Modifier.semantics {
+                                contentDescription = "Amount error: enter a valid amount greater than zero"
+                            },
                         )
                     }
                     Spacer(Modifier.height(Spacing.xs))

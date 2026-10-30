@@ -2,6 +2,7 @@ package com.mizani.money.feature.transactions
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -21,12 +22,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mizani.money.core.importing.TransactionMessageParser
+import com.mizani.money.R
 import com.mizani.money.ui.AppViewModel
 import com.mizani.money.ui.components.MizaniTopBar
+import com.mizani.money.ui.components.MizaniInfoButton
 import com.mizani.money.ui.components.MizaniPicker
 import com.mizani.money.ui.components.PickerOption
 import com.mizani.money.ui.components.Spacing
@@ -56,11 +61,19 @@ fun MessageImportScreen(
                 .padding(horizontal = Spacing.lg, vertical = Spacing.md),
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
-            Text(
-                "Paste or share a mobile-money confirmation. Mizani reads it on this device; the original message is not saved.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Paste or share a mobile-money confirmation. Mizani reads it on this device; the original message is not saved.",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                MizaniInfoButton(
+                    infoTitle = stringResource(R.string.info_import_privacy_title),
+                    infoBody = stringResource(R.string.info_import_privacy_body),
+                    contentDescription = stringResource(R.string.info_import_privacy_title),
+                )
+            }
             Text(
                 "If the message does not name its provider, choose it here. Supported networks include MTN MoMo, Airtel Money, M-Pesa, Orange Money, Moov, Wave, Telecel, Tigo, EcoCash, OPay and more.",
                 style = MaterialTheme.typography.labelLarge,

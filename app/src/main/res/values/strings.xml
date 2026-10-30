@@ -1,4 +1,19 @@
 <resources>
+    <string name="info_dialog_got_it">Got it</string>
+    <string name="info_liquid_title">What does Liquid mean?</string>
+    <string name="info_liquid_body">Liquid is the recorded balance across active wallets other than debt wallets. Across wallets includes debt wallets.</string>
+    <string name="info_investment_gain_title">How is gain or loss calculated?</string>
+    <string name="info_investment_gain_body">Gain or loss is your entered current value minus your entered cost basis, using the valuation date shown. It is a manual estimate, not a provider-reported return.</string>
+    <string name="info_commitment_rate_title">About the reference rate</string>
+    <string name="info_commitment_rate_body">This planning amount uses the daily reference rate saved when you created the bill. Your payment provider may use a different rate.</string>
+    <string name="info_import_privacy_title">What happens to the message?</string>
+    <string name="info_import_privacy_body">Mizani parses the message on this phone and discards its text. To prevent duplicates, it keeps the provider reference, or an exact-message fingerprint if there is no reference. Mizani never reads SMS automatically.</string>
+    <string name="info_transaction_types_title">Which transaction type should I use?</string>
+    <string name="info_transaction_types_body">Transfer moves money between your wallets; it is not income or spending. Refund is money returned for an earlier expense. Adjustment corrects a wallet balance without recording income or spending.</string>
+    <string name="info_personalised_checkins_title">About personalised money check-ins</string>
+    <string name="info_personalised_checkins_body">These are occasional prompts based on the check-in types you enable and records stored on this phone. They are separate from the daily reminder. Android may delay or block notifications; no names or amounts appear in them.</string>
+    <string name="onboarding_currency_info_title">About your primary currency</string>
+    <string name="onboarding_currency_info_body">This currency is used for your workspace totals, charts and planning. It is fixed after setup. You can still record money in other currencies when you have a saved reference rate.</string>
     <string name="app_name">Mizani</string>
 
     <!-- Shared action / status copy -->
@@ -61,13 +76,29 @@
     <string name="settings_reminder_test_sent">Test notification sent. If you do not see it, check Mizani\'s notification settings in Android.</string>
     <string name="settings_reminder_schedule_error">Could not update the reminder. Try again.</string>
     <string name="notification_channel_reminders">Money reminders</string>
-    <string name="notification_channel_reminders_description">Optional local reminders about recording activity and upcoming commitments.</string>
+    <string name="notification_channel_reminders_description">Optional local reminders about recording activity, money check-ins and upcoming commitments.</string>
     <string name="notification_daily_reminder_title">Daily money check-in</string>
     <string name="notification_daily_reminder_body">No income or expenses have been logged today. Open Mizani to review or add your activity.</string>
     <string name="notification_commitment_reminder_title">Upcoming payment</string>
     <string name="notification_commitment_reminder_body">Open Mizani to review a payment due soon.</string>
     <string name="notification_test_reminder_title">Mizani reminders are on</string>
     <string name="notification_test_reminder_body">This test confirms that Mizani can send reminder notifications.</string>
+    <string name="settings_habit_notifications_title">Personalised money check-ins</string>
+    <string name="settings_habit_notifications_description">Use your local Mizani records to suggest a useful review when a pattern or upcoming item needs attention.</string>
+    <string name="settings_habit_notifications_note">Everything is calculated on this phone. Notifications never show balances, amounts, names or transaction details.</string>
+    <string name="settings_habit_notifications_choose">Choose check-ins</string>
+    <string name="settings_habit_spending_title">Weekly spending review</string>
+    <string name="settings_habit_spending_description">A gentle weekly prompt after you have recorded enough spending to review.</string>
+    <string name="settings_habit_income_title">Expected income</string>
+    <string name="settings_habit_income_description">A check-in near an expected income date that you recorded.</string>
+    <string name="settings_habit_investment_title">Investment review</string>
+    <string name="settings_habit_investment_description">A reminder when a recorded investment valuation needs a refresh.</string>
+    <string name="settings_habit_debt_title">Debt payment review</string>
+    <string name="settings_habit_debt_description">A check-in near an upcoming or overdue payment date.</string>
+    <string name="settings_habit_goal_title">Savings goal review</string>
+    <string name="settings_habit_goal_description">A prompt when an unfinished goal is approaching its target date.</string>
+    <string name="notification_habit_title">Mizani money check-in</string>
+    <string name="notification_habit_body">Open Mizani for a private money review.</string>
 
     <!-- App lock -->
     <string name="lock_error_pin">Incorrect PIN. Try again.</string>

@@ -26,7 +26,7 @@ object LegalDocuments {
     const val EFFECTIVE_DATE = "30 October 2026"
     const val PRIVACY_EFFECTIVE_DATE = "30 October 2026"
     const val TERMS_VERSION = "2026-10-30-2"
-    const val PRIVACY_VERSION = "2026-10-30-3"
+    const val PRIVACY_VERSION = "2026-10-30-5"
     const val PRIVACY_CONTACT = "paul.ochieng.dev@gmail.com"
     const val PROVIDER_NAME = "Paul Ochieng"
     const val PROVIDER_ADDRESS = "Kampala, Uganda"
@@ -143,14 +143,16 @@ object LegalDocuments {
                     "on this device. The original message is discarded after review; only the transaction you " +
                     "confirm and its provider reference are stored in your ledger.",
                 "Mizani also stores settings such as your selected country, primary currency, theme and app-lock " +
-                    "preferences, optional reminder settings and time, and cached currency rates. App-lock details " +
-                    "stay on this device. The app records which versions of these documents you accepted and when.",
+                    "preferences, optional reminder settings and time, selected local money check-in categories, " +
+                    "and cached currency rates. App-lock details stay on this device. The app records which versions " +
+                    "of these documents you accepted and when.",
             )),
             LegalSection("3. Why the app uses this information", listOf(
                 "Mizani uses your information to provide the budgeting features you choose, protect your records, " +
-                    "and create exports or backups when you request them. Optional daily and commitment reminders " +
-                    "check your local ledger and use generic notifications without names or amounts; they do not " +
-                    "send ledger information off the device.",
+                    "and create exports or backups when you request them. Optional daily, commitment and money " +
+                    "check-in reminders check your local ledger and use generic notifications without names or " +
+                    "amounts; they do not send ledger information off the device. Money check-ins are descriptive " +
+                    "prompts, not investment, debt or other financial advice.",
                 "Mizani does not require a name, email address, phone number, bank login, or account. Your " +
                     "ledger is not used for advertising or usage tracking.",
                 "If you choose Send feedback, Mizani opens your device's email app with your message addressed " +
@@ -168,6 +170,10 @@ object LegalDocuments {
                     "public release information from GitHub and compares the release version on your device. It " +
                     "does not send your installed version or ledger. GitHub may receive your IP address and request " +
                     "details under its Privacy Statement. You can skip the check.",
+                "When Mizani is installed from Google Play, the Play in-app update service may check the app version, " +
+                    "installed modules and device metadata to determine whether a Play release is available and how " +
+                    "large it is. Google Play controls the download and installation; Mizani does not send ledger " +
+                    "entries or financial details for this check. The update prompt is shown while the app is active.",
                 "When you use Send feedback, the email app you choose may process and retain the message under its " +
                     "own terms. The feedback message includes the text you write and basic Mizani and Android " +
                     "version information; it does not include transaction amounts, balances, wallet names, or " +
@@ -206,8 +212,8 @@ object LegalDocuments {
                 "You can view and correct entries in the app, export your ledger from Settings, and delete local " +
                     "data from Settings. Deletion does not remove exports or backups already saved elsewhere. " +
                     "Currency-rate requests happen only when you convert a foreign-currency transaction. Update " +
-                    "checks are optional and available when you install outside Google Play. Neither sends ledger " +
-                    "entries. Optional reminders use local settings and check local records only. Shared or pasted " +
+                    "checks use GitHub for sideloaded builds and Google Play for Play-installed builds. Neither " +
+                    "sends ledger entries. Optional reminders use local settings and check local records only. Shared or pasted " +
                     "transaction text is processed on this device and is not retained as a message.",
                 "Privacy rights depend on the law that applies where you live. That law may give you rights to " +
                     "request access, correction or deletion, object to certain processing, or complain to a data " +

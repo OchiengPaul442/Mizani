@@ -44,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -169,6 +170,8 @@ fun WalletsScreen(
                     value = if (state.walletBalancesVisible) MoneyFormat.format(liquid, currency) else "••••••",
                     modifier = Modifier.weight(1f),
                     accent = MaterialTheme.colorScheme.primary,
+                    infoTitle = stringResource(R.string.info_liquid_title),
+                    infoBody = stringResource(R.string.info_liquid_body),
                     valueContentDescription = if (state.walletBalancesVisible) {
                         "Liquid balance ${MoneyFormat.format(liquid, currency)}"
                     } else {

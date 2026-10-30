@@ -99,9 +99,10 @@ object FeedbackComposer {
         appVersion: String,
         androidVersion: String,
     ): Intent = Intent(Intent.ACTION_SENDTO).apply {
-        // Use an opaque mailto URI. A path-based builder would create mailto:/address,
-        // which some email clients do not resolve as a recipient.
-        data = Uri.parse("mailto:$OFFICIAL_EMAIL")
+        // Keep the data URI at the mailto scheme so email clients consume the standard extras.
+        // Some clients accept the recipient from mailto:address but silently drop EXTRA_SUBJECT
+        // and EXTRA_TEXT when the address is also embedded in the URI.
+        data = Uri.parse("mailto:")
         putExtra(Intent.EXTRA_EMAIL, arrayOf(OFFICIAL_EMAIL))
         putExtra(Intent.EXTRA_SUBJECT, subject(topic))
         putExtra(Intent.EXTRA_TEXT, body(topic, message, appVersion, androidVersion))

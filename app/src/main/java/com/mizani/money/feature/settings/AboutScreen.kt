@@ -140,7 +140,7 @@ fun AboutScreen(
                     icon = Icons.Rounded.Download,
                     title = if (installedFromPlay) "App updates" else "Check for updates",
                     subtitle = when {
-                        installedFromPlay -> "Google Play manages updates for this app."
+                        installedFromPlay -> "Google Play checks when online and prompts you when an update is ready."
                         isCheckingForUpdate -> "Checking for a new version…"
                         else -> "Version ${AppInfo.VERSION}"
                     },

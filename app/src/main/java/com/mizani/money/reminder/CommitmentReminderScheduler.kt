@@ -20,6 +20,10 @@ class CommitmentReminderScheduler(context: Context) {
     private val appContext = context.applicationContext
     private val workManager = WorkManager.getInstance(appContext)
 
+    suspend fun cancelAll() = withContext(Dispatchers.IO) {
+        workManager.cancelAllWorkByTag(WORK_TAG).result.get()
+    }
+
     suspend fun reconcile(snapshot: LedgerSnapshot, today: LocalDate = LocalDate.now()) = withContext(Dispatchers.IO) {
         val desired = snapshot.commitmentProgress()
             .asSequence()
