@@ -67,6 +67,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mizani.money.R
 import com.mizani.money.core.model.CategoryType
 import com.mizani.money.core.model.Ids
@@ -117,6 +118,7 @@ fun AddTransactionScreen(
     onBack: () -> Unit,
 ) {
     val themeTokens = LocalMizaniThemeTokens.current
+    val today by vm.today.collectAsStateWithLifecycle()
     val snapshot = state.snapshot
     val currency = state.currency
     val existing = remember(initialTransactionId, snapshot.transactions) {
@@ -213,7 +215,7 @@ fun AddTransactionScreen(
     var date by rememberSaveable(existing?.id, importCandidate?.reference) {
         mutableStateOf(
             existing?.let { LocalDate.ofEpochDay(it.localDateEpochDay) }
-                ?: importCandidate?.date ?: vm.today,
+                ?: importCandidate?.date ?: today,
         )
     }
     var payee by rememberSaveable(existing?.id, importCandidate?.reference) {

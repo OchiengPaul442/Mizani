@@ -1,6 +1,6 @@
 # Play Store release checklist
 
-Status as of 30 October 2026: **NO-GO until the owner completes the external Play Console,
+Status as of 1 November 2026: **NO-GO until the owner completes the external Play Console,
 legal, signing, and device-testing gates below.** This document separates repository evidence from
 actions that cannot be performed from the source tree.
 
@@ -12,8 +12,8 @@ The policy-specific evidence review is tracked in [Google Play policy audit](GOO
 | --- | --- |
 | App | Mizani |
 | Application ID | `com.mizani.money` |
-| Current version | `1.7.0` |
-| Current derived version code | `1007000`; confirm it is greater than the latest Play version code |
+| Current version | `1.8.0` |
+| Current derived version code | `1008000`; confirm it is greater than the latest Play version code |
 | Provider | Paul Ochieng; confirm legal authority to publish |
 | Privacy contact | `paul.ochieng.dev@gmail.com`; confirm it is monitored |
 | Release address | Kampala, Uganda; owner-confirmed release value |
@@ -28,9 +28,12 @@ The policy-specific evidence review is tracked in [Google Play policy audit](GOO
 - [x] Automatic app-data backup and device transfer are disabled.
 - [x] No account, cloud sync, advertising, analytics, SMS, contacts, location, camera, or storage feature was found.
 - [x] The app has an in-app local-data deletion flow.
-- [x] The in-app Terms and Privacy Notice now use the supplied provider, email, address, and 30 October 2026 document revisions.
+- [x] The in-app Terms and Privacy Notice use the supplied provider, email, address, and the 1 November 2026 document revisions.
 - [x] Navigation regression fix is covered by unit/build checks and a compiled Android UI regression test.
 - [x] Manual offline investment snapshots are isolated from ledger transactions, protected by the existing value-visibility control, and included in encrypted backups and Excel exports.
+- [x] Daily reminders default on only after onboarding creates a local workspace; existing explicit opt-outs remain authoritative.
+- [x] Daily Momentum is locally computed from tracked calendar days and has deterministic unit coverage without rewarding spending amounts.
+- [x] Adaptive navigation and Home/Activity reflow were exercised on the Pixel 10 Pro Fold in open, half-open, cover, and 130% font-scale states.
 
 ## Mandatory owner actions before upload
 

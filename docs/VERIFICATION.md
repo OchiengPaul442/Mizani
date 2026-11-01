@@ -172,6 +172,38 @@ disposable `Medium_Phone_API_36.1` emulator (API 36, x86_64): 30 tests passed wi
 errors, or skips. The 100-scenario matrix is tracked in `docs/INVESTMENT_QA_MATRIX.md`; manual
 physical-device and Play Console rows remain release-owner gates.
 
+### 1.8.0 release-candidate verification (2026-11-01)
+
+The release metadata was advanced to `1.8.0` with derived Android version code `1008000`. The
+following checks passed against that source tree:
+
+```powershell
+.\gradlew.bat --% :app:testDebugUnitTest :app:lintDebug :app:assembleDebug --no-daemon -Pkotlin.incremental=false
+.\gradlew.bat --% :app:connectedDebugAndroidTest --no-daemon -Pkotlin.incremental=false
+.\gradlew.bat --% :app:testDebugUnitTest :app:compileDebugAndroidTestKotlin --no-daemon -Pkotlin.incremental=false --no-configuration-cache
+.\gradlew.bat --% :app:assembleRelease :app:bundleRelease :app:lintRelease :app:signingReport --no-daemon -Pkotlin.incremental=false --no-configuration-cache
+```
+
+The full connected instrumentation suite passed on the disposable `Pixel_10_Pro_Fold(AVD) - 17`
+device: 39 tests, 0 failures, 0 errors, and 0 skips. The final debug quality gate also passed 148
+JVM tests, debug lint, and debug assembly. The 10,000-transaction performance case completed
+Activity search in 3,559 ms after the local search-index and typing-coalescing fix. The release APK,
+AAB, and release lint also passed; `aapt` confirmed `versionName=1.8.0`, `versionCode=1008000`,
+`minSdkVersion=24`, and `targetSdkVersion=37`. The release outputs were
+`app-release-unsigned.apk` (6,981,758 bytes, SHA-256
+`E2E48E75C8066C60F74BF8DBA72B6A3F38AAD71F78B1F7949E55A9538433093F`) and `app-release.aab`
+(9,955,045 bytes, SHA-256
+`7D81CB5C83F4642B71168D997953B4E0D106ED85FF1DAFFBF42A868226F3FA52`). `jarsigner` confirmed the
+release AAB is unsigned in this workspace because release signing credentials are intentionally not
+stored here; signing, signed-AAB verification, Play Console review, and physical-device gates remain
+owner actions.
+
+The foldable exploratory pass covered open, half-open, and cover states at normal and 130% system
+font scale, including navigation, Home/Momentum scrolling, Activity, Settings/reminder controls, and
+the add-entry sheet. UI hierarchy bounds remained inside the active display. Because `FLAG_SECURE`
+intentionally blanks ordinary screenshots, this is not a pixel-level screenshot sign-off; the pass
+used semantics, bounds, and real interactions without weakening the financial-data protection.
+
 ### Reminder time validation (2026-10-30)
 
 Reminder times are stored as minute-of-day values and scheduled against the device's current local
@@ -232,6 +264,45 @@ The unit tests, Android test compilation, focused feedback emulator suite, debug
 passed. The emulator was a sideloaded debug build, so Google Play's real availability response and
 download UI require a Play internal-test track with a signed published artifact; that release-owner
 gate remains unverified here.
+
+### Default reminders, adaptive layout and Daily Momentum (2026-11-01)
+
+The daily local reminder now defaults to enabled for a completed workspace, remains opt-out, and
+does not schedule or post before onboarding creates the workspace. The Home screen derives private
+daily points, streaks and milestone badges from the encrypted transaction snapshot; it adds no
+database fields, network calls, account system, or spending rewards. Navigation and crowded Home and
+Activity summaries reflow from the available window width and font scale: compact windows use
+accessible icon-only navigation when labels would wrap, while wider windows use a navigation rail.
+
+Verified on the disposable API 36.1 `Medium_Phone_API_36.1` emulator with:
+
+```powershell
+.\gradlew.bat --% :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.mizani.money.GuestJourneyTest --no-daemon -Pkotlin.incremental=false
+.\gradlew.bat --% :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.mizani.money.SettingsAndReminderEndToEndTest --no-daemon -Pkotlin.incremental=false
+.\gradlew.bat --% :app:testDebugUnitTest :app:lintDebug :app:assembleDebug --no-daemon -Pkotlin.incremental=false
+```
+
+All three commands passed. Manual UI-hierarchy checks also passed at font scale 1.3 on a 720 px
+compact window and at an 800 dp-equivalent wide window: navigation labels remained available to
+accessibility services, action buttons retained usable bounds, and the rail avoided bottom-nav
+compression. Screenshot review remains unavailable for the secure app window; physical foldable,
+TalkBack and OEM notification-delivery checks remain release-owner follow-up work.
+
+The local SDK did not provide a foldable AVD: `adb shell cmd device_state print-states` exposed only
+the `DEFAULT` state. The additional compact and wide checks therefore simulated cover-like and
+unfolded window sizes with `adb shell wm size` and density overrides; hinge posture, cutout, and
+spanning behavior remain unverified until a real foldable profile is available.
+
+The Pixel 10 Pro Fold API 17 AVD was subsequently exercised in `OPENED`, `HALF_OPENED`, and
+`CLOSED` states. Home and Activity stayed within the active display bounds at normal and 1.3x font
+scale; the cover navigation retained accessible labels when its visible labels were hidden; and the
+Daily Momentum card exposed its title, tracked-day stats, action, milestone, and next-milestone copy
+after scrolling. The `CLOSED` state initially showed the emulator keyguard and was dismissed before
+app assertions. The app window is secure, so screenshots of its content render black; these checks
+use UI hierarchy, bounds, semantics labels, and interaction evidence instead of claiming visual
+pixel review.
+The additional `REAR_DISPLAY_MODE` and `CONCURRENT_INNER_DEFAULT` states exposed the launcher on
+this AVD rather than an app window, so they were recorded as state-transition checks only.
 
 ## Scope and data compatibility
 

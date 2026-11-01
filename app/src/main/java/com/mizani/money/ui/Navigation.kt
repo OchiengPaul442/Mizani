@@ -6,6 +6,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -36,6 +37,9 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Scaffold
@@ -53,6 +57,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -220,58 +225,99 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
         navController.popBackStack()
     }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        floatingActionButton = {
-            if (showGlobalAdd) {
-                ExtendedFloatingActionButton(
-                    onClick = { showAddSheet = true },
-                    icon = { Icon(Icons.Rounded.Add, contentDescription = null) },
-                    text = { Text("Add") },
-                )
-            }
-        },
-        bottomBar = {
-            if (isTopLevel) {
-                Box(
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        // Use the app window, not a device-type check. This adapts automatically to split screen,
+        // rotation, compact foldable displays and unfolded tablets as the available window changes.
+        val useRail = isTopLevel && maxWidth >= AdaptiveLayout.MEDIUM_WIDTH_DP.dp
+        val hideBottomLabels = maxWidth < AdaptiveLayout.COMPACT_NAVIGATION_WIDTH_DP.dp ||
+            LocalDensity.current.fontScale > AdaptiveLayout.LARGE_FONT_SCALE
+        val hideRailLabels = LocalDensity.current.fontScale > AdaptiveLayout.EXTRA_LARGE_FONT_SCALE
+        Row(Modifier.fillMaxSize()) {
+            if (useRail) {
+                NavigationRail(
                     modifier = Modifier
-                        .fillMaxWidth()
                         .navigationBarsPadding()
-                        .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                        .padding(horizontal = Spacing.sm, vertical = Spacing.lg)
+                        .clip(MaterialTheme.shapes.large)
+                        .border(
+                            width = 1.dp,
+                            color = mizaniSurfaceBorderColor(),
+                            shape = MaterialTheme.shapes.large,
+                        ),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 ) {
-                    NavigationBar(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(MaterialTheme.shapes.large)
-                            .border(
-                                width = 1.dp,
-                                color = mizaniSurfaceBorderColor(),
-                                shape = MaterialTheme.shapes.large,
+                    tabs.forEach { tab ->
+                        val selected = currentRoute == tab.route
+                        NavigationRailItem(
+                            selected = selected,
+                            onClick = { openTopLevel(tab.route) },
+                            icon = { Icon(tab.icon, contentDescription = if (hideRailLabels) tab.label else null) },
+                            label = if (hideRailLabels) null else { { Text(tab.label, maxLines = 1) } },
+                            colors = NavigationRailItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             ),
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        tonalElevation = 0.dp,
-                    ) {
-                        tabs.forEach { tab ->
-                            val selected = currentRoute == tab.route
-                            NavigationBarItem(
-                                selected = selected,
-                                onClick = { openTopLevel(tab.route) },
-                                icon = { Icon(tab.icon, contentDescription = null) },
-                                label = { Text(tab.label) },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    selectedTextColor = MaterialTheme.colorScheme.primary,
-                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                ),
-                            )
-                        }
+                        )
                     }
                 }
             }
-        },
-    ) { padding ->
+
+            Scaffold(
+                modifier = Modifier.weight(1f),
+                containerColor = MaterialTheme.colorScheme.background,
+                floatingActionButton = {
+                    if (showGlobalAdd) {
+                        ExtendedFloatingActionButton(
+                            onClick = { showAddSheet = true },
+                            icon = { Icon(Icons.Rounded.Add, contentDescription = null) },
+                            text = { Text("Add") },
+                        )
+                    }
+                },
+                bottomBar = {
+                    if (isTopLevel && !useRail) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .navigationBarsPadding()
+                                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                        ) {
+                            NavigationBar(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(MaterialTheme.shapes.large)
+                                    .border(
+                                        width = 1.dp,
+                                        color = mizaniSurfaceBorderColor(),
+                                        shape = MaterialTheme.shapes.large,
+                                    ),
+                                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                tonalElevation = 0.dp,
+                            ) {
+                                tabs.forEach { tab ->
+                                    val selected = currentRoute == tab.route
+                                    NavigationBarItem(
+                                        selected = selected,
+                                        onClick = { openTopLevel(tab.route) },
+                                        icon = { Icon(tab.icon, contentDescription = if (hideBottomLabels) tab.label else null) },
+                                        label = if (hideBottomLabels) null else { { Text(tab.label, maxLines = 1) } },
+                                        colors = NavigationBarItemDefaults.colors(
+                                            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        ),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                },
+            ) { padding ->
         NavHost(
             navController = navController,
             startDestination = "home",
@@ -563,6 +609,8 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
                     )
                 }
             }
+            }
+        }
         }
     }
 

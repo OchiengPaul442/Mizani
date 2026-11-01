@@ -3,6 +3,7 @@ package com.mizani.money.feature.transactions
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -28,6 +29,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,7 +37,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mizani.money.core.model.TransactionType
 import com.mizani.money.core.money.Currency
 import com.mizani.money.core.money.MoneyFormat
@@ -46,6 +50,7 @@ import com.mizani.money.R
 import com.mizani.money.data.local.TransactionEntity
 import com.mizani.money.ui.AppUiState
 import com.mizani.money.ui.AppViewModel
+import com.mizani.money.ui.AdaptiveLayout
 import com.mizani.money.ui.components.DateRangePickerDialog
 import com.mizani.money.ui.components.EmptyState
 import com.mizani.money.ui.components.MizaniAmountField
@@ -56,7 +61,10 @@ import com.mizani.money.ui.components.PickerOption
 import com.mizani.money.ui.components.Spacing
 import com.mizani.money.ui.components.TransactionRow
 import com.mizani.money.ui.theme.LocalMizaniThemeTokens
+import kotlinx.coroutines.delay
 import java.time.LocalDate
+
+private const val SEARCH_DEBOUNCE_MS = 120L
 
 private enum class DateFilter(val label: String) {
     ALL("All time"),
@@ -75,8 +83,9 @@ fun TransactionsScreen(
 ) {
     val snapshot = state.snapshot
     val currency = state.currency
-    val today = vm.today
+    val today by vm.today.collectAsStateWithLifecycle()
     var search by rememberSaveable { mutableStateOf("") }
+    var appliedSearch by remember { mutableStateOf("") }
     var showFilters by rememberSaveable { mutableStateOf(false) }
     var dateFilter by rememberSaveable { mutableStateOf(DateFilter.ALL) }
     var customRange by remember { mutableStateOf<DateRange?>(null) }
@@ -86,6 +95,13 @@ fun TransactionsScreen(
     var categoryId by remember { mutableStateOf<String?>(null) }
     var minAmount by rememberSaveable { mutableStateOf("") }
     var maxAmount by rememberSaveable { mutableStateOf("") }
+
+    // Avoid re-filtering a large local ledger once per character while the user is typing.
+    // The field remains immediately responsive; only the derived result is lightly debounced.
+    LaunchedEffect(search) {
+        delay(SEARCH_DEBOUNCE_MS)
+        appliedSearch = search
+    }
 
     val range: DateRange? = when (dateFilter) {
         DateFilter.ALL -> null
@@ -97,9 +113,25 @@ fun TransactionsScreen(
     val minMinor = MoneyFormat.parse(minAmount, currency)
     val maxMinor = MoneyFormat.parse(maxAmount, currency)
 
+    // Build searchable text once per ledger snapshot. Rebuilding and lowercasing this string
+    // inside the row filter for every keystroke makes large local ledgers feel progressively
+    // slower, even though the data is already in memory.
+    val searchIndex = remember(snapshot.transactions, snapshot.categories, snapshot.wallets) {
+        snapshot.transactions.associate { transaction ->
+            transaction.id to buildString {
+                append(transaction.payee).append(' ')
+                append(transaction.note).append(' ')
+                append(snapshot.categoryName(transaction.categoryId)).append(' ')
+                append(snapshot.walletName(transaction.walletId)).append(' ')
+                append(transaction.type.label).append(' ')
+                append(transaction.amountMinor)
+            }.lowercase()
+        }
+    }
+
     val filtered = remember(
         snapshot.transactions,
-        search,
+        appliedSearch,
         range?.start,
         range?.end,
         selectedTypes,
@@ -108,7 +140,7 @@ fun TransactionsScreen(
         minMinor,
         maxMinor,
     ) {
-        val query = search.trim().lowercase()
+        val query = appliedSearch.trim().lowercase()
         snapshot.transactions.filter { transaction ->
             if (range != null && !range.contains(LocalDate.ofEpochDay(transaction.localDateEpochDay))) return@filter false
             if (selectedTypes.isNotEmpty() && transaction.type !in selectedTypes) return@filter false
@@ -117,15 +149,7 @@ fun TransactionsScreen(
             if (minMinor != null && transaction.amountMinor < minMinor) return@filter false
             if (maxMinor != null && transaction.amountMinor > maxMinor) return@filter false
             if (query.isNotEmpty()) {
-                val haystack = buildString {
-                    append(transaction.payee).append(' ')
-                    append(transaction.note).append(' ')
-                    append(snapshot.categoryName(transaction.categoryId)).append(' ')
-                    append(snapshot.walletName(transaction.walletId)).append(' ')
-                    append(transaction.type.label).append(' ')
-                    append(transaction.amountMinor)
-                }.lowercase()
-                if (!haystack.contains(query)) return@filter false
+                if (!(searchIndex[transaction.id] ?: "").contains(query)) return@filter false
             }
             true
         }
@@ -335,21 +359,49 @@ private fun SummaryRow(
 ) {
     val themeTokens = LocalMizaniThemeTokens.current
     MizaniCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(Spacing.md)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("Income", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(MoneyFormat.format(incomeMinor, currency), style = MaterialTheme.typography.titleSmall, color = themeTokens.income)
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val stackSummary = maxWidth < AdaptiveLayout.STACKED_CONTENT_WIDTH_DP.dp ||
+                LocalDensity.current.fontScale > AdaptiveLayout.LARGE_FONT_SCALE
+            if (stackSummary) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    SummaryLine("Income", MoneyFormat.format(incomeMinor, currency), themeTokens.income)
+                    SummaryLine("Net spending", MoneyFormat.format(expenseMinor, currency), MaterialTheme.colorScheme.onSurface)
+                    Text(
+                        "$count shown",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Income", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(MoneyFormat.format(incomeMinor, currency), style = MaterialTheme.typography.titleSmall, color = themeTokens.income)
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Text("Net spending", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(MoneyFormat.format(expenseMinor, currency), style = MaterialTheme.typography.titleSmall)
+                    }
+                    Text(
+                        "$count shown",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
-            Column(Modifier.weight(1f)) {
-                Text("Net spending", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(MoneyFormat.format(expenseMinor, currency), style = MaterialTheme.typography.titleSmall)
-            }
-            Text(
-                "$count shown",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
+    }
+}
+
+@Composable
+private fun SummaryLine(label: String, value: String, valueColor: androidx.compose.ui.graphics.Color) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.titleSmall, color = valueColor)
     }
 }
 

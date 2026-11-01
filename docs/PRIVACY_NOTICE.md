@@ -1,7 +1,7 @@
 # Mizani Privacy Notice
 
-**Version:** 2026-10-30-5
-**Effective:** 30 October 2026
+**Version:** 2026-11-01-1
+**Effective:** 1 November 2026
 **Provider:** Paul Ochieng
 **Address:** Kampala, Uganda
 **Contact:** paul.ochieng.dev@gmail.com
@@ -18,11 +18,11 @@ The information you enter can include wallet names and balances; transaction typ
 
 If you choose to paste or share a supported mobile-money confirmation, Mizani reads its text on this device. The original message is discarded after review; only the transaction you confirm and its provider reference are stored in your ledger.
 
-Mizani also stores settings such as your selected country, primary currency, theme and app-lock preferences, optional reminder settings and time, selected local money check-in categories, and cached currency rates. App-lock details stay on this device. The app records which versions of these documents you accepted and when.
+Mizani also stores settings such as your selected country, primary currency, theme and app-lock preferences, the daily reminder (enabled by default at setup) and its time, optional money check-in settings, and cached currency rates. App-lock details stay on this device. The app records which versions of these documents you accepted and when.
 
 ## 3. Why the app uses this information
 
-Mizani uses your information to provide the budgeting features you choose, protect your records, and create exports or backups when you request them. Optional daily, commitment and money check-in reminders check your local ledger and use generic notifications without names or amounts; they do not send ledger information off the device. Money check-ins are descriptive prompts, not investment, debt or other financial advice.
+Mizani uses your information to provide the budgeting features you choose, protect your records, and create exports or backups when you request them. The daily reminder is enabled by default at setup but can be turned off; it checks your local ledger and uses generic notifications without names or amounts. Optional commitment and money check-in reminders work the same way. None of these reminders sends ledger information off the device. Money check-ins are descriptive prompts, not investment, debt or other financial advice.
 
 Mizani does not require a name, email address, phone number, bank login, or account. Your ledger is not used for advertising or usage tracking.
 

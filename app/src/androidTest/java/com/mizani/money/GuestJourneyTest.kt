@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -84,6 +85,12 @@ class GuestJourneyTest {
         compose.waitUntil(timeoutMillis = 20_000) {
             compose.onAllNodesWithText("Activity").fetchSemanticsNodes().isNotEmpty()
         }
+        compose.onNodeWithText("Daily momentum").assertExists()
+        compose.onNodeWithText("Track days, not amounts · 10 points per day.").assertExists()
+        compose.onNodeWithText("0 points").assertExists()
+        compose.onNodeWithText("Record today").assertExists()
+        compose.onNodeWithText("Milestone: Starting out").assertExists()
+        compose.onNodeWithText("Next milestone: First steps · 3 days to go").assertExists()
         compose.onNode(hasText("Activity") and hasClickAction()).performClick()
         compose.onNodeWithText("Add transaction").performClick()
         compose.onNodeWithText("Record expense").performClick()
@@ -133,7 +140,7 @@ class GuestJourneyTest {
         compose.onAllNodesWithContentDescription(
             "Expense, Housing & rent, −UGX 25,000",
             substring = true,
-        ).onFirst().performClick()
+        ).onFirst().performScrollTo().performClick()
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodesWithText("Edit transaction").fetchSemanticsNodes().isNotEmpty()
         }

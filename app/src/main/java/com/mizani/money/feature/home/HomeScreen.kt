@@ -9,11 +9,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -24,6 +24,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -44,7 +46,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -60,11 +64,14 @@ import com.mizani.money.core.time.DateRange
 import com.mizani.money.core.time.DateText
 import com.mizani.money.core.time.Periods
 import com.mizani.money.domain.analytics.DashboardMetrics
+import com.mizani.money.domain.engagement.DailyMomentum
+import com.mizani.money.domain.engagement.DailyMomentumCalculator
 import com.mizani.money.data.local.WalletEntity
 import com.mizani.money.feature.lock.ProtectedBalanceValue
 import com.mizani.money.feature.lock.WalletBalanceVisibilityControl
 import com.mizani.money.ui.AppUiState
 import com.mizani.money.ui.AppViewModel
+import com.mizani.money.ui.AdaptiveLayout
 import com.mizani.money.ui.components.DateRangePickerDialog
 import com.mizani.money.ui.components.EmptyState
 import com.mizani.money.ui.components.InsightCard
@@ -72,6 +79,7 @@ import com.mizani.money.ui.components.MizaniCard
 import com.mizani.money.ui.components.MizaniDonutChart
 import com.mizani.money.ui.components.MizaniMark
 import com.mizani.money.ui.components.PeriodMenu
+import com.mizani.money.ui.components.ProgressBar
 import com.mizani.money.ui.components.SectionHeader
 import com.mizani.money.ui.components.Spacing
 import com.mizani.money.ui.components.StorysetIllustration
@@ -103,7 +111,10 @@ fun HomeScreen(
     val snapshot = state.snapshot
     val currency = state.currency
     val walletBalances = remember(snapshot) { snapshot.walletBalances() }
-    val today = vm.today
+    val today by vm.today.collectAsStateWithLifecycle()
+    val momentum = remember(snapshot.transactions, today) {
+        DailyMomentumCalculator.calculate(snapshot.transactions, today)
+    }
     var showRangePicker by remember { mutableStateOf(false) }
 
     if (showRangePicker) {
@@ -166,6 +177,7 @@ fun HomeScreen(
                     onSetupPin = onSetupPin,
                 )
             }
+            DailyMomentumCard(momentum = momentum, onAdd = onAdd)
             return@Column
         }
 
@@ -180,6 +192,7 @@ fun HomeScreen(
                 onSetupPin = onSetupPin,
             )
         }
+        DailyMomentumCard(momentum = momentum, onAdd = onAdd)
 
         val current = metrics
         if (current == null) {
@@ -457,6 +470,7 @@ private fun SectionBlock(
 @Composable
 private fun GetStartedHero(onAddIncome: () -> Unit, onAddExpense: () -> Unit) {
     val themeTokens = LocalMizaniThemeTokens.current
+    val illustrationSize = if (LocalDensity.current.fontScale > AdaptiveLayout.LARGE_FONT_SCALE) 104.dp else 144.dp
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -467,7 +481,7 @@ private fun GetStartedHero(onAddIncome: () -> Unit, onAddExpense: () -> Unit) {
         Column {
             Box(
                 modifier = Modifier.align(Alignment.CenterHorizontally)
-                    .size(144.dp).clip(CircleShape)
+                    .size(illustrationSize).clip(CircleShape)
                     .background(Color.White.copy(alpha = 0.14f)),
                 contentAlignment = Alignment.Center,
             ) {
@@ -505,33 +519,64 @@ private fun QuickAddActions(
     onDarkBackground: Boolean = false,
 ) {
     val themeTokens = LocalMizaniThemeTokens.current
-    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val stackActions = maxWidth < AdaptiveLayout.STACKED_CONTENT_WIDTH_DP.dp ||
+            LocalDensity.current.fontScale > AdaptiveLayout.LARGE_FONT_SCALE
         val colors = if (onDarkBackground) {
             ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = themeTokens.heroStart)
         } else {
             ButtonDefaults.buttonColors()
         }
-        Button(
-            onClick = onAddExpense,
-            modifier = Modifier.weight(1f).height(Spacing.buttonHeight),
-            shape = MaterialTheme.shapes.small,
-            colors = colors,
-        ) {
-            Icon(Icons.Rounded.ArrowUpward, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(4.dp))
-            Text("Add expense", maxLines = 1)
-        }
-        OutlinedButton(
-            onClick = onAddIncome,
-            modifier = Modifier.weight(1f).height(Spacing.buttonHeight),
-            shape = MaterialTheme.shapes.small,
-            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-                contentColor = if (onDarkBackground) Color.White else MaterialTheme.colorScheme.primary,
-            ),
-        ) {
-            Icon(Icons.Rounded.ArrowDownward, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(4.dp))
-            Text("Add income", maxLines = 1)
+        if (stackActions) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                Button(
+                    onClick = onAddExpense,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = Spacing.buttonHeight),
+                    shape = MaterialTheme.shapes.small,
+                    colors = colors,
+                ) {
+                    Icon(Icons.Rounded.ArrowUpward, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Add expense")
+                }
+                OutlinedButton(
+                    onClick = onAddIncome,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = Spacing.buttonHeight),
+                    shape = MaterialTheme.shapes.small,
+                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                        contentColor = if (onDarkBackground) Color.White else MaterialTheme.colorScheme.primary,
+                    ),
+                ) {
+                    Icon(Icons.Rounded.ArrowDownward, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Add income")
+                }
+            }
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                Button(
+                    onClick = onAddExpense,
+                    modifier = Modifier.weight(1f).heightIn(min = Spacing.buttonHeight),
+                    shape = MaterialTheme.shapes.small,
+                    colors = colors,
+                ) {
+                    Icon(Icons.Rounded.ArrowUpward, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Add expense", maxLines = 1)
+                }
+                OutlinedButton(
+                    onClick = onAddIncome,
+                    modifier = Modifier.weight(1f).heightIn(min = Spacing.buttonHeight),
+                    shape = MaterialTheme.shapes.small,
+                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                        contentColor = if (onDarkBackground) Color.White else MaterialTheme.colorScheme.primary,
+                    ),
+                ) {
+                    Icon(Icons.Rounded.ArrowDownward, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Add income", maxLines = 1)
+                }
+            }
         }
     }
 }
@@ -540,40 +585,34 @@ private fun QuickAddActions(
 private fun SummaryCard(metrics: DashboardMetrics, currency: Currency) {
     val themeTokens = LocalMizaniThemeTokens.current
     MizaniCard {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            SummaryColumn(
-                label = "Income",
-                value = MoneyFormat.format(metrics.incomeMinor, currency),
-                valueColor = themeTokens.income,
-                modifier = Modifier.weight(1f),
-            )
-            SummaryDivider()
-            SummaryColumn(
-                label = "Net expenses",
-                value = MoneyFormat.format(metrics.expenseMinor, currency),
-                valueColor = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f),
-            )
-            SummaryDivider()
-            SummaryColumn(
-                label = "Net",
-                value = MoneyFormat.format(metrics.netMinor, currency),
-                valueColor = if (metrics.netMinor >= 0) {
-                    themeTokens.income
-                } else {
-                    MaterialTheme.colorScheme.error
-                },
-                modifier = Modifier.weight(1f),
-            )
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val stackSummary = maxWidth < AdaptiveLayout.STACKED_CONTENT_WIDTH_DP.dp ||
+                LocalDensity.current.fontScale > AdaptiveLayout.LARGE_FONT_SCALE
+            val netColor = if (metrics.netMinor >= 0) themeTokens.income else MaterialTheme.colorScheme.error
+            if (stackSummary) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                    SummaryColumn("Income", MoneyFormat.format(metrics.incomeMinor, currency), themeTokens.income, Modifier.fillMaxWidth())
+                    SummaryColumn("Net expenses", MoneyFormat.format(metrics.expenseMinor, currency), MaterialTheme.colorScheme.onSurface, Modifier.fillMaxWidth())
+                    SummaryColumn("Net", MoneyFormat.format(metrics.netMinor, currency), netColor, Modifier.fillMaxWidth())
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    SummaryColumn("Income", MoneyFormat.format(metrics.incomeMinor, currency), themeTokens.income, Modifier.weight(1f))
+                    SummaryDivider()
+                    SummaryColumn("Net expenses", MoneyFormat.format(metrics.expenseMinor, currency), MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
+                    SummaryDivider()
+                    SummaryColumn("Net", MoneyFormat.format(metrics.netMinor, currency), netColor, Modifier.weight(1f))
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun RowScope.SummaryColumn(
+private fun SummaryColumn(
     label: String,
     value: String,
     valueColor: Color,
@@ -591,9 +630,195 @@ private fun RowScope.SummaryColumn(
             style = MaterialTheme.typography.titleSmall,
             color = valueColor,
             fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+private fun DailyMomentumCard(
+    momentum: DailyMomentum,
+    onAdd: () -> Unit,
+) {
+    val next = momentum.nextTier
+    val progress = if (next == null) {
+        1f
+    } else {
+        val range = (next.minimumTrackedDays - momentum.tier.minimumTrackedDays).coerceAtLeast(1)
+        (momentum.trackedDays - momentum.tier.minimumTrackedDays).toFloat() / range
+    }
+    MizaniCard(
+        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.42f),
+    ) {
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val stackStats = maxWidth < AdaptiveLayout.STACKED_CONTENT_WIDTH_DP.dp ||
+                LocalDensity.current.fontScale > AdaptiveLayout.LARGE_FONT_SCALE
+
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Rounded.EmojiEvents,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+                    Spacer(Modifier.width(Spacing.sm))
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.home_momentum_title), style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            stringResource(R.string.home_momentum_subtitle),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Spacer(Modifier.width(Spacing.sm))
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary)
+                            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+                    ) {
+                        Text(
+                            stringResource(R.string.home_momentum_points, momentum.points),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(Spacing.md))
+                if (stackStats) {
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                        MomentumStat(momentum.trackedDays, R.string.home_momentum_days_tracked)
+                        MomentumStat(momentum.currentStreak, R.string.home_momentum_day_streak)
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        MomentumStat(
+                            value = momentum.trackedDays,
+                            labelRes = R.string.home_momentum_days_tracked,
+                            modifier = Modifier.weight(1f),
+                        )
+                        SummaryDivider()
+                        MomentumStat(
+                            value = momentum.currentStreak,
+                            labelRes = R.string.home_momentum_day_streak,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(Spacing.md))
+                if (momentum.todayTracked) {
+                    Row(
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            Icons.Rounded.CheckCircle,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(Modifier.width(Spacing.sm))
+                        Text(
+                            stringResource(R.string.home_momentum_today_done),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                } else if (stackStats) {
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                        Text(
+                            stringResource(R.string.home_momentum_today_prompt),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        TextButton(onClick = onAdd) {
+                            Text(stringResource(R.string.home_momentum_record_action))
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            stringResource(R.string.home_momentum_today_prompt),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(onClick = onAdd) {
+                            Text(stringResource(R.string.home_momentum_record_action))
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(Spacing.sm))
+                ProgressBar(progress, color = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.height(Spacing.xs))
+                Text(
+                    stringResource(R.string.home_momentum_milestone, momentum.tier.title),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (next != null) {
+                    val daysToNext = momentum.trackedDaysToNextTier ?: 0
+                    Text(
+                        if (daysToNext == 1) {
+                            stringResource(R.string.home_momentum_next_one, next.title)
+                        } else {
+                            stringResource(R.string.home_momentum_next_many, next.title, daysToNext)
+                        },
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    Text(
+                        stringResource(R.string.home_momentum_all_milestones),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MomentumStat(
+    value: Int,
+    labelRes: Int,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            value.toString(),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            stringResource(labelRes),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

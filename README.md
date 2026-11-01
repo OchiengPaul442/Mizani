@@ -52,8 +52,8 @@ Mizani is an Android budgeting app designed to work offline. It needs no account
   settlement rates.
 - **Keep and move your records.** Export transactions to CSV or Excel, or create and restore a
   Mizani backup encrypted with a passphrase. CSV and Excel files are not encrypted.
-- **Get a gentle reminder.** An optional daily local reminder defaults to 8:00 p.m. and can be
-  changed in Settings. You can also opt in to local money check-ins for weekly spending, expected
+- **Get a gentle reminder.** A daily local reminder is enabled by default at 8:00 p.m. and can be
+  changed or disabled in Settings. You can also opt in to local money check-ins for weekly spending, expected
   income, investment valuation, debt payments and savings goals. Check-ins are frequency-limited,
   use generic private notification copy, and show no names or amounts on the lock screen.
 - **Protect access.** Use an optional six digit app PIN or biometric unlock.

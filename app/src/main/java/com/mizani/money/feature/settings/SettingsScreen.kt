@@ -280,6 +280,18 @@ fun SettingsScreen(
         }
         runCatching { context.startActivity(intent) }
     }
+    val requestDailyReminderNotificationAccess: () -> Unit = {
+        pendingNotificationEnable = "daily"
+        reminderStatus = null
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            openReminderNotificationSettings()
+        }
+    }
     val onDailyReminderChanged: (Boolean) -> Unit = { enabled ->
         pendingNotificationEnable = "daily"
         reminderStatus = null
@@ -1188,8 +1200,21 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error,
                         )
-                        TextButton(onClick = openReminderNotificationSettings) {
-                            Text(stringResource(R.string.settings_open_notification_settings))
+                        TextButton(onClick = requestDailyReminderNotificationAccess) {
+                            Text(
+                                stringResource(
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                        ContextCompat.checkSelfPermission(
+                                            context,
+                                            Manifest.permission.POST_NOTIFICATIONS,
+                                        ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+                                    ) {
+                                        R.string.settings_allow_notifications
+                                    } else {
+                                        R.string.settings_open_notification_settings
+                                    },
+                                ),
+                            )
                         }
                     }
                 }

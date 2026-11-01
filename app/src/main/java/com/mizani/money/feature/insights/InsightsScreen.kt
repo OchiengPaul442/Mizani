@@ -96,7 +96,7 @@ fun InsightsScreen(
     val periodRange by vm.periodRange.collectAsStateWithLifecycle()
     val snapshot = state.snapshot
     val currency = state.currency
-    val today = vm.today
+    val today by vm.today.collectAsStateWithLifecycle()
     var showRangePicker by remember { mutableStateOf(false) }
     var showDailyTargetDialog by remember { mutableStateOf(false) }
 

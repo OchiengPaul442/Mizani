@@ -59,6 +59,19 @@
     <string name="home_get_started_body">Record money as it comes in or goes out. Your totals update right away.</string>
     <string name="home_loading">Loading your summary…</string>
 
+    <string name="home_momentum_title">Daily momentum</string>
+    <string name="home_momentum_subtitle">Track days, not amounts · 10 points per day.</string>
+    <string name="home_momentum_points">%1$d points</string>
+    <string name="home_momentum_days_tracked">days tracked</string>
+    <string name="home_momentum_day_streak">day streak</string>
+    <string name="home_momentum_today_done">You\'re checked in for today.</string>
+    <string name="home_momentum_today_prompt">Record any money activity today to keep your streak moving.</string>
+    <string name="home_momentum_record_action">Record today</string>
+    <string name="home_momentum_milestone">Milestone: %1$s</string>
+    <string name="home_momentum_next_one">Next milestone: %1$s · 1 day to go</string>
+    <string name="home_momentum_next_many">Next milestone: %1$s · %2$d days to go</string>
+    <string name="home_momentum_all_milestones">All milestones reached — keep your habit going.</string>
+
     <!-- Insights -->
     <string name="insights_subtitle">What your records show</string>
     <string name="insights_loading">Loading insights…</string>
@@ -66,11 +79,12 @@
     <!-- Daily reminders -->
     <string name="settings_reminders_title">Reminders</string>
     <string name="settings_daily_reminder_title">Daily money check-in</string>
-    <string name="settings_daily_reminder_description">At %1$s local time, remind me to review today\'s money activity if nothing has been recorded.</string>
+    <string name="settings_daily_reminder_description">Enabled by default at %1$s local time. Remind me to review today\'s money activity if nothing has been recorded; I can turn it off anytime.</string>
     <string name="settings_reminder_time_label">Reminder time</string>
     <string name="settings_reminder_local_note">The time uses this phone\'s current local time zone and is shown with AM or PM. Android may delay alerts when battery saving or background restrictions are active.</string>
     <string name="settings_reminder_permission_denied">Notification permission was declined. Allow notifications to receive reminders.</string>
-    <string name="settings_reminder_notifications_disabled">Notifications are turned off for Mizani. Turn them on in Android settings to receive reminders.</string>
+    <string name="settings_reminder_notifications_disabled">Notifications are off for Mizani. Allow them to receive reminders.</string>
+    <string name="settings_allow_notifications">Allow notifications</string>
     <string name="settings_open_notification_settings">Open notification settings</string>
     <string name="settings_send_test_reminder">Send a test notification</string>
     <string name="settings_reminder_test_sent">Test notification sent. If you do not see it, check Mizani\'s notification settings in Android.</string>

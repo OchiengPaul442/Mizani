@@ -6,6 +6,34 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-11-01
+
+### Added
+
+- Add private, on-device Daily Momentum points, streaks and recognition milestones based on
+  tracked calendar days; progress never rewards spending, uses a network, or exposes financial
+  details in notifications.
+
+### Changed
+
+- Enable the daily local money reminder by default after onboarding, while preserving an explicit
+  Settings opt-out and preventing scheduling before a workspace exists.
+- Adapt navigation to use a rail on wider windows and icon-only navigation at narrow or large-font
+  scales; reflow Home and Activity actions and summaries instead of squeezing text into rows.
+- Clarify Daily Momentum around tracked days and streaks, add a direct record-today action, and
+  replace unsupported “unlocked” wording with honest recognition milestones.
+
+### Fixed
+
+- Provide an in-app notification-permission action for the default daily reminder on Android 13+
+  instead of leaving delivery dependent on a settings-only link.
+- Keep Home, Insights, and new transaction dates current across foregrounding, midnight, and local
+  time-zone changes; preserve large monetary summaries at larger text sizes.
+- Keep Activity search responsive on large local ledgers by indexing searchable transaction text
+  per snapshot and coalescing rapid typing before filtering.
+- Re-align shared reminder scheduling when habit-only check-ins are enabled and keep the privacy
+  notice aligned with the default reminder behavior.
+
 ## [1.7.1] - 2026-10-30
 
 ### Changed

@@ -141,11 +141,19 @@ class SettingsAndReminderEndToEndTest {
         }
         compose.waitUntil(timeoutMillis = 5_000) {
             compose.onAllNodesWithText(
-                "At 12:00 AM local time, remind me to review today's money activity if nothing has been recorded.",
+                "Enabled by default at 12:00 AM local time",
+                substring = true,
             ).fetchSemanticsNodes().isNotEmpty()
         }
         val reminderToggle = compose.onNodeWithContentDescription("Daily money check-in")
         reminderToggle.performScrollTo()
+        reminderToggle.assertIsOn()
+        assertTrue(
+            "A fresh workspace should enable the daily reminder by default",
+            runBlocking { app.container.settingsRepository.settings.first().dailyReminderEnabled },
+        )
+        // Explicit opt-out remains available, and opting back in must repair the schedule.
+        reminderToggle.performClick()
         reminderToggle.assertIsOff()
         reminderToggle.performClick()
         compose.waitUntil(timeoutMillis = 10_000) {
@@ -269,6 +277,34 @@ class SettingsAndReminderEndToEndTest {
         assertEquals(
             today.toEpochDay(),
             runBlocking { app.container.settingsRepository.settings.first().lastDailyReminderEpochDay },
+        )
+    }
+
+    @Test
+    fun defaultReminderCannotPostBeforeOnboarding() {
+        scenario.close()
+        TestState.reset()
+        DailyReminderNotifications.ensureChannel(app)
+        val notifications = app.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notifications.cancelAll()
+        val settings = runBlocking { app.container.settingsRepository.settings.first() }
+        assertTrue(settings.dailyReminderEnabled)
+        assertTrue(!settings.onboardingComplete)
+
+        val worker = TestListenableWorkerBuilder<DailyTransactionReminderWorker>(app)
+            .setInputData(
+                workDataOf(
+                    DailyReminderScheduler.INPUT_REMINDER_MINUTE_OF_DAY to settings.dailyReminderMinuteOfDay,
+                    DailyReminderScheduler.INPUT_TARGET_EPOCH_DAY to ZonedDateTime.now().toLocalDate().toEpochDay(),
+                    DailyReminderScheduler.INPUT_SCHEDULE_VERSION to settings.dailyReminderScheduleVersion,
+                ),
+            )
+            .build()
+        runBlocking { worker.doWork() }
+
+        assertTrue(notifications.activeNotifications.none { it.packageName == app.packageName })
+        assertTrue(
+            runBlocking { app.container.settingsRepository.settings.first().lastDailyReminderEpochDay == null },
         )
     }
 

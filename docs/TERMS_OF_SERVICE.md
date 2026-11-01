@@ -1,7 +1,7 @@
 # Mizani Terms of Service
 
-**Version:** 2026-10-30-2
-**Effective:** 30 October 2026
+**Version:** 2026-11-01-1
+**Effective:** 1 November 2026
 **Provider:** Paul Ochieng
 **Address:** Kampala, Uganda
 **Contact:** paul.ochieng.dev@gmail.com
@@ -28,7 +28,7 @@ Mizani does not keep an online copy of your financial records. They are encrypte
 
 Mizani uses Android's secure-window setting to block ordinary screenshots, screen recordings, and capture on non-secure displays. This platform control cannot stop a camera or a compromised device, and its behavior depends on Android and the device maker.
 
-If you turn on a daily reminder, Mizani checks the ledger on this device and can show a generic notification when no income, expense, or refund has been recorded that day. It does not send your ledger to a reminder service.
+Mizani enables a daily reminder by default at setup. You can change or turn it off in Settings. When enabled, Mizani checks the ledger on this device and can show a generic notification when no income, expense, or refund has been recorded that day. It does not send your ledger to a reminder service.
 
 Enter information you are entitled to use. Avoid putting another person’s sensitive details in a payee or note unless you have a valid reason and permission to do so.
 

@@ -21,7 +21,7 @@ class ReminderTimeChangeReceiver : BroadcastReceiver() {
                 val app = appContext as com.mizani.money.MizaniApplication
                 val settingsRepository = app.container.settingsRepository
                 val currentSettings = settingsRepository.settings.first()
-                if (currentSettings.dailyReminderEnabled) {
+                if (currentSettings.dailyReminderEnabled || currentSettings.habitNotificationsEnabled) {
                     settingsRepository.bumpDailyReminderScheduleVersion()
                 }
                 val settings = settingsRepository.settings.first()

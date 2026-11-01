@@ -30,11 +30,14 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
@@ -76,7 +79,8 @@ class AppViewModel(private val container: AppContainer) : ViewModel() {
     lateinit var exporter: ExportManager
         private set
 
-    val today: LocalDate = LocalDate.now()
+    private val _today = MutableStateFlow(LocalDate.now())
+    val today: StateFlow<LocalDate> = _today.asStateFlow()
 
     private val settingsAttempt = MutableStateFlow(0)
     private val settingsReadState = MutableStateFlow<SettingsReadState>(SettingsReadState.Loading)
@@ -127,6 +131,13 @@ class AppViewModel(private val container: AppContainer) : ViewModel() {
         .stateIn(viewModelScope, SharingStarted.Eagerly, AppUiState())
 
     init {
+        viewModelScope.launch {
+            while (isActive) {
+                refreshToday()
+                delay(TODAY_REFRESH_INTERVAL_MS)
+            }
+        }
+
         viewModelScope.launch {
             settingsAttempt.collectLatest {
                 settingsReadState.value = SettingsReadState.Loading
@@ -184,21 +195,21 @@ class AppViewModel(private val container: AppContainer) : ViewModel() {
         startupAttempt.value += 1
     }
 
-    val periodRange: StateFlow<DateRange> = combine(_selectedPreset, _customRange) { preset, custom ->
+    val periodRange: StateFlow<DateRange> = combine(_selectedPreset, _customRange, today) { preset, custom, currentToday ->
         if (preset == PeriodPreset.CUSTOM && custom != null) {
             custom
         } else {
-            Periods.preset(preset, today)
+            Periods.preset(preset, currentToday)
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, Periods.monthOf(LocalDate.now()))
 
-    val metrics: StateFlow<DashboardMetrics?> = combine(snapshotFlow, periodRange) { snapshot, range ->
-        snapshot?.let { AnalyticsEngine(it).dashboard(range, today) }
+    val metrics: StateFlow<DashboardMetrics?> = combine(snapshotFlow, periodRange, today) { snapshot, range, currentToday ->
+        snapshot?.let { AnalyticsEngine(it).dashboard(range, currentToday) }
     }.flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     val insights: StateFlow<List<com.mizani.money.core.model.Insight>> =
-        combine(snapshotFlow, metrics) { snapshot, dashboard ->
+        combine(snapshotFlow, metrics, today) { snapshot, dashboard, currentToday ->
             if (snapshot == null || dashboard == null) {
                 emptyList()
             } else {
@@ -206,10 +217,15 @@ class AppViewModel(private val container: AppContainer) : ViewModel() {
                     data = snapshot,
                     engine = AnalyticsEngine(snapshot),
                     currency = Currencies.byCode(snapshot.currencyCode),
-                ).generate(dashboard, today)
+                ).generate(dashboard, currentToday)
             }
         }.flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** Refreshes the local calendar date when the Activity returns to the foreground. */
+    fun refreshToday() {
+        _today.value = LocalDate.now()
+    }
 
     fun selectPreset(preset: PeriodPreset) {
         _selectedPreset.value = preset
@@ -238,6 +254,13 @@ class AppViewModel(private val container: AppContainer) : ViewModel() {
             openingBalanceMinor = openingBalanceMinor,
         )
         settingsRepository.completeOnboarding(countryCode, currencyCode)
+        // The default daily reminder is intentionally not scheduled before onboarding. Start it
+        // as soon as the local workspace exists, while still leaving notification permission to
+        // Android and the user's explicit choice. WorkManager is best-effort and must not turn a
+        // successful local workspace creation into a failed onboarding result.
+        runCatching {
+            container.dailyReminderScheduler.ensureScheduled(settingsRepository.settings.first())
+        }
         unlocked.value = true
     }
 
@@ -311,7 +334,7 @@ class AppViewModel(private val container: AppContainer) : ViewModel() {
         require(message.length <= TransactionMessageParser.MAX_MESSAGE_LENGTH) {
             "This message is too long to import. Paste only the transaction confirmation."
         }
-        val candidate = when (val parsed = TransactionMessageParser.parse(message, today, providerHint)) {
+        val candidate = when (val parsed = TransactionMessageParser.parse(message, today.value, providerHint)) {
             is MessageParseResult.Parsed -> parsed.candidate
             is MessageParseResult.Rejected -> throw IllegalArgumentException(
                 when (parsed.reason) {
@@ -466,6 +489,7 @@ class AppViewModel(private val container: AppContainer) : ViewModel() {
     companion object {
         /** Time in background after which the app re-locks (e.g. long file-picker sessions). */
         const val LOCK_GRACE_PERIOD_MS = 15_000L
+        private const val TODAY_REFRESH_INTERVAL_MS = 60_000L
 
         fun factory(container: AppContainer): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {

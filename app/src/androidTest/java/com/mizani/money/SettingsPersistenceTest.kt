@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -35,6 +36,22 @@ class SettingsPersistenceTest {
     @Test
     fun newSettingsDefaultToLightTheme() = runBlocking {
         assertEquals(ThemeMode.LIGHT, app.container.settingsRepository.settings.first().themeMode)
+    }
+
+    @Test
+    fun newSettingsDefaultToDailyReminderEnabled() = runBlocking {
+        assertTrue(app.container.settingsRepository.settings.first().dailyReminderEnabled)
+    }
+
+    @Test
+    fun explicitDailyReminderOptOutSurvivesRepositoryRecreation() = runBlocking {
+        val original = app.container.settingsRepository
+        original.completeOnboarding("UG", "UGX")
+        original.setDailyReminderEnabled(false)
+
+        val restored = SettingsRepository(app)
+
+        assertFalse(restored.settings.first().dailyReminderEnabled)
     }
 
     @Test

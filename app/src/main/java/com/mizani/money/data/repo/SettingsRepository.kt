@@ -41,7 +41,9 @@ data class AppSettings(
     val lockEnabled: Boolean = false,
     val biometricEnabled: Boolean = false,
     val hasPin: Boolean = false,
-    val dailyReminderEnabled: Boolean = false,
+    // A new install starts with the gentle local check-in enabled. An explicit false in DataStore
+    // remains authoritative, so existing users who disabled it stay opted out after an update.
+    val dailyReminderEnabled: Boolean = true,
     val dailyReminderMinuteOfDay: Int = DailyReminderSchedule.DEFAULT_MINUTE_OF_DAY,
     val dailyReminderScheduleVersion: Long = 0L,
     val lastDailyReminderEpochDay: Long? = null,
@@ -114,7 +116,7 @@ class SettingsRepository(context: Context) {
                 lockEnabled = preferences[Keys.LOCK_ENABLED] ?: false,
                 biometricEnabled = preferences[Keys.BIOMETRIC_ENABLED] ?: false,
                 hasPin = preferences[Keys.PIN_HASH] != null && preferences[Keys.PIN_SALT] != null,
-                dailyReminderEnabled = preferences[Keys.DAILY_REMINDER_ENABLED] ?: false,
+                dailyReminderEnabled = preferences[Keys.DAILY_REMINDER_ENABLED] ?: true,
                 dailyReminderMinuteOfDay = (preferences[Keys.DAILY_REMINDER_MINUTE_OF_DAY]
                     ?: DailyReminderSchedule.DEFAULT_MINUTE_OF_DAY)
                     .coerceIn(0, DailyReminderSchedule.MINUTES_PER_DAY - 1),

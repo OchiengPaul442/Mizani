@@ -123,6 +123,7 @@ class MainActivity : FragmentActivity() {
         super.onResume()
         // Reassert after returning from external activities or system UI.
         setSecureWindow()
+        appViewModel.refreshToday()
         if (appReadyForUpdateCheck) checkForPlayUpdate()
     }
 

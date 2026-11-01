@@ -23,10 +23,10 @@ data class LegalDocument(
  * accept the revised document once before opening their ledger.
  */
 object LegalDocuments {
-    const val EFFECTIVE_DATE = "30 October 2026"
-    const val PRIVACY_EFFECTIVE_DATE = "30 October 2026"
-    const val TERMS_VERSION = "2026-10-30-2"
-    const val PRIVACY_VERSION = "2026-10-30-5"
+    const val EFFECTIVE_DATE = "1 November 2026"
+    const val PRIVACY_EFFECTIVE_DATE = "1 November 2026"
+    const val TERMS_VERSION = "2026-11-01-1"
+    const val PRIVACY_VERSION = "2026-11-01-1"
     const val PRIVACY_CONTACT = "paul.ochieng.dev@gmail.com"
     const val PROVIDER_NAME = "Paul Ochieng"
     const val PROVIDER_ADDRESS = "Kampala, Uganda"
@@ -66,9 +66,10 @@ object LegalDocuments {
                 "Mizani uses Android's secure-window setting to block ordinary screenshots, screen recordings, " +
                     "and capture on non-secure displays. This platform control cannot stop a camera or a " +
                     "compromised device, and its behavior depends on Android and the device maker.",
-                "If you turn on a daily reminder, Mizani checks the ledger on this device and can show a generic " +
-                    "notification when no income, expense, or refund has been recorded that day. It does not send your " +
-                    "ledger to a reminder service.",
+                "Mizani enables a daily reminder by default at setup. You can change or turn it off in Settings. " +
+                    "When enabled, Mizani checks the ledger on this device and can show a generic notification when " +
+                    "no income, expense, or refund has been recorded that day. It does not send your ledger to a " +
+                    "reminder service.",
                 "Enter information you are entitled to use. Avoid putting another person’s sensitive details " +
                     "in a payee or note unless you have a valid reason and permission to do so.",
             )),
@@ -143,16 +144,17 @@ object LegalDocuments {
                     "on this device. The original message is discarded after review; only the transaction you " +
                     "confirm and its provider reference are stored in your ledger.",
                 "Mizani also stores settings such as your selected country, primary currency, theme and app-lock " +
-                    "preferences, optional reminder settings and time, selected local money check-in categories, " +
-                    "and cached currency rates. App-lock details stay on this device. The app records which versions " +
-                    "of these documents you accepted and when.",
+                    "preferences, the daily reminder (enabled by default at setup) and its time, optional money " +
+                    "check-in settings, and cached currency rates. App-lock details stay on this device. The app " +
+                    "records which versions of these documents you accepted and when.",
             )),
             LegalSection("3. Why the app uses this information", listOf(
                 "Mizani uses your information to provide the budgeting features you choose, protect your records, " +
-                    "and create exports or backups when you request them. Optional daily, commitment and money " +
-                    "check-in reminders check your local ledger and use generic notifications without names or " +
-                    "amounts; they do not send ledger information off the device. Money check-ins are descriptive " +
-                    "prompts, not investment, debt or other financial advice.",
+                    "and create exports or backups when you request them. The daily reminder is enabled by default " +
+                    "at setup but can be turned off; it checks your local ledger and uses generic notifications " +
+                    "without names or amounts. Optional commitment and money check-in reminders work the same way. " +
+                    "None of these reminders sends ledger information off the device. Money check-ins are " +
+                    "descriptive prompts, not investment, debt or other financial advice.",
                 "Mizani does not require a name, email address, phone number, bank login, or account. Your " +
                     "ledger is not used for advertising or usage tracking.",
                 "If you choose Send feedback, Mizani opens your device's email app with your message addressed " +

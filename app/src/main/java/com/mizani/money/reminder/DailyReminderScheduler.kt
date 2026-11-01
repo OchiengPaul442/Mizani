@@ -102,7 +102,7 @@ class DailyReminderScheduler(context: Context) {
         "$WORK_NAME_PREFIX-$scheduleVersion-$epochDay"
 
     private fun hasAnyReminderEnabled(settings: AppSettings): Boolean =
-        settings.dailyReminderEnabled || settings.habitNotificationsEnabled
+        settings.onboardingComplete && (settings.dailyReminderEnabled || settings.habitNotificationsEnabled)
 
     companion object {
         const val WORK_TAG = "mizani_daily_transaction_reminder"

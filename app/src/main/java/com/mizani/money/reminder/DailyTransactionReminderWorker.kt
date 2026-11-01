@@ -24,7 +24,11 @@ class DailyTransactionReminderWorker(
             val container = app.container
             val settingsRepository = container.settingsRepository
             val settings = settingsRepository.settings.first()
-            if (!settings.dailyReminderEnabled && !settings.habitNotificationsEnabled) return Result.success()
+            // Default-on settings must never create a notification before setup has created a
+            // workspace. This is defense in depth for stale work left by a process restart.
+            if (!settings.onboardingComplete ||
+                (!settings.dailyReminderEnabled && !settings.habitNotificationsEnabled)
+            ) return Result.success()
 
             val scheduleVersion = inputData.getLong(
                 DailyReminderScheduler.INPUT_SCHEDULE_VERSION,
@@ -69,6 +73,7 @@ class DailyTransactionReminderWorker(
             if (needsDatabase) {
                 container.awaitSqlCipherReady()
                 val snapshot = container.financeRepository.snapshot.first()
+                if (snapshot.workspace == null) return Result.success()
                 val hasTrackedMoneyToday = if (settings.dailyReminderEnabled) {
                     container.database.transactionDao().hasIncomeExpenseOrRefundOn(today.toEpochDay())
                 } else {
@@ -109,6 +114,7 @@ class DailyTransactionReminderWorker(
                 if (!habitNotificationPosted && scheduleIsStillCurrent &&
                     latestSettings.dailyReminderEnabled &&
                     latestSettings.lastDailyReminderEpochDay != today.toEpochDay() &&
+                    latestSettings.lastHabitNotificationEpochDay != today.toEpochDay() &&
                     !hasTrackedMoneyToday && DailyReminderNotifications.canPost(applicationContext) &&
                     DailyReminderNotifications.post(applicationContext)
                 ) {
