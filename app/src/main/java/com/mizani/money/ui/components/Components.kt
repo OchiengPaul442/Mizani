@@ -379,7 +379,7 @@ fun EmptyState(
         )
         if (actionLabel != null && onAction != null) {
             Spacer(Modifier.height(Spacing.lg))
-            OutlinedButton(onClick = onAction) { Text(actionLabel) }
+            OutlinedButton(onClick = onAction, shape = MaterialTheme.shapes.medium) { Text(actionLabel) }
         }
     }
 }
@@ -512,7 +512,7 @@ fun DateField(
     OutlinedButton(
         onClick = { showPicker = true },
         modifier = modifier.height(Spacing.fieldHeight),
-        shape = MaterialTheme.shapes.small,
+        shape = MaterialTheme.shapes.medium,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
         Row(

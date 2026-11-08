@@ -174,6 +174,30 @@ class BackupValidatorTest {
     }
 
     @Test
+    fun `rejects non-positive recurring amount`() {
+        val rule = RecurringRuleEntity(
+            id = "r1", name = "R", type = RecurringType.BILL, amountMinor = 0,
+            categoryId = "food", walletId = null, frequency = com.mizani.money.core.model.Frequency.MONTHLY,
+            nextDueEpochDay = 0L, createdAt = now, updatedAt = now,
+        )
+        assertRejected(validBundle().copy(recurring = listOf(rule)), "amount")
+    }
+
+    @Test
+    fun `rejects recurring category with the wrong type`() {
+        val salary = CategoryEntity(
+            id = "salary", name = "Salary", type = CategoryType.INCOME, icon = "income",
+            colorHex = "#000", isDefault = false, sortOrder = 1, createdAt = now, updatedAt = now,
+        )
+        val rule = RecurringRuleEntity(
+            id = "r1", name = "R", type = RecurringType.BILL, amountMinor = 10,
+            categoryId = "salary", walletId = null, frequency = com.mizani.money.core.model.Frequency.MONTHLY,
+            nextDueEpochDay = 0L, createdAt = now, updatedAt = now,
+        )
+        assertRejected(validBundle().copy(categories = listOf(food, salary), recurring = listOf(rule)), "category")
+    }
+
+    @Test
     fun `rejects goal dangling linked wallet`() {
         val goal = GoalEntity(
             id = "g1", name = "G", targetMinor = 100, allocatedMinor = 0,

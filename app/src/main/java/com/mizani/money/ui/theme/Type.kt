@@ -122,7 +122,7 @@ val MizaniTypography = Typography(
 )
 
 /**
- * Brand shapes (official Mizani brand kit): cards and rows 16dp, buttons and fields 12dp,
+ * Brand shapes (official Mizani brand kit): cards, rows and serious buttons 16dp, fields 12dp,
  * dialogs 20dp, hero/onboarding surfaces 22dp, tiny badges 6dp.
  */
 val MizaniShapes = Shapes(

@@ -28,14 +28,18 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,6 +53,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mizani.money.R
 import com.mizani.money.core.model.CategoryType
 import com.mizani.money.core.model.TransactionType
@@ -57,10 +62,12 @@ import com.mizani.money.core.money.Currencies
 import com.mizani.money.core.money.MoneyFormat
 import com.mizani.money.core.time.DateText
 import com.mizani.money.data.local.CommitmentEntity
+import com.mizani.money.data.local.RecurringRuleEntity
 import com.mizani.money.data.repo.CommitmentDraft
 import com.mizani.money.data.repo.CommitmentProgress
 import com.mizani.money.data.repo.ExchangeRate
 import com.mizani.money.data.repo.ExchangeRateUnavailableException
+import com.mizani.money.data.repo.RecurringDraft
 import com.mizani.money.ui.AppUiState
 import com.mizani.money.ui.AppViewModel
 import com.mizani.money.ui.components.DateField
@@ -86,7 +93,9 @@ fun CommitmentsScreen(
 ) {
     val snapshot = state.snapshot
     val currency = state.currency
+    val today by vm.today.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
+    var selectedSection by rememberSaveable { mutableIntStateOf(0) }
     var editor by remember { mutableStateOf<CommitmentEntity?>(null) }
     var editorOpen by remember { mutableStateOf(false) }
     var editError by remember { mutableStateOf<String?>(null) }
@@ -95,6 +104,14 @@ fun CommitmentsScreen(
     var actionError by remember { mutableStateOf<Pair<String, String>?>(null) }
     var deleteTarget by remember { mutableStateOf<CommitmentEntity?>(null) }
     var pendingDelete by remember { mutableStateOf(false) }
+    var recurringEditor by remember { mutableStateOf<RecurringRuleEntity?>(null) }
+    var recurringEditorOpen by remember { mutableStateOf(false) }
+    var recurringEditError by remember { mutableStateOf<String?>(null) }
+    var recurringSaving by remember { mutableStateOf(false) }
+    var recurringBusyId by remember { mutableStateOf<String?>(null) }
+    var recurringActionError by remember { mutableStateOf<String?>(null) }
+    var recurringDeleteTarget by remember { mutableStateOf<RecurringRuleEntity?>(null) }
+    var recurringDeleteBusy by remember { mutableStateOf(false) }
 
     val progress = remember(snapshot.commitments, snapshot.commitmentPayments, snapshot.transactions) {
         snapshot.commitmentProgress().sortedWith(
@@ -164,6 +181,36 @@ fun CommitmentsScreen(
         )
     }
 
+    if (recurringEditorOpen) {
+        RecurringEditorDialog(
+            initial = recurringEditor,
+            state = state,
+            busy = recurringSaving,
+            error = recurringEditError,
+            onDismiss = {
+                if (!recurringSaving) {
+                    recurringEditorOpen = false
+                    recurringEditor = null
+                    recurringEditError = null
+                }
+            },
+            onSave = { draft ->
+                recurringSaving = true
+                recurringEditError = null
+                scope.launch {
+                    runCatching { vm.finance.saveRecurring(recurringEditor?.id, draft) }
+                        .onSuccess {
+                            recurringEditorOpen = false
+                            recurringEditor = null
+                            recurringEditError = null
+                        }
+                        .onFailure { recurringEditError = it.message ?: "Could not save this repeating item." }
+                    recurringSaving = false
+                }
+            },
+        )
+    }
+
     if (deleteTarget != null) {
         MizaniConfirmDialog(
             title = "Delete ${deleteTarget?.name}?",
@@ -185,19 +232,70 @@ fun CommitmentsScreen(
         )
     }
 
-    Column(Modifier.fillMaxSize()) {
-        MizaniTopBar(
-            title = "Bills & commitments",
-            subtitle = "Track one-off bills and payment progress",
-            actions = {
-                if (active.isNotEmpty()) {
-                    IconButton(onClick = { editor = null; editError = null; editorOpen = true }) {
-                        Icon(Icons.Rounded.Add, contentDescription = "Add commitment")
-                    }
+    if (recurringDeleteTarget != null) {
+        MizaniConfirmDialog(
+            title = "Delete ${recurringDeleteTarget?.name}?",
+            body = "This removes the schedule only. Any transactions you already recorded stay in Activity and your balances.",
+            confirmLabel = "Delete schedule",
+            destructive = true,
+            dismissLabel = "Keep it",
+            onDismiss = { if (!recurringDeleteBusy) recurringDeleteTarget = null },
+            onConfirm = {
+                val selected = recurringDeleteTarget ?: return@MizaniConfirmDialog
+                recurringDeleteBusy = true
+                scope.launch {
+                    runCatching { vm.finance.deleteRecurring(selected.id) }
+                        .onSuccess { recurringDeleteTarget = null; recurringActionError = null }
+                        .onFailure { recurringActionError = it.message ?: "Could not delete this schedule." }
+                    recurringDeleteBusy = false
                 }
             },
         )
-        Column(
+    }
+
+    Column(Modifier.fillMaxSize()) {
+        MizaniTopBar(
+            title = "Bills & recurring",
+            subtitle = if (selectedSection == 0) {
+                "Track one-off bills and payment progress"
+            } else {
+                "Remember repeating bills and expected income"
+            },
+            actions = {
+                IconButton(
+                    onClick = {
+                        if (selectedSection == 0) {
+                            editor = null
+                            editError = null
+                            editorOpen = true
+                        } else {
+                            recurringEditor = null
+                            recurringEditError = null
+                            recurringEditorOpen = true
+                        }
+                    },
+                ) {
+                    Icon(
+                        Icons.Rounded.Add,
+                        contentDescription = if (selectedSection == 0) "Add one-off bill" else "Add repeating item",
+                    )
+                }
+            },
+        )
+        PrimaryTabRow(selectedTabIndex = selectedSection) {
+            Tab(
+                selected = selectedSection == 0,
+                onClick = { selectedSection = 0 },
+                text = { Text("One-off bills") },
+            )
+            Tab(
+                selected = selectedSection == 1,
+                onClick = { selectedSection = 1 },
+                text = { Text("Recurring") },
+            )
+        }
+        if (selectedSection == 0) {
+            Column(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
@@ -231,7 +329,10 @@ fun CommitmentsScreen(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Spacer(Modifier.height(Spacing.md))
-                    Button(onClick = { editor = null; editError = null; editorOpen = true }) {
+                    Button(
+                        onClick = { editor = null; editError = null; editorOpen = true },
+                        shape = MaterialTheme.shapes.medium,
+                    ) {
                         Icon(Icons.Rounded.Add, contentDescription = null)
                         Spacer(Modifier.padding(horizontal = 2.dp))
                         Text("Add a one-off bill")
@@ -333,6 +434,44 @@ fun CommitmentsScreen(
                     )
                 }
             }
+            }
+        } else {
+            RecurringSchedulesPanel(
+                state = state,
+                today = today,
+                busyId = recurringBusyId ?: if (recurringSaving) "__editor__" else null,
+                message = recurringActionError,
+                modifier = Modifier.weight(1f),
+                onAdd = {
+                    recurringEditor = null
+                    recurringEditError = null
+                    recurringEditorOpen = true
+                },
+                onEdit = { rule ->
+                    recurringEditor = rule
+                    recurringEditError = null
+                    recurringEditorOpen = true
+                },
+                onArchive = { rule, archivedValue ->
+                    recurringActionError = null
+                    recurringBusyId = rule.id
+                    scope.launch {
+                        runCatching { vm.finance.setRecurringArchived(rule.id, archivedValue) }
+                            .onFailure { recurringActionError = it.message ?: "Could not update this schedule." }
+                        recurringBusyId = null
+                    }
+                },
+                onRecord = { rule ->
+                    recurringActionError = null
+                    recurringBusyId = rule.id
+                    scope.launch {
+                        runCatching { vm.finance.markRecurringPaid(rule.id, today) }
+                            .onFailure { recurringActionError = it.message ?: "Could not record this item." }
+                        recurringBusyId = null
+                    }
+                },
+                onDelete = { rule -> recurringDeleteTarget = rule },
+            )
         }
     }
 }

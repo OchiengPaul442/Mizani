@@ -158,7 +158,7 @@ fun ThirdPartyNoticesDialog(onClose: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.End,
                 ) {
-                    Button(onClick = onClose) { Text("Done") }
+                    Button(onClick = onClose, shape = MaterialTheme.shapes.medium) { Text("Done") }
                 }
             }
         }

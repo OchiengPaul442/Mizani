@@ -1,6 +1,6 @@
 # Play Store release checklist
 
-Status as of 1 November 2026: **NO-GO until the owner completes the external Play Console,
+Status as of 8 November 2026: **NO-GO until the owner completes the external Play Console,
 legal, signing, and device-testing gates below.** This document separates repository evidence from
 actions that cannot be performed from the source tree.
 
@@ -56,6 +56,28 @@ The policy-specific evidence review is tracked in [Google Play policy audit](GOO
 - [ ] Add the final public privacy-policy URL and verify it from an incognito browser.
 - [ ] Add a support email and support/contact page.
 
+#### October 29, 2026 policy announcement checks
+
+Review the [official policy announcement](https://support.google.com/googleplay/android-developer/answer/18100766)
+and the [sensitive-permissions policy](https://support.google.com/googleplay/android-developer/answer/16558241)
+for every release. Mizani currently has no source-level use of the affected APIs, but these are
+release-owner gates and future-feature constraints:
+
+- [x] Confirm the manifest does not declare Local Network, Manage Contacts, location, All Files
+  Access, SMS/call-log, or Accessibility permissions; keep exports/backups on scoped document
+  pickers.
+- [x] Confirm the app does not use AppFunctions, subscriptions, or eligibility-based discounts.
+- [x] Confirm no child/family-targeted feature currently requires Play Age Signals; reassess if
+  the target audience or product scope changes.
+- [ ] Complete the Play Console trader-status declaration from November 2026 where applicable.
+- [ ] If the app is sold into or out of Japan, complete the required authorization by 1 December
+  2026.
+- [ ] Review the February 2027 Play technical quality requirements against the final signed
+  artifact before the affected release deadline.
+- [ ] Before adding wireless/device-to-desktop sync, document the transport and re-run the
+  permission, data-safety, security, and Play declaration review. Do not add Local Network
+  permission merely as a future-proofing measure.
+
 ### 3. Finish legal and privacy approval
 
 - [ ] Confirm Paul Ochieng is the correct legal provider/data controller.
@@ -89,6 +111,8 @@ The policy-specific evidence review is tracked in [Google Play policy audit](GOO
   a downloaded flexible update resumes and completes after returning to the app.
 - [ ] Test the exact Play reviewer journey using disposable data only.
 - [ ] Review the Play pre-launch report and resolve all blocking issues.
+- [ ] Before the February 2027 quality deadline, review Play's memory and code-optimization
+  requirements and attach evidence from the final signed release and pre-launch report.
 
 ## Release and rollback gates
 

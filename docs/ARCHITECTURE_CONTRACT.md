@@ -35,13 +35,19 @@ This is an offline-first financial application.
   commitment stores its saved daily reference rate and workspace-currency equivalent so progress,
   reserves, exports and restores remain deterministic without re-fetching a rate.
 - Transfers between a user's wallets are not expenditure or income. Fees are expenditure.
-- Expected income is not received income. Recurring income rules never create cash until
-  the user marks them received.
+- Expected income is not received income. Recurring schedules are forecasts and reminders; they
+  never create cash or spending until the user records the actual occurrence. Recording one
+  occurrence advances the schedule by exactly one interval, so overdue occurrences remain visible
+  for deliberate reconciliation rather than being silently skipped.
 - Savings contributions are not ordinary spending when money merely moves between the
   user's own wallets.
 - Refunds reduce net spending in the original category. Adjustments never count as income
   or spending.
 - Deletions are soft (tombstone) so analytics and future sync never resurrect money history.
+- Stable entity IDs, revisions, timestamps and tombstones are the current local foundation for a
+  future device-to-desktop sync protocol. They are not a sync protocol by themselves: any future
+  implementation must still define device identity, conflict resolution, tombstone retention,
+  restore ordering and encrypted transport before it adds wireless, Bluetooth or network sync.
 - Financial writes happen in Room transactions with validation at the repository boundary.
 - Commitment payments associate one active expense with one obligation; they never create a
   second ledger row. Linked refunds reduce the paid total. Deleting an expense removes its link;

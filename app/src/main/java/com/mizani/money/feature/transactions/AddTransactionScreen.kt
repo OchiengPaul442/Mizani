@@ -1093,7 +1093,7 @@ fun AddTransactionScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp),
-                        shape = MaterialTheme.shapes.small,
+                        shape = MaterialTheme.shapes.medium,
                     ) {
                         Text(
                             when {

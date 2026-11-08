@@ -213,6 +213,7 @@ fun SensitiveActionConfirmationDialog(
                         },
                         enabled = !verifying,
                         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                        shape = MaterialTheme.shapes.medium,
                     ) {
                         Icon(Icons.Rounded.Fingerprint, contentDescription = null)
                         Spacer(Modifier.width(Spacing.sm))

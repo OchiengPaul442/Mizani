@@ -1,6 +1,6 @@
 # Google Play policy audit
 
-**Audit date:** 30 October 2026  
+**Audit date:** 8 November 2026
 **Status:** No-go until the external Play Console and release-owner gates below are completed.
 
 This is an engineering and release-readiness audit, not legal advice or a guarantee of Google Play
@@ -12,6 +12,7 @@ approval. Google Play's current policy pages and the final signed artifact contr
 - [Financial Services](https://support.google.com/googleplay/android-developer/answer/9876821)
 - [User Data](https://support.google.com/googleplay/android-developer/answer/10144311)
 - [Permissions and APIs that Access Sensitive Information](https://support.google.com/googleplay/android-developer/answer/16558241)
+- [Policy announcement: October 29, 2026](https://support.google.com/googleplay/android-developer/answer/18100766)
 - [Target API Level Policy](https://support.google.com/googleplay/android-developer/answer/16561298)
 - [SDK Requirements](https://support.google.com/googleplay/android-developer/answer/13323374)
 - [Metadata](https://support.google.com/googleplay/android-developer/answer/9898842)
@@ -20,6 +21,33 @@ approval. Google Play's current policy pages and the final signed artifact contr
 - [Intellectual Property](https://support.google.com/googleplay/android-developer/answer/9888072)
 - [Export compliance](https://support.google.com/googleplay/android-developer/answer/113770?hl=en)
 - [Advance notice to App Review](https://support.google.com/googleplay/android-developer/answer/6320428)
+
+## October 29, 2026 policy announcement review
+
+The announcement gives developers at least 30 days from 29 October 2026 to update affected
+apps. The repository and manifest were reviewed against each announced change. Mizani currently
+does not use the affected restricted permissions or APIs, so no new permission, declaration, or
+runtime flow is required in this source revision.
+
+| Announced area | Mizani impact | Required handling |
+| --- | --- | --- |
+| Local Network permission | Not declared or used. The app has no device-to-device or local-network sync. | Do not add the permission as future desktop-sync preparation. Re-audit the transport and complete the Play declaration before introducing local-network functionality. |
+| Manage Contacts permission | Not declared or used. | Keep contact selection out of the product unless a core use case is approved; prefer scoped platform pickers if a future feature needs contact data. |
+| AppFunctions API | Not used. | No action. If added later, review agent-safety, deception, security-boundary, and cross-app behavior before release. |
+| Subscription eligibility discounts | No subscriptions, trials, or eligibility-based discounts. | No action. Revisit pricing copy and eligibility verification before adding any paid recurring offer. |
+| Location, All Files Access, Accessibility, SMS/call logs | None of these permissions or APIs are used. User-initiated imports and exports use scoped sharing/document-picker flows. | Preserve the current least-privilege design; do not replace the document picker with broad storage access or add background SMS/call-log access. |
+| Play Age Signals API | No child/family-targeted experience is currently in scope. | Do not integrate it speculatively. Reassess if the target audience or family features change. |
+| Trader status and Japan authorization | External Play Console/account obligations, not source behavior. | The release owner must complete trader-status steps where applicable, and Japan authorization by 1 December 2026 if the app is sold into or out of Japan. |
+| February 2027 technical quality requirements | Release/build gate; source review alone cannot establish compliance. | Review the linked Play quality requirements and the final signed artifact before the affected deadline. |
+
+### Source-level conclusion
+
+The existing manifest remains intentionally limited to `INTERNET`, `USE_BIOMETRIC`, and
+`POST_NOTIFICATIONS`, with a targeted mailto query. The app continues to use scoped Android
+document pickers for exports and backups, encrypted local storage as its source of truth, and no
+account, cloud sync, ads, analytics, contacts, location, SMS, call logs, accessibility service,
+or AppFunctions integration. No runtime legal-document version bump is warranted because this
+policy review does not change Mizani's user-facing data processing.
 
 ## Repository evidence
 
@@ -59,6 +87,9 @@ approval. Google Play's current policy pages and the final signed artifact contr
    updates, and the Play pre-launch report using disposable data.
 9. Review local-law, privacy, financial-record, and export obligations for every country selected
    in Play Console. Source inspection cannot establish those legal requirements.
+10. Complete the policy-announcement checks in the release checklist: trader status where
+    applicable, Japan authorization where applicable, and the February 2027 technical-quality
+    review before the next affected release.
 
 ## Release decision
 

@@ -32,6 +32,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -532,7 +533,7 @@ private fun QuickAddActions(
                 Button(
                     onClick = onAddExpense,
                     modifier = Modifier.fillMaxWidth().heightIn(min = Spacing.buttonHeight),
-                    shape = MaterialTheme.shapes.small,
+                    shape = MaterialTheme.shapes.medium,
                     colors = colors,
                 ) {
                     Icon(Icons.Rounded.ArrowUpward, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -542,7 +543,7 @@ private fun QuickAddActions(
                 OutlinedButton(
                     onClick = onAddIncome,
                     modifier = Modifier.fillMaxWidth().heightIn(min = Spacing.buttonHeight),
-                    shape = MaterialTheme.shapes.small,
+                    shape = MaterialTheme.shapes.medium,
                     colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
                         contentColor = if (onDarkBackground) Color.White else MaterialTheme.colorScheme.primary,
                     ),
@@ -557,7 +558,7 @@ private fun QuickAddActions(
                 Button(
                     onClick = onAddExpense,
                     modifier = Modifier.weight(1f).heightIn(min = Spacing.buttonHeight),
-                    shape = MaterialTheme.shapes.small,
+                    shape = MaterialTheme.shapes.medium,
                     colors = colors,
                 ) {
                     Icon(Icons.Rounded.ArrowUpward, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -567,7 +568,7 @@ private fun QuickAddActions(
                 OutlinedButton(
                     onClick = onAddIncome,
                     modifier = Modifier.weight(1f).heightIn(min = Spacing.buttonHeight),
-                    shape = MaterialTheme.shapes.small,
+                    shape = MaterialTheme.shapes.medium,
                     colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
                         contentColor = if (onDarkBackground) Color.White else MaterialTheme.colorScheme.primary,
                     ),
@@ -650,13 +651,14 @@ private fun DailyMomentumCard(
         (momentum.trackedDays - momentum.tier.minimumTrackedDays).toFloat() / range
     }
     MizaniCard(
-        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.42f),
+        modifier = Modifier.fillMaxWidth(),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        contentPadding = PaddingValues(Spacing.lg),
     ) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val stackStats = maxWidth < AdaptiveLayout.STACKED_CONTENT_WIDTH_DP.dp ||
-                LocalDensity.current.fontScale > AdaptiveLayout.LARGE_FONT_SCALE
+            val stackStats = maxWidth < AdaptiveLayout.COMPACT_NAVIGATION_WIDTH_DP.dp
 
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.Top,
@@ -687,9 +689,9 @@ private fun DailyMomentumCard(
                     Spacer(Modifier.width(Spacing.sm))
                     Box(
                         modifier = Modifier
-                            .clip(CircleShape)
+                            .clip(MaterialTheme.shapes.medium)
                             .background(MaterialTheme.colorScheme.primary)
-                            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+                            .padding(horizontal = Spacing.md, vertical = Spacing.xs),
                     ) {
                         Text(
                             stringResource(R.string.home_momentum_points, momentum.points),
@@ -700,56 +702,76 @@ private fun DailyMomentumCard(
                     }
                 }
 
-                Spacer(Modifier.height(Spacing.md))
-                if (stackStats) {
-                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                        MomentumStat(momentum.trackedDays, R.string.home_momentum_days_tracked)
-                        MomentumStat(momentum.currentStreak, R.string.home_momentum_day_streak)
-                    }
-                } else {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        MomentumStat(
-                            value = momentum.trackedDays,
-                            labelRes = R.string.home_momentum_days_tracked,
-                            modifier = Modifier.weight(1f),
-                        )
-                        SummaryDivider()
-                        MomentumStat(
-                            value = momentum.currentStreak,
-                            labelRes = R.string.home_momentum_day_streak,
-                            modifier = Modifier.weight(1f),
-                        )
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                ) {
+                    if (stackStats) {
+                        Column(
+                            modifier = Modifier.padding(Spacing.md),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                        ) {
+                            MomentumStat(momentum.trackedDays, R.string.home_momentum_days_tracked)
+                            MomentumStat(momentum.currentStreak, R.string.home_momentum_day_streak)
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.padding(vertical = Spacing.sm),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            MomentumStat(
+                                value = momentum.trackedDays,
+                                labelRes = R.string.home_momentum_days_tracked,
+                                modifier = Modifier.weight(1f),
+                            )
+                            SummaryDivider()
+                            MomentumStat(
+                                value = momentum.currentStreak,
+                                labelRes = R.string.home_momentum_day_streak,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
                     }
                 }
 
-                Spacer(Modifier.height(Spacing.md))
                 if (momentum.todayTracked) {
-                    Row(
-                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                        verticalAlignment = Alignment.CenterVertically,
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics { liveRegion = LiveRegionMode.Polite },
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.primaryContainer,
                     ) {
-                        Icon(
-                            Icons.Rounded.CheckCircle,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp),
-                        )
-                        Spacer(Modifier.width(Spacing.sm))
-                        Text(
-                            stringResource(R.string.home_momentum_today_done),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
+                        Row(
+                            modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                Icons.Rounded.CheckCircle,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Spacer(Modifier.width(Spacing.sm))
+                            Text(
+                                stringResource(R.string.home_momentum_today_done),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
                     }
                 } else if (stackStats) {
-                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                         Text(
                             stringResource(R.string.home_momentum_today_prompt),
                             style = MaterialTheme.typography.bodyMedium,
                         )
-                        TextButton(onClick = onAdd) {
+                        Button(
+                            onClick = onAdd,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.medium,
+                        ) {
                             Text(stringResource(R.string.home_momentum_record_action))
                         }
                     }
@@ -763,37 +785,40 @@ private fun DailyMomentumCard(
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.weight(1f),
                         )
-                        TextButton(onClick = onAdd) {
+                        Button(
+                            onClick = onAdd,
+                            shape = MaterialTheme.shapes.medium,
+                        ) {
                             Text(stringResource(R.string.home_momentum_record_action))
                         }
                     }
                 }
 
-                Spacer(Modifier.height(Spacing.sm))
                 ProgressBar(progress, color = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.height(Spacing.xs))
-                Text(
-                    stringResource(R.string.home_momentum_milestone, momentum.tier.title),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                if (next != null) {
-                    val daysToNext = momentum.trackedDaysToNextTier ?: 0
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     Text(
-                        if (daysToNext == 1) {
-                            stringResource(R.string.home_momentum_next_one, next.title)
-                        } else {
-                            stringResource(R.string.home_momentum_next_many, next.title, daysToNext)
-                        },
+                        stringResource(R.string.home_momentum_milestone, momentum.tier.title),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                } else {
-                    Text(
-                        stringResource(R.string.home_momentum_all_milestones),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    if (next != null) {
+                        val daysToNext = momentum.trackedDaysToNextTier ?: 0
+                        Text(
+                            if (daysToNext == 1) {
+                                stringResource(R.string.home_momentum_next_one, next.title)
+                            } else {
+                                stringResource(R.string.home_momentum_next_many, next.title, daysToNext)
+                            },
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        Text(
+                            stringResource(R.string.home_momentum_all_milestones),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }
@@ -812,12 +837,12 @@ private fun MomentumStat(
     ) {
         Text(
             value.toString(),
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.SemiBold,
         )
         Text(
             stringResource(labelRes),
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }

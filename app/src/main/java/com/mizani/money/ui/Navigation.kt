@@ -12,9 +12,12 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
@@ -59,6 +62,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.window.layout.FoldingFeature
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -135,7 +139,11 @@ private fun MizaniRouteSurface(content: @Composable () -> Unit) {
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
+fun MizaniNavHost(
+    vm: AppViewModel,
+    state: AppUiState,
+    foldingFeatures: List<FoldingFeature> = emptyList(),
+) {
     val navController = rememberNavController()
     val pendingImport by vm.pendingImport.collectAsState()
     val sharedImportReady by vm.sharedImportReady.collectAsState()
@@ -226,13 +234,39 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
     }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        // Use the app window, not a device-type check. This adapts automatically to split screen,
-        // rotation, compact foldable displays and unfolded tablets as the available window changes.
-        val useRail = isTopLevel && maxWidth >= AdaptiveLayout.MEDIUM_WIDTH_DP.dp
-        val hideBottomLabels = maxWidth < AdaptiveLayout.COMPACT_NAVIGATION_WIDTH_DP.dp ||
-            LocalDensity.current.fontScale > AdaptiveLayout.LARGE_FONT_SCALE
-        val hideRailLabels = LocalDensity.current.fontScale > AdaptiveLayout.EXTRA_LARGE_FONT_SCALE
-        Row(Modifier.fillMaxSize()) {
+        // Use the current safe pane, not a device-type check. This adapts automatically to split
+        // screen, rotation, compact foldable displays and unfolded tablets. A separating hinge is
+        // treated as a boundary so content never renders underneath it; the largest pane gets the
+        // app while the other pane remains available to the system or another app.
+        val density = LocalDensity.current
+        val safePane = AdaptiveLayout.largestSafePane(
+            windowWidthPx = with(density) { maxWidth.toPx().toInt() },
+            windowHeightPx = with(density) { maxHeight.toPx().toInt() },
+            feature = foldingFeatures.firstOrNull { it.isSeparating }?.let { feature ->
+                FoldFeatureBounds(
+                    leftPx = feature.bounds.left,
+                    topPx = feature.bounds.top,
+                    rightPx = feature.bounds.right,
+                    bottomPx = feature.bounds.bottom,
+                    vertical = feature.orientation == FoldingFeature.Orientation.VERTICAL,
+                    separating = feature.isSeparating,
+                )
+            },
+        )
+        val safePaneWidth = with(density) { safePane.widthPx.toDp() }
+        val safePaneHeight = with(density) { safePane.heightPx.toDp() }
+        val safePaneLeft = with(density) { safePane.leftPx.toDp() }
+        val safePaneTop = with(density) { safePane.topPx.toDp() }
+        val useRail = isTopLevel && safePaneWidth >= AdaptiveLayout.MEDIUM_WIDTH_DP.dp
+        val hideBottomLabels = safePaneWidth < AdaptiveLayout.COMPACT_NAVIGATION_WIDTH_DP.dp ||
+            density.fontScale > AdaptiveLayout.LARGE_FONT_SCALE
+        val hideRailLabels = density.fontScale > AdaptiveLayout.EXTRA_LARGE_FONT_SCALE
+        Row(
+            modifier = Modifier
+                .width(safePaneWidth)
+                .height(safePaneHeight)
+                .offset(x = safePaneLeft, y = safePaneTop),
+        ) {
             if (useRail) {
                 NavigationRail(
                     modifier = Modifier
@@ -612,6 +646,7 @@ fun MizaniNavHost(vm: AppViewModel, state: AppUiState) {
             }
         }
         }
+
     }
 
     if (showAddSheet) {

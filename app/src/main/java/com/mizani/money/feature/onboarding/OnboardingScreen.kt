@@ -405,7 +405,7 @@ private fun WelcomeStep(
             onClick = if (page == 0) onNext else onAccept,
             enabled = page == 0 || !accepting,
             modifier = Modifier.fillMaxWidth().height(54.dp),
-            shape = MaterialTheme.shapes.small,
+            shape = MaterialTheme.shapes.medium,
         ) {
             if (page == 1 && accepting) {
                 androidx.compose.material3.CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
@@ -593,7 +593,7 @@ private fun MoneySetupStep(
             )
         }
         Spacer(Modifier.height(Spacing.xl))
-        Button(onClick = onContinue, modifier = Modifier.fillMaxWidth().height(54.dp), shape = MaterialTheme.shapes.small) {
+        Button(onClick = onContinue, modifier = Modifier.fillMaxWidth().height(54.dp), shape = MaterialTheme.shapes.medium) {
             Text(stringResource(R.string.onboarding_country_continue))
         }
     }
@@ -676,7 +676,7 @@ private fun ReadyStep(
             onClick = onFinish,
             enabled = !saving,
             modifier = Modifier.fillMaxWidth().height(54.dp),
-            shape = MaterialTheme.shapes.small,
+            shape = MaterialTheme.shapes.medium,
         ) {
             Text(if (saving) stringResource(R.string.onboarding_ready_preparing) else stringResource(R.string.onboarding_ready_start))
         }

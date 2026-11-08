@@ -39,6 +39,7 @@ import java.time.ZoneId
 
 private const val MAX_COMMITMENT_NAME_LENGTH = 80
 private const val MAX_COMMITMENT_REMINDER_DAYS = 30
+private const val MAX_RECURRING_NAME_LENGTH = 80
 private const val MAX_INVESTMENT_NAME_LENGTH = 80
 private const val MAX_INVESTMENT_PROVIDER_LENGTH = 80
 private const val MAX_INVESTMENT_NOTE_LENGTH = 240
@@ -622,18 +623,21 @@ class FinanceRepository(private val database: MizaniDatabase) {
 
     suspend fun saveRecurring(id: String?, draft: RecurringDraft): String = database.withTransaction {
         require(draft.amountMinor > 0) { "Amount must be greater than zero" }
+        val name = draft.name.trim()
+        require(name.isNotEmpty()) { "Enter a recurring item name" }
+        require(name.length <= MAX_RECURRING_NAME_LENGTH) { "Recurring item name is too long" }
         val expectedCategoryType = if (draft.type == RecurringType.INCOME) CategoryType.INCOME else CategoryType.EXPENSE
         requireCategoryType(draft.categoryId, expectedCategoryType, draft.type.label)
         if (draft.walletId != null) {
             val wallet = walletDao.getById(draft.walletId)
-            require(wallet != null) { "Wallet not found" }
+            require(wallet != null && wallet.deletedAt == null) { "Wallet not found" }
             require(!wallet.archived) { "Wallet is archived" }
         }
         val existing = id?.let { recurringDao.getAll().firstOrNull { rule -> rule.id == it } }
         val now = System.currentTimeMillis()
         val entity = RecurringRuleEntity(
             id = existing?.id ?: Ids.newId(),
-            name = draft.name.trim().ifBlank { draft.type.label },
+            name = name,
             type = draft.type,
             amountMinor = draft.amountMinor,
             categoryId = draft.categoryId,
@@ -655,13 +659,20 @@ class FinanceRepository(private val database: MizaniDatabase) {
         recurringDao.setArchived(id, archived, System.currentTimeMillis())
     }
 
+    suspend fun deleteRecurring(id: String) {
+        recurringDao.softDelete(id, System.currentTimeMillis())
+    }
+
     suspend fun markRecurringPaid(id: String, date: LocalDate = LocalDate.now()): String =
         database.withTransaction {
             val rule = recurringDao.getAll().firstOrNull { it.id == id } ?: error("Rule not found")
+            require(!rule.archived) { "Recurring item is archived" }
             val workspace = workspaceDao.get() ?: error("No workspace")
             val fallbackWallet = walletDao.getAll().firstOrNull { !it.archived && it.deletedAt == null }
                 ?: error("Create a wallet first")
-            val walletId = rule.walletId?.takeIf { walletDao.getById(it) != null } ?: fallbackWallet.id
+            val walletId = rule.walletId?.let { walletId ->
+                walletDao.getById(walletId)?.takeIf { it.deletedAt == null && !it.archived }?.id
+            } ?: fallbackWallet.id
             val type = if (rule.type == RecurringType.BILL) TransactionType.EXPENSE else TransactionType.INCOME
             val now = System.currentTimeMillis()
             val transactionId = Ids.newId()

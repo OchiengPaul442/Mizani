@@ -12,11 +12,15 @@ import com.mizani.money.core.model.CategoryType
 import com.mizani.money.core.model.TransactionType
 import com.mizani.money.core.model.WalletType
 import com.mizani.money.data.repo.CommitmentDraft
+import com.mizani.money.data.repo.RecurringDraft
 import com.mizani.money.data.repo.TransactionDraft
+import com.mizani.money.core.model.Frequency
+import com.mizani.money.core.model.RecurringType
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -73,6 +77,18 @@ class CommitmentsEndToEndTest {
                     categoryId = category.id,
                 ),
             )
+            app.container.financeRepository.saveRecurring(
+                id = null,
+                draft = RecurringDraft(
+                    name = "Monthly rent",
+                    type = RecurringType.BILL,
+                    amountMinor = 40_000,
+                    categoryId = category.id,
+                    walletId = wallet.id,
+                    frequency = Frequency.MONTHLY,
+                    nextDue = LocalDate.now().plusDays(1),
+                ),
+            )
         }
         scenario = ActivityScenario.launch(MainActivity::class.java)
     }
@@ -108,5 +124,30 @@ class CommitmentsEndToEndTest {
         val snapshot = runBlocking { app.container.financeRepository.snapshot.first() }
         assertEquals(1, snapshot.transactions.size)
         assertEquals(0, snapshot.commitmentPayments.size)
+    }
+
+    @Test
+    fun recurringScheduleExplainsItselfAndRecordsOneActualTransaction() {
+        compose.waitUntil(timeoutMillis = 20_000) {
+            compose.onAllNodesWithText("Home").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("Bills").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithText("Recurring").fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("Recurring").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithText("Repeating money, made simple").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        compose.onNodeWithText("Record payment").performClick()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            runBlocking { app.container.financeRepository.snapshot.first().transactions.size == 2 }
+        }
+
+        val snapshot = runBlocking { app.container.financeRepository.snapshot.first() }
+        assertEquals(2, snapshot.transactions.size)
+        assertEquals(1, snapshot.recurring.size)
+        assertTrue(snapshot.recurring.single().nextDueEpochDay > LocalDate.now().toEpochDay())
     }
 }

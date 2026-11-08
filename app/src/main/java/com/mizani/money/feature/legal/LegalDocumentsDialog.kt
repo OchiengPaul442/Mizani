@@ -98,7 +98,7 @@ fun LegalDocumentsDialog(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Button(onClick = onClose) { Text("Done") }
+                    Button(onClick = onClose, shape = MaterialTheme.shapes.medium) { Text("Done") }
                 }
             }
         }

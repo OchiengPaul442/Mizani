@@ -336,12 +336,18 @@ private fun CategoryDialog(
                 if (initial != null && !initial.archived) {
                     Text("Order", style = MaterialTheme.typography.labelMedium)
                     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                        OutlinedButton(onClick = { onMove(initial, -1) }) {
+                        OutlinedButton(
+                            onClick = { onMove(initial, -1) },
+                            shape = MaterialTheme.shapes.medium,
+                        ) {
                             Icon(Icons.Rounded.KeyboardArrowUp, contentDescription = "Move up", modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(4.dp))
                             Text("Move up")
                         }
-                        OutlinedButton(onClick = { onMove(initial, 1) }) {
+                        OutlinedButton(
+                            onClick = { onMove(initial, 1) },
+                            shape = MaterialTheme.shapes.medium,
+                        ) {
                             Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = "Move down", modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(4.dp))
                             Text("Move down")

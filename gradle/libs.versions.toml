@@ -24,6 +24,7 @@ espressoCore = "3.7.0"
 ossLicensesPlugin = "0.13.0"
 ossLicenses = "17.5.2"
 playAppUpdate = "2.1.0"
+window = "1.5.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -62,6 +63,7 @@ androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "a
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 play-services-oss-licenses = { group = "com.google.android.gms", name = "play-services-oss-licenses", version.ref = "ossLicenses" }
 play-app-update = { group = "com.google.android.play", name = "app-update", version.ref = "playAppUpdate" }
+androidx-window = { group = "androidx.window", name = "window", version.ref = "window" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

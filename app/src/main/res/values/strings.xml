@@ -65,7 +65,7 @@
     <string name="home_momentum_days_tracked">days tracked</string>
     <string name="home_momentum_day_streak">day streak</string>
     <string name="home_momentum_today_done">You\'re checked in for today.</string>
-    <string name="home_momentum_today_prompt">Record any money activity today to keep your streak moving.</string>
+    <string name="home_momentum_today_prompt">Log one money activity to track today.</string>
     <string name="home_momentum_record_action">Record today</string>
     <string name="home_momentum_milestone">Milestone: %1$s</string>
     <string name="home_momentum_next_one">Next milestone: %1$s · 1 day to go</string>

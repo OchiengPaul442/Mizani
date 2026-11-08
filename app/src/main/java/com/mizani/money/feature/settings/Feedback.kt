@@ -267,6 +267,7 @@ fun FeedbackScreen(onBack: () -> Unit) {
             Button(
                 onClick = ::openEmail,
                 modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium,
             ) {
                 Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = null)
                 Spacer(Modifier.width(Spacing.sm))

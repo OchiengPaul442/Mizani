@@ -7,7 +7,7 @@ Storyset's [FAQ](https://storyset.com/faqs) requires attribution when free illus
 | Local asset | Storyset source | App use | Adjustments |
 | --- | --- | --- | --- |
 | `app/src/main/assets/storyset/finance_cuate.svg` | [Finance, Cuate](https://storyset.com/illustration/finance/cuate) | Onboarding, home empty-ledger hero | Recolored gold accent `#FFC727` to Mizani gold `#E8BF6A`; adapted the character skin tone to `#9B5E49`. |
-| `app/src/main/assets/storyset/financial_data_cuate.svg` | [Financial data, Cuate](https://storyset.com/illustration/financial-data/cuate) | Onboarding, Insights empty state | Recolored gold accent `#FFC727` to Mizani gold `#E8BF6A`. |
+| `app/src/main/assets/storyset/financial_data_cuate.svg` | [Financial data, Cuate](https://storyset.com/illustration/financial-data/cuate) | Onboarding, Insights and Recurring empty states | Recolored gold accent `#FFC727` to Mizani gold `#E8BF6A`. |
 | `app/src/main/assets/storyset/saving_money_cuate.svg` | [Saving money, Cuate](https://storyset.com/illustration/saving-money/cuate) | Final onboarding step | No changes. |
 
 The original SVG structure is retained locally and rendered from app assets. The app does not fetch illustrations at runtime.

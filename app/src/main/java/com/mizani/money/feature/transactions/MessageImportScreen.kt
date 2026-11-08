@@ -137,6 +137,7 @@ fun MessageImportScreen(
                 },
                 enabled = message.isNotBlank() && !reading,
                 modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium,
             ) {
                 if (reading) {
                     CircularProgressIndicator(

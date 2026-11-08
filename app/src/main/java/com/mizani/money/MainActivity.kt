@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -43,8 +44,14 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.window.layout.FoldingFeature
+import androidx.window.layout.WindowInfoTracker
+import androidx.window.layout.WindowLayoutInfo
 import com.google.android.play.core.appupdate.AppUpdateInfo
 import com.google.android.play.core.appupdate.AppUpdateManager
 import com.google.android.play.core.appupdate.AppUpdateManagerFactory
@@ -62,6 +69,7 @@ import com.mizani.money.ui.MizaniNavHost
 import com.mizani.money.ui.components.MizaniMark
 import com.mizani.money.ui.components.Spacing
 import com.mizani.money.ui.theme.MizaniTheme
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import com.mizani.money.core.importing.TransactionMessageParser
 
@@ -104,6 +112,17 @@ class MainActivity : FragmentActivity() {
         consumeSharedText(intent)
         setContent {
             val state by appViewModel.uiState.collectAsStateWithLifecycle()
+            val lifecycleOwner = LocalLifecycleOwner.current
+            val windowLayoutInfo by produceState<WindowLayoutInfo?>(
+                initialValue = null,
+                key1 = lifecycleOwner,
+            ) {
+                lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    WindowInfoTracker.getOrCreate(this@MainActivity)
+                        .windowLayoutInfo(this@MainActivity)
+                        .collect { value = it }
+                }
+            }
             MizaniTheme(
                 themeMode = state.settings.themeMode,
                 colorTheme = state.settings.colorTheme,
@@ -113,6 +132,7 @@ class MainActivity : FragmentActivity() {
                 MizaniRoot(
                     vm = appViewModel,
                     state = state,
+                    windowLayoutInfo = windowLayoutInfo,
                     onAppReadyForUpdateCheck = ::onAppReadyForUpdateCheck,
                 )
             }
@@ -250,6 +270,7 @@ class MainActivity : FragmentActivity() {
 fun MizaniRoot(
     vm: AppViewModel,
     state: AppUiState,
+    windowLayoutInfo: WindowLayoutInfo? = null,
     onAppReadyForUpdateCheck: () -> Unit = {},
 ) {
     var acceptingLegal by remember { mutableStateOf(false) }
@@ -299,7 +320,11 @@ fun MizaniRoot(
                     },
                 )
             }
-            else -> MizaniNavHost(vm, state)
+            else -> MizaniNavHost(
+                vm = vm,
+                state = state,
+                foldingFeatures = windowLayoutInfo?.displayFeatures?.filterIsInstance<FoldingFeature>().orEmpty(),
+            )
         }
     }
 }
@@ -326,7 +351,7 @@ private fun StartupErrorScreen(onRetry: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(Spacing.lg))
-        Button(onClick = onRetry) { Text("Try again") }
+        Button(onClick = onRetry, shape = MaterialTheme.shapes.medium) { Text("Try again") }
     }
 }
 

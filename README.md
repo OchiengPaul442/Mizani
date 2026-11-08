@@ -50,8 +50,9 @@ Mizani is an Android budgeting app designed to work offline. It needs no account
   online, Mizani fetches the latest available daily reference rate and saves the source amount,
   converted amount, rate and rate date. Reference rates can differ from bank, card or mobile money
   settlement rates.
-- **Keep and move your records.** Export transactions to CSV or Excel, or create and restore a
-  Mizani backup encrypted with a passphrase. CSV and Excel files are not encrypted.
+- **Keep and move your records.** Export a multi-sheet Excel workbook for analysis (transactions,
+  wallets, schedules and plans), or use the transaction-only CSV for compatibility. You can also
+  create and restore a Mizani backup encrypted with a passphrase. CSV and Excel files are not encrypted.
 - **Get a gentle reminder.** A daily local reminder is enabled by default at 8:00 p.m. and can be
   changed or disabled in Settings. You can also opt in to local money check-ins for weekly spending, expected
   income, investment valuation, debt payments and savings goals. Check-ins are frequency-limited,

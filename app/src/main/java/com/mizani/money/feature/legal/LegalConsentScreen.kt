@@ -115,6 +115,7 @@ fun LegalConsentScreen(
                 onClick = onAgree,
                 enabled = !accepting,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                shape = MaterialTheme.shapes.medium,
             ) {
                 if (accepting) {
                     CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)

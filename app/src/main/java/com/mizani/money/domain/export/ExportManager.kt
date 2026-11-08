@@ -141,7 +141,7 @@ class ExportManager(
                     ),
                     listOf(
                         ExcelCell.Text("Records included"),
-                        ExcelCell.Text("Archived and soft-deleted records retained in this workspace are included and marked in their sheets."),
+                        ExcelCell.Text("Archived records are included and marked in their sheets. Soft-deleted records remain in encrypted backups, not in this analysis workbook."),
                     ),
                     listOf(
                         ExcelCell.Text("File protection"),

@@ -155,6 +155,7 @@ dependencies {
     implementation(libs.androidx.biometric)
     implementation(libs.play.services.oss.licenses)
     implementation(libs.play.app.update)
+    implementation(libs.androidx.window)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.sqlcipher.android)
 

@@ -200,8 +200,21 @@ internal object BackupValidator {
             }
         }
         bundle.recurring.forEach { rule ->
+            require(rule.name.isNotBlank()) { "Recurring rule has no name" }
+            require(rule.name.length <= 80) { "Recurring rule name is too long" }
+            require(rule.amountMinor in 1L..MoneyLimits.MAX_MINOR_AMOUNT) {
+                "Recurring rule amount is invalid"
+            }
             if (rule.categoryId != null) {
                 require(rule.categoryId in categoryIds) { "Recurring rule references a missing category" }
+                val expectedType = if (rule.type == com.mizani.money.core.model.RecurringType.INCOME) {
+                    CategoryType.INCOME
+                } else {
+                    CategoryType.EXPENSE
+                }
+                require(categoryTypeById[rule.categoryId] == expectedType) {
+                    "Recurring rule category does not match its type"
+                }
             }
             if (rule.walletId != null) {
                 require(rule.walletId in walletIds) { "Recurring rule references a missing wallet" }

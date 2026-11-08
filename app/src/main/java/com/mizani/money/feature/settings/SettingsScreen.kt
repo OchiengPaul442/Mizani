@@ -850,23 +850,23 @@ fun SettingsScreen(
                     StatusBanner(text = error!!, isError = true, onDismiss = { error = null })
                 }
                 Text(
-                    "Download your records for your own analysis, or create an encrypted backup to move them to another phone.",
+                    "Use the Excel workbook for full analysis across transactions, wallets, schedules and plans. Create an encrypted backup when you want to move the ledger to another phone.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 MizaniSectionCard {
                     MizaniInfoRow(
                         icon = Icons.Rounded.Download,
-                        title = "Download transactions (CSV)",
-                        subtitle = "Open in a spreadsheet or analysis app",
-                        onClick = { requestSensitiveAction(SensitiveDataAction.CSV_EXPORT) },
+                        title = "Download Excel workbook (recommended)",
+                        subtitle = "Full workbook with separate analysis-ready sheets",
+                        onClick = { requestSensitiveAction(SensitiveDataAction.EXCEL_EXPORT) },
                     )
                     MizaniSectionDivider()
                     MizaniInfoRow(
                         icon = Icons.Rounded.Download,
-                        title = "Download Excel workbook",
-                        subtitle = "Transactions and related records in sheets",
-                        onClick = { requestSensitiveAction(SensitiveDataAction.EXCEL_EXPORT) },
+                        title = "Download transactions (CSV)",
+                        subtitle = "A simple transaction-only file for older analysis tools",
+                        onClick = { requestSensitiveAction(SensitiveDataAction.CSV_EXPORT) },
                     )
                     MizaniSectionDivider()
                     MizaniInfoRow(
@@ -962,6 +962,7 @@ fun SettingsScreen(
                     OutlinedButton(
                         onClick = { showAccentColorPicker = true },
                         modifier = Modifier.weight(1f).heightIn(min = 60.dp),
+                        shape = MaterialTheme.shapes.medium,
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -1045,8 +1046,14 @@ fun SettingsScreen(
                 )
                 if (settings.hasPin) {
                     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                        OutlinedButton(onClick = { showVerifyForChange = true }) { Text("Change PIN") }
-                        OutlinedButton(onClick = { showDisablePin = true }) {
+                        OutlinedButton(
+                            onClick = { showVerifyForChange = true },
+                            shape = MaterialTheme.shapes.medium,
+                        ) { Text("Change PIN") }
+                        OutlinedButton(
+                            onClick = { showDisablePin = true },
+                            shape = MaterialTheme.shapes.medium,
+                        ) {
                             Icon(Icons.Rounded.LockOpen, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
                             Text("Turn off")
@@ -1056,7 +1063,10 @@ fun SettingsScreen(
                         }
                     }
                 } else {
-                    OutlinedButton(onClick = { showPinSetup = true }) { Text("Set up app lock") }
+                    OutlinedButton(
+                        onClick = { showPinSetup = true },
+                        shape = MaterialTheme.shapes.medium,
+                    ) { Text("Set up app lock") }
                 }
                 if (settings.lockEnabled && canBiometric) {
                     Spacer(Modifier.height(Spacing.sm))
@@ -1165,6 +1175,7 @@ fun SettingsScreen(
                                     )
                                 }.show()
                             },
+                            shape = MaterialTheme.shapes.medium,
                         ) {
                             Text(reminderTimeLabel)
                         }

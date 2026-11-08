@@ -218,6 +218,7 @@ fun InsightsScreen(
             OutlinedButton(
                 onClick = onExportData,
                 modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium,
             ) {
                 Icon(Icons.Rounded.Download, contentDescription = null)
                 Spacer(Modifier.width(Spacing.sm))
@@ -623,6 +624,7 @@ private fun OutlookSetupPanel(observedDays: Int, onEditTarget: () -> Unit) {
             Button(
                 onClick = onEditTarget,
                 modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium,
             ) {
                 Text("Set daily target")
             }

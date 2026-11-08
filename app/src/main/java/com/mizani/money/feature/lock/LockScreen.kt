@@ -220,6 +220,7 @@ fun LockScreen(vm: AppViewModel, biometricEnabled: Boolean) {
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
+                    shape = MaterialTheme.shapes.medium,
                 ) {
                     Icon(Icons.Rounded.Fingerprint, contentDescription = null)
                     Spacer(Modifier.width(Spacing.sm))

@@ -78,7 +78,7 @@ fun MizaniPicker(
                 fieldLabel?.let { contentDescription = "$it: $selectedText" }
             },
             enabled = enabled,
-            shape = MaterialTheme.shapes.small,
+            shape = MaterialTheme.shapes.medium,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         ) {
             Text(

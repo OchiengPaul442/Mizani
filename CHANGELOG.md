@@ -6,6 +6,28 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
 
 ## [Unreleased]
 
+### Added
+
+- Add a first-class Recurring section inside Bills so users can create, edit, archive, record and
+  delete repeating bills and expected income without confusing schedules with actual transactions.
+
+### Changed
+
+- Standardize Bills and recurring primary call-to-action buttons on the medium corner shape.
+- Refine the Daily Momentum card with a compact stat layout, clearer progress hierarchy, and a
+  consistent medium-rounded Record today CTA.
+- Standardize filled, tonal, and outlined action buttons on the medium corner shape across the app;
+  text-only links and icon-only controls remain intentionally lighter.
+- Update the Google Play policy audit and release checklist for the 29 October 2026 permission,
+  trader-status, age-signals, Japan, and technical-quality changes without adding restricted
+  permissions to the app.
+- Clarify that recurring schedules are forecasts until the user records an occurrence, and make the
+  multi-sheet Excel workbook the recommended export for analysis while retaining CSV compatibility.
+- Choose an uninterrupted pane around separating foldable hinges and keep the activity explicitly
+  resizable for foldable and multi-window layouts.
+- Tighten recurring-item validation and preserve stable IDs, revisions and tombstones as the local
+  foundation for a future encrypted device-to-desktop sync protocol.
+
 ## [1.8.0] - 2026-11-01
 
 ### Added
