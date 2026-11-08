@@ -58,6 +58,8 @@
     <string name="home_get_started_title">Start tracking your money</string>
     <string name="home_get_started_body">Record money as it comes in or goes out. Your totals update right away.</string>
     <string name="home_loading">Loading your summary…</string>
+    <string name="home_quick_add_title">Record activity</string>
+    <string name="home_quick_add_subtitle">Add an expense or income in a few taps.</string>
 
     <string name="home_momentum_title">Daily momentum</string>
     <string name="home_momentum_subtitle">Track days, not amounts · 10 points per day.</string>

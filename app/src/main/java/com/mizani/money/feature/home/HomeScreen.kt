@@ -213,7 +213,7 @@ fun HomeScreen(
 
         SummaryCard(metrics = current, currency = currency)
 
-        QuickAddActions(onAddIncome = onAddIncome, onAddExpense = onAddExpense)
+        QuickAddSection(onAddIncome = onAddIncome, onAddExpense = onAddExpense)
 
         SectionBlock(title = "Recent activity", actionLabel = "See all", onAction = onOpenTransactions) {
             snapshot.transactions.take(4).forEach { transaction ->
@@ -554,7 +554,10 @@ private fun QuickAddActions(
                 }
             }
         } else {
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
                 Button(
                     onClick = onAddExpense,
                     modifier = Modifier.weight(1f).heightIn(min = Spacing.buttonHeight),
@@ -578,6 +581,34 @@ private fun QuickAddActions(
                     Text("Add income", maxLines = 1)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun QuickAddSection(
+    onAddIncome: () -> Unit,
+    onAddExpense: () -> Unit,
+) {
+    MizaniCard(
+        modifier = Modifier.fillMaxWidth(),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        contentPadding = PaddingValues(Spacing.md),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            Text(
+                stringResource(R.string.home_quick_add_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                stringResource(R.string.home_quick_add_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            QuickAddActions(
+                onAddIncome = onAddIncome,
+                onAddExpense = onAddExpense,
+            )
         }
     }
 }

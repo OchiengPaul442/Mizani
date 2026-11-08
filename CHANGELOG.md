@@ -18,6 +18,8 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
   consistent medium-rounded Record today CTA.
 - Standardize filled, tonal, and outlined action buttons on the medium corner shape across the app;
   text-only links and icon-only controls remain intentionally lighter.
+- Group the Home screen’s primary expense and income actions into a labelled quick-add module for
+  clearer dashboard hierarchy.
 - Update the Google Play policy audit and release checklist for the 29 October 2026 permission,
   trader-status, age-signals, Japan, and technical-quality changes without adding restricted
   permissions to the app.
