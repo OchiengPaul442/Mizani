@@ -6,6 +6,8 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-11-08
+
 ### Added
 
 - Add a first-class Recurring section inside Bills so users can create, edit, archive, record and
