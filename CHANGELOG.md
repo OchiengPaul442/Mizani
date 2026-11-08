@@ -10,6 +10,8 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
 
 - Add a first-class Recurring section inside Bills so users can create, edit, archive, record and
   delete repeating bills and expected income without confusing schedules with actual transactions.
+- Add a debt workspace with clear empty-state guidance, protected debt summaries, payment progress,
+  due dates, and payment recording through the existing transactional ledger.
 
 ### Changed
 
@@ -29,6 +31,7 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
   resizable for foldable and multi-window layouts.
 - Tighten recurring-item validation and preserve stable IDs, revisions and tombstones as the local
   foundation for a future encrypted device-to-desktop sync protocol.
+- Improve custom-accent hero contrast by keeping both gradient stops dark enough for white text.
 
 ## [1.8.0] - 2026-11-01
 

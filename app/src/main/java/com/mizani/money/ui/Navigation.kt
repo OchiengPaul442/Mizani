@@ -70,6 +70,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.mizani.money.feature.categories.CategoriesScreen
 import com.mizani.money.feature.commitments.CommitmentsScreen
+import com.mizani.money.feature.debts.DebtsScreen
 import com.mizani.money.feature.home.HomeScreen
 import com.mizani.money.feature.insights.InsightsScreen
 import com.mizani.money.feature.investments.InvestmentsScreen
@@ -568,6 +569,22 @@ fun MizaniNavHost(
             ) {
                 MizaniRouteSurface {
                     WalletsScreen(
+                        vm = vm,
+                        state = state,
+                        onBack = ::navigateBack,
+                        onSetupPin = { openDetail("settings") },
+                    )
+                }
+            }
+            composable(
+                "debts",
+                enterTransition = ::navEnter,
+                exitTransition = ::navExit,
+                popEnterTransition = ::navPopEnter,
+                popExitTransition = ::navPopExit,
+            ) {
+                MizaniRouteSurface {
+                    DebtsScreen(
                         vm = vm,
                         state = state,
                         onBack = ::navigateBack,

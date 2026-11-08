@@ -8,6 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
+import androidx.compose.material.icons.rounded.AccountBalance
 import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Feedback
@@ -45,6 +46,13 @@ fun MoreScreen(
                     title = "Wallets",
                     subtitle = "Cash, mobile money and bank balances",
                     onClick = { onNavigate("wallets") },
+                )
+                MizaniSectionDivider()
+                MizaniInfoRow(
+                    icon = Icons.Rounded.AccountBalance,
+                    title = "Debts",
+                    subtitle = "What you owe and payments made against it",
+                    onClick = { onNavigate("debts") },
                 )
                 MizaniSectionDivider()
                 MizaniInfoRow(

@@ -263,6 +263,45 @@ class RepositoryIntegrationTest {
     }
 
     @Test
+    fun debtWriteBoundaryRejectsInvalidAmountsAndWallets() = runBlocking {
+        val app = ApplicationProvider.getApplicationContext<MizaniApplication>()
+        val repo = app.container.financeRepository
+        repo.createWorkspace("UG", "UGX", "Cash", WalletType.CASH, 0)
+        val snapshot = repo.snapshot.first()
+        val cash = snapshot.wallets.single()
+        val debtWallet = repo.addWallet("Debt wallet", WalletType.DEBT, 0, "#8C4A3C")
+
+        assertRejected(
+            {
+                repo.saveDebt(null, "Invalid", "Lender", 10_000, -1, 0, null, null, "")
+            },
+            "original",
+        )
+        assertRejected(
+            {
+                repo.saveDebt(null, "Invalid", "Lender", 10_000, null, -1, null, null, "")
+            },
+            "periodic",
+        )
+        assertRejected(
+            {
+                repo.saveDebt(null, "Invalid", "Lender", 10_000, null, 0, null, Double.NaN, "")
+            },
+            "interest",
+        )
+
+        val debtId = repo.saveDebt(null, "Phone loan", "Lender", 10_000, 20_000, 2_000, null, null, "")
+        assertRejected(
+            { repo.recordDebtPayment(debtId, cash.id, 10_001, LocalDate.now()) },
+            "exceed",
+        )
+        assertRejected(
+            { repo.recordDebtPayment(debtId, debtWallet, 1_000, LocalDate.now()) },
+            "non-debt",
+        )
+    }
+
+    @Test
     fun importedReferencesStayUniqueAndCommitmentLinksDoNotDuplicateExpenses() = runBlocking {
         val app = ApplicationProvider.getApplicationContext<MizaniApplication>()
         val repo = app.container.financeRepository

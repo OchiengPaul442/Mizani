@@ -210,8 +210,11 @@ private fun customAccentTokens(hex: String): AccentTokens {
         darkOnPrimary = contrastingForeground(darkPrimary),
         darkContainer = darkContainer,
         darkOnContainer = contrastingForeground(darkContainer),
+        // Hero copy is intentionally white in both light and dark app modes. Keep both
+        // gradient stops dark enough for that fixed foreground even when a user chooses a
+        // high-luminance accent such as yellow.
         heroStart = withHslLightness(seed, 0.18f),
-        heroEnd = lightPrimary,
+        heroEnd = withHslLightness(seed, 0.20f),
         heroAccent = darkPrimary,
         heroAccentOn = contrastingForeground(darkPrimary),
     )

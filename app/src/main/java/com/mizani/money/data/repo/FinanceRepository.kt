@@ -834,6 +834,11 @@ class FinanceRepository(private val database: MizaniDatabase) {
         note: String,
     ): String = database.withTransaction {
         require(balanceMinor >= 0) { "Balance cannot be negative" }
+        require(originalMinor == null || originalMinor >= 0) { "Original amount cannot be negative" }
+        require(periodicPaymentMinor >= 0) { "Periodic payment cannot be negative" }
+        require(interestRatePercent == null || (interestRatePercent.isFinite() && interestRatePercent >= 0.0)) {
+            "Interest rate must be a finite non-negative value"
+        }
         val existing = debtId?.let { debtDao.getById(it) }
         val now = System.currentTimeMillis()
         val entity = DebtEntity(
@@ -866,6 +871,8 @@ class FinanceRepository(private val database: MizaniDatabase) {
             if (debt.deletedAt != null || debt.archived) { error("Debt is no longer available") }
             val wallet = walletDao.getById(walletId) ?: error("Wallet not found")
             require(!wallet.archived) { "Wallet is archived" }
+            require(wallet.type != WalletType.DEBT) { "Choose a non-debt wallet" }
+            require(amountMinor <= debt.currentBalanceMinor) { "Payment cannot exceed the debt balance" }
             val workspace = workspaceDao.get() ?: error("No workspace")
             val category = categoryDao.getById(DefaultCategories.defaultEntityId("category", "debt"))
                 ?: categoryDao.getAll().firstOrNull { it.type == CategoryType.EXPENSE }
