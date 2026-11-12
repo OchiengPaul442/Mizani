@@ -60,6 +60,37 @@
     <string name="home_loading">Loading your summary…</string>
     <string name="home_quick_add_title">Record activity</string>
     <string name="home_quick_add_subtitle">Add an expense or income in a few taps.</string>
+    <string name="home_quick_add_expense">Add expense</string>
+    <string name="home_quick_add_expense_description">Add expense</string>
+    <string name="home_quick_add_income">Add income</string>
+    <string name="home_quick_add_income_description">Add income</string>
+    <string name="home_quick_add_transfer">Transfer</string>
+    <string name="home_quick_add_transfer_description">Transfer between wallets</string>
+    <string name="home_quick_add_import">Import</string>
+    <string name="home_quick_add_import_description">Import a message</string>
+
+    <string name="home_hero_across_wallets">Across wallets</string>
+    <string name="home_hero_income">Income</string>
+    <string name="home_hero_spending">Spending</string>
+    <string name="home_hero_net">Net</string>
+    <string name="home_hero_day_progress">Day %1$d of %2$d</string>
+
+    <string name="home_spending_title">Spending</string>
+    <string name="home_spending_empty_title">No spending yet</string>
+    <string name="home_spending_empty_body">Add an expense to see spending by category.</string>
+    <string name="home_spending_other">Other</string>
+    <string name="home_spending_pulse_label">Last 7 days</string>
+    <string name="home_spending_pulse_description">Last 7 days spending: %1$s</string>
+    <string name="home_recent_activity_title">Recent activity</string>
+
+    <string name="home_coming_up_title">Coming up</string>
+    <string name="home_coming_up_due_label">Due in the next 7 days</string>
+    <string name="home_coming_up_expected_income">Expected</string>
+    <string name="home_coming_up_bill">Bill</string>
+
+    <string name="home_wallets_title">Your wallets</string>
+    <string name="home_wallets_action">See all</string>
+    <string name="home_insight_title">Insight</string>
 
     <string name="home_momentum_title">Daily momentum</string>
     <string name="home_momentum_subtitle">Track days, not amounts · 10 points per day.</string>

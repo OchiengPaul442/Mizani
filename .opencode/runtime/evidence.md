@@ -1,38 +1,68 @@
 # Evidence
 
-## Confirmed baseline leads
-- `README.md:1-152` describes a single-module offline-first Kotlin/Compose finance app with Room/SQLCipher, integer minor-unit money, deterministic analytics, no network/AI runtime, and existing unit/instrumented verification claims. These are documentation claims until commands are re-run for the final change set.
-- `app/src/main/java/com/mizani/money/**` contains 15 feature/screen areas plus shared UI, repository, local database, analytics, money, security, and export code.
-- Existing tests are present under `app/src/test` (money, time, PIN, analytics, insights) and `app/src/androidTest` (guest journey, repository, lock, backup/restore, demo data).
-- No `AGENTS.md` or `.opencode/runtime/*.md` existed before this audit; this state directory is now created.
-- `docs/VERIFICATION.md:79-90` defines manual first-launch/offline/financial/lock/export scenarios; `:92-99` lists no cloud/SMS/multi-currency and release-artifact limitations.
-- `docs/DESIGN_SYSTEM.md:124-130` defines accessibility expectations (48dp controls, non-color signals, chart descriptions, large-font/dark-mode support).
-- `FinanceModels.kt:59-81` confirms refund wallet changes currently add amount without subtracting a refund fee; `Analytics.kt:57-79` and `:422-455`, `TransactionsScreen.kt:135-138`, and `ExportManager.kt:127-131` independently omit refund fees from eligible expense calculations/summaries.
-- `SettingsScreen.kt:173-187` wraps `vm.enableLock(pin): Result<Unit>` without handling the nested result, so a returned failure can show “App lock is on.”
-- Read-only inventory confirmed routes in `ui/Navigation.kt:51-236`, root gates in `MainActivity.kt:64-73`, and More entry points in `feature/more/MoreScreen.kt:100-158`.
-- Read-only inventory found no PIN attempt throttling/backoff in `AppViewModel.unlockWithPin` or `SettingsScreen` verification paths; this is a security risk requiring explicit product/security review.
-- Read-only inventory found CSV field escaping in `ExportManager.csvEscape` only quotes delimiters/newlines; spreadsheet formula prefixes are not neutralized.
-- Read-only inventory confirmed `MoneyFormat.parse` rounds excess fractional precision (`HALF_UP`) for both decimal and zero-decimal currencies; the UI currently reports malformed input as a generic zero/amount error.
-- Read-only inventory confirmed all app copy remains largely hardcoded and `StatusBanner` has no live-region semantics; several archive/navigation icons rely on null content descriptions.
+## Build (confirmed)
+- `:app:testDebugUnitTest` — BUILD SUCCESSFUL (after structural redesign and after final defect fixes).
+- `:app:compileDebugKotlin` — BUILD SUCCESSFUL (repeated after each pass).
+- `:app:assembleDebug` — BUILD SUCCESSFUL (repeated after each pass).
+- `:app:compileDebugAndroidTestKotlin` — BUILD SUCCESSFUL (after stale Bills assertion correction).
+- Final `:app:testDebugUnitTest` after the forward-looking upcoming-window fix — BUILD SUCCESSFUL in 8s, EXIT=0, no failing tests.
+- `git status --short` after all changes — exactly the 13 expected paths, no unexpected files.
+- No instrumentation suite run (would reset the emulator ledger).
 
-## Verification log
-- **PROVEN baseline unit tests:** `.\\gradlew.bat :app:testDebugUnitTest --console=plain --stacktrace --rerun` exited 0; fresh report shows 42 tests, 0 failures/errors/skips across Money (10), PIN (3), Periods (7), Analytics (17), Insights (5). Worker log: `%TEMP%\\mizani-testDebugUnitTest.log`.
-- **PROVEN baseline debug build:** `.\\gradlew.bat :app:assembleDebug --console=plain --stacktrace --rerun-tasks` exited 0; 40/40 tasks executed; APK `app/build/outputs/apk/debug/app-debug.apk` 30,917,845 bytes; only five `Icons.Rounded.*` deprecation warnings. Worker log: `%TEMP%\\mizani-assembleDebug.log`.
-- **HISTORICAL baseline:** earlier androidTest was blocked by no attached device. Superseded by the final emulator run recorded below.
-- Repository has an unborn `main` with no commits; test sources are untracked. No production files were edited by the baseline worker.
-- **PROVEN secondary UX pass:** `gradlew :app:compileDebugKotlin` exited 0 and `gradlew :app:testDebugUnitTest` exited 0 after edits in `feature/settings/SettingsScreen.kt`, `feature/plan/{PlanDialogs,PlanScreen}.kt`, `feature/budget/BudgetScreen.kt`, `feature/goals/GoalScreen.kt`, `feature/debts/DebtsScreen.kt`, `feature/wallets/WalletsScreen.kt`, and `feature/categories/CategoriesScreen.kt`. Worker reports no navigation/schema/dependency/calculation changes.
-- Confirmed secondary fixes: nested app-lock `Result<Unit>` is consumed directly; destructive recurring archive now confirms; error fallbacks are null-safe; goal not-found and form statuses use shared empty/status components; picker/swatch selection semantics were added.
-- Secondary UI verification remains **PARTIAL**: TalkBack, dialog behavior, and 48dp target compliance were not device-tested; compile/unit pass is not UI proof.
-- **PROVEN primary UX compile:** `:app:compileDebugKotlin` exited 0 after primary resource/accessibility edits. Primary worker preserved UI-test-critical labels and reports resource references validated; runtime accessibility remains unverified.
-- Finance worker reports implemented refund-fee accounting and repository/restore validation in `FinanceModels.kt`, `Analytics.kt`, `TransactionsScreen.kt`, `ExportManager.kt`, `FinanceRepository.kt`, and `BackupValidator.kt`, plus regression tests. Its reported clean compile/28-test pass predates the final combined tree and is not final evidence.
-- **PROVEN final verification (current tree after chart/display fixes):** `:app:compileDebugKotlin :app:processDebugResources` exit 0; `:app:testDebugUnitTest --rerun` exit 0 with **87 tests**, 0 failures/errors/skips in 8 suites (Money 12, PinBackoffPolicy 8, PinHasher 3, Periods 7, BackupValidator 29, AnalyticsEngine 19, ExportManager 4, InsightEngine 5); `:app:assembleDebug` exit 0 with APK **31,141,566 bytes** (~29.7 MiB); `:app:compileDebugAndroidTestKotlin` exit 0. `adb devices -l` via full SDK path reported zero attached devices, so instrumented/manual testing remains BLOCKED.
-- **INDEPENDENT RE-REVIEW — PASS WITH RISKS:** prior CSV negative-number and leading-whitespace defects are fixed; duplicate restore-ID validation, `saveGoal` linked-wallet guard, and PIN gate confirmed. Residual hypotheses: wall-clock PIN backoff bypass, non-atomic failure counter, and real spreadsheet/device behavior unverified.
-- **PROVEN documentation cleanup:** 49 screenshots, screenshot index, obsolete AI-strategy docs, and brand packaging/marketing docs deleted; independent listing/grep confirm no dangling references.
-- **PROVEN refund-heavy display fix (code-level):** Home/Insights now filter positive category slices and use a positive total with a neutral empty state; day-header and net-cash-flow signs are corrected and labels use “Net spending.” Runtime visual behavior is unverified without a device.
-- **PROVEN emulator E2E:** headless `Medium_Phone_API_36.1` (API 36.1, serial emulator-5554, boot ~75s) ran all five classes separately: GuestJourneyTest 1/0 failures 84.2s (one systemui ANR focus retry), RepositoryIntegrationTest 2 tests exit 0 56s, AppLockTest 1/0 88.7s, BackupRestoreTest 1/0 63.8s, DemoDataTest 1/0 17.8s. App data cleared/uninstalled, emulator killed.
-- **PROVEN release build:** `:app:assembleRelease` exits 0 with `optimization { enable = true }`; unsigned APK 10,663,390 bytes (~10.2 MiB), no custom ProGuard rules. A temporary debug-keystore-signed copy installed, launched MainActivity to resumed state with no fatal/E `mizani` logs; test-signed copy deleted. Production signing remains absent.
-- **PROVEN final docs/report sync:** README/VERIFICATION/report reflect 87 tests, debug 31,141,566-byte APK, unsigned 10,663,390-byte release, emulator pass, cleanup, and residual risks.
-- **CLEANUP:** emulator logs/screenshots/test APKs deleted; no screenshots remain (only launcher mipmaps); androidTest outputs/reports deleted. JVM test reports are being removed as the last cleanup step.
+## Device (foldable emulator, confirmed)
+- emulator-5554, sdk_gphone64_x86_64, Android 17, 390 dpi.
+- Posture command: `adb shell cmd device_state state <int>` (0 closed, 1 half-opened, 2 opened).
+- Closed: 1080x2364 px = 443x970 dp, bottom nav (baseline).
+- Half-open: 2076x2152 px, app content confined to the left ~970px pane (398dp), bottom nav (baseline).
+- Open: 2076x2152 px = 852x883 dp, left rail; content ~724dp; two columns expected.
+- FLAG_SECURE: captures are black; never bypass. Bounds evidence only.
 
-## Open questions / limits
-- Production signing key absent; localization English-only; manual 9-step/TalkBack and real-spreadsheet CSV unverified; PIN wall-clock/atomicity residual; release R8 runtime smoke passed but production-signed release not tested.
+## Open posture, populated (confirmed after install)
+- Two test transactions added through the UI: expense UGX 25,000 (Housing & rent, Cash) and income UGX 100,000 (Salary, Cash).
+- Nav: left rail (Home x=76, Activity x=65, Insights x=62, Bills x=88, More x=82).
+- Two columns: `Recent activity` x=309; `Spending` x=1210.
+- Full-width hero band: `Across wallets` x=323; `Income` x=1191, `Spending` x=1476, `Net` x=1815; values `UGX 100,000`, `UGX 25,000`, `+UGX 75,000`.
+- Period progress: `1–30 November 2026`, `Day 12 of 30`.
+- 7-day pulse present: `Last 7 days`, bars for 6–12 Nov, today UGX 25,000.
+- Max text right edge 2008 < 2076; no clipped/overlapping bounds.
+- Defect found: quick actions were 2x2 (Add expense y=906, Transfer y=1117) because the 354dp column hit the 340dp threshold. Fixed to 300dp threshold; divider flush fix pending build.
+
+## Final posture matrix (all PASS)
+- **Open 852dp:** rail labels share x (Home 76, Activity 65, Insights 62, Bills 88, More 82). Actions one row (labels y=1043; Add expense x=313, Add income 522, Transfer 747, Import 961). Left column: Recent activity x=309, Your wallets x=309 (y=1719); right: Spending x=1210, Daily momentum x=1341. Max right 2008 <= 2076. Recent activity / Last 7 days / Daily momentum present.
+- **Half-open:** print-state=1; bottom nav shares y=1976; actions one row all y=1186; max right 970 (inside the app pane); no horizontal overflow. The app is confined to the OS-assigned pane; the other pane remains available to the system.
+- **Closed 443dp:** bottom nav shares y=2207; actions one row all y=1202; max right 1012 <= 1080; Recent activity + Spending visible; lower sections scroll.
+- **Large font 1.3 (Open):** actions 2x2 (Add expense/Income y=1378, Transfer/Import y=1599); rail labels present; hero stats end <=1850; max right 2008 <= 2076. Original font scale 1.0 restored and verified.
+- Final state left: posture 2, font 1.0, app foreground, two disposable transactions.
+
+## Final regression on the final APK
+- `NavigationBackRegressionTest` after Insights/More/Settings/width fixes: **3 tests, 0 failures, 0 errors, 0 skipped**, exit 0. The test task uninstalled app+test packages afterward; both were reinstalled.
+- The Pixel 10 Pro Fold AVD crashed again during the final demo seed; a stable `Medium_Phone_API_36.1` (1080x2400, 420dpi) auto-started. Fold posture verification remains valid from the earlier run; wide-layout verification for the new pages will use a temporary logical `wm size` override (838dp) on the phone, then reset.
+
+## Phone demo state (final device available)
+- Medium_Phone_API_36.1, 1080x2400, 420dpi, font 1.0. App 1.9.0 installed; onboarding complete.
+- Seeded through UI: expense UGX 25,000 (Housing & rent, MTN MoMo), income UGX 100,000 (Salary), one-off bill "Internet" UGX 75,000 due today, uncategorised.
+- `demo-phone-home.txt` (9,299 B, 3 scroll segments) proves Coming up + Internet + Due in the next 7 days + UGX 75,000, Recent activity, Last 7 days, Daily momentum, four actions one row y=1318, max right 1006 <= 1080.
+- The Pixel Fold AVD remains unavailable; wide-layout verification for the new pages will use a temporary logical width override (2200x2400, 420dpi ≈ 838dp) and be reset afterward.
+
+## Release cut
+- Version advanced explicitly by the user to **1.10.0**, derived Android versionCode **1010000** (strictly greater than 1.9.0/1009000).
+- `CHANGELOG.md` has a dated `[1.10.0] - 2026-11-13` section with all redesign/currency/Bills/lock/About entries and a fresh empty `[Unreleased]`.
+- `docs/PLAY_STORE_RELEASE_CHECKLIST.md` and `docs/VERIFICATION.md` updated for 1.10.0/1010000.
+- `:app:testDebugUnitTest`, `:app:assembleDebug`, `:app:compileDebugAndroidTestKotlin`, `:app:printReleaseVersion` all green; print output 1.10.0/1010000.
+
+## Limitations / notes
+- Visual pixels cannot be captured: FLAG_SECURE intentionally renders screencaptures black. Evidence is layout bounds + text semantics, not color/spacing screenshots.
+- No instrumentation suite run (it resets the emulator ledger). `compileDebugAndroidTestKotlin` passes; the stale "Bills & commitments" assertion was corrected to "Bills & recurring".
+- "Coming up" was not visually exercised because the emulator has no bills/recurring items; its data path is the existing `AnalyticsEngine.upcoming` over a 45-day forward range.
+- Two disposable transactions remain on the emulator for inspection (UGX 25,000 expense, UGX 100,000 income).
+- Final APK smoke: `adb install -r` Success; versionName=1.9.0; Open posture; actions one row y=1043; Recent activity / Last 7 days / Daily momentum present; max right 2008 <= 2076; rail present; `git diff --check` clean; exactly the 13 expected modified files, no untracked artifacts.
+- Focused instrumentation `NavigationBackRegressionTest` (final APK, open fold): **3 tests, 0 failures, 0 errors, 0 skipped**, 17.9s, exit code 0. This directly exercised the empty-Home `Add expense` tile, top-level tab switching, back from Wallets/Categories, and the corrected `Bills & recurring` title. TestState.reset cleared the emulator ledger (expected/disclosed).
+- `git diff --check` exit 0; 13 modified files, no unexpected artifacts.
+- Guest journey `GuestJourneyTest` (final APK, open fold): **1 test, 0 failures, 0 errors, 0 skipped**, 15.1s, exit code 0. Covers onboarding → empty Home (Daily momentum strings) → Activity add expense/income → Recent activity → edit transaction.
+- Domain fix after device review: `AnalyticsEngine.upcoming()` now includes one-off commitments (remaining workspace amount, due today..range end, non-archived) in addition to recurring items and debts. New unit test added; `:app:testDebugUnitTest` **20 tests, 0 failures**, compile green. This makes the new Home "Coming up" card correct for one-off bills.
+- After the user restarted Android Studio/emulator: device online. App package had been removed by the crash; final APK reinstalled successfully. Onboarding was completed through the UI; demo data seeded: MTN MoMo wallet, expense UGX 25,000 (Housing & rent), income UGX 100,000 (Salary), and a one-off bill "Internet" UGX 75,000 due today.
+- Final "Coming up" proof (`demo-home-comingup.txt`): title x=1210 y=1682; Internet row [1341,1872][1729,1911]; amount [1811,1890][1998,1929]; "Due in the next 7 days" + UGX 75,000; four actions share y=1043; max text right 2008 <= 2076; 61 text nodes, 0 overlapping pairs. This proves the one-off-bill domain fix reaches the Home card.
+- Additional redesign pass: Insights rebuilt with full-width cash-flow hero, responsive two columns, export in the app bar, accent section headers; More rebuilt with centered 680dp/two-column hub; Settings centered 680dp with accent section headers and divided Appearance card; Home/Insights/More/Settings max-width modifier order corrected (`widthIn(...).fillMaxWidth()` / `widthIn(...).fillMaxHeight()`). Insights/More/Settings compile+assemble green.
+- Performance: `AnalyticsEngine.dailySpending(days, today)` single-pass replaces seven `expenseMinor` scans; unit-tested equivalence. Unit suite 20+ green.
+- Final working tree: 19 expected modified tracked files (Home, Activity, Navigation, AdaptiveLayout, Components, WalletBalancePrivacy, strings, CHANGELOG, docs, NavigationBackRegressionTest, Analytics, Home, Insights, More, Settings, AnalyticsEngineTest, Fixtures + runtime 3). No untracked artifacts.
+- App left on Home, Open posture, font scale 1.0, with demo data. Balance hero/account balances remain masked because no app PIN/reveal was set.

@@ -3,6 +3,7 @@ package com.mizani.money.feature.insights
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -21,12 +23,12 @@ import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,10 +46,12 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mizani.money.R
+import com.mizani.money.core.model.Insight
 import com.mizani.money.core.model.TransactionType
 import com.mizani.money.core.model.WalletType
 import com.mizani.money.core.money.Currency
@@ -55,12 +59,15 @@ import com.mizani.money.core.money.MoneyFormat
 import com.mizani.money.core.time.DateRange
 import com.mizani.money.core.time.DateText
 import com.mizani.money.core.time.Periods
+import com.mizani.money.data.local.TransactionEntity
+import com.mizani.money.data.repo.LedgerSnapshot
 import com.mizani.money.domain.analytics.AnalyticsEngine
 import com.mizani.money.domain.analytics.DashboardMetrics
 import com.mizani.money.domain.analytics.IncomeVariability
 import com.mizani.money.domain.analytics.MoneyOutlook
 import com.mizani.money.feature.lock.ProtectedBalanceValue
 import com.mizani.money.feature.lock.WalletBalanceVisibilityControl
+import com.mizani.money.ui.AdaptiveLayout
 import com.mizani.money.ui.AppUiState
 import com.mizani.money.ui.AppViewModel
 import com.mizani.money.ui.components.DateRangePickerDialog
@@ -74,6 +81,7 @@ import com.mizani.money.ui.components.MizaniTopBar
 import com.mizani.money.ui.components.MonthBar
 import com.mizani.money.ui.components.PeriodMenu
 import com.mizani.money.ui.components.ProgressBar
+import com.mizani.money.ui.components.SectionHeader
 import com.mizani.money.ui.components.Spacing
 import com.mizani.money.ui.components.parseHexColor
 import com.mizani.money.ui.theme.LocalMizaniThemeTokens
@@ -81,6 +89,9 @@ import java.time.YearMonth
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
+
+/** Two-column Insights content is capped so cards never stretch edge-to-edge on tablets. */
+private val InsightsContentMaxWidth = 1180.dp
 
 @Composable
 fun InsightsScreen(
@@ -100,7 +111,7 @@ fun InsightsScreen(
     var showRangePicker by remember { mutableStateOf(false) }
     var showDailyTargetDialog by remember { mutableStateOf(false) }
 
-    // Secondary metrics stay behind a "More metrics" toggle. rememberSaveable keeps the
+    // Secondary metrics stay behind a "More detail" toggle. rememberSaveable keeps the
     // choice across scrolling, tab switches and process death within the screen session.
     var showMoreMetrics by rememberSaveable { mutableStateOf(false) }
 
@@ -153,340 +164,520 @@ fun InsightsScreen(
     }
 
     Column(Modifier.fillMaxSize()) {
-        MizaniTopBar(title = "Insights", subtitle = stringResource(R.string.insights_subtitle))
-        Column(
+        MizaniTopBar(
+            title = "Insights",
+            subtitle = stringResource(R.string.insights_subtitle),
+            actions = {
+                IconButton(onClick = onExportData) {
+                    Icon(Icons.Rounded.Download, contentDescription = "Export data")
+                }
+            },
+        )
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = Spacing.lg)
                 .padding(bottom = Spacing.bottomFab),
-            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
-            PeriodMenu(
-                selected = selectedPreset,
-                customRange = customRange,
-                range = periodRange,
-                onSelect = { preset -> vm.selectPreset(preset) },
-                onCustom = { showRangePicker = true },
-            )
-
-            MoneyOutlookCard(
-                vm = vm,
-                state = state,
-                outlook = outlook,
-                onSetupPin = onSetupPin,
-                onEditTarget = { showDailyTargetDialog = true },
-            )
-
-            if (showDailyTargetDialog) {
-                DailyTargetDialog(
-                    vm = vm,
-                    initialTargetMinor = snapshot.workspace?.outlookDailyTargetMinor,
-                    currency = currency,
-                    onDismiss = { showDailyTargetDialog = false },
-                )
-            }
-
-            if (snapshot.transactions.isEmpty()) {
-                EmptyState(
-                    title = "No transactions yet",
-                    body = "Add income or expenses to see your cash flow and analysis.",
-                    icon = Icons.Rounded.BarChart,
-                    illustrationAsset = "financial_data_cuate.svg",
-                )
-                return@Column
-            }
-
-            val current = metrics
-            if (current == null) {
-                Text(
-                    stringResource(R.string.insights_loading),
-                    style = MaterialTheme.typography.bodyMedium,
-                    // Loading is a status change: announce it instead of going visually blank.
-                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                )
-                return@Column
-            }
-
-            CashFlowHero(
-                metrics = current,
-                periodLabel = DateText.rangeLabel(current.period),
-                previousLabel = DateText.rangeLabel(current.previousPeriod),
-                currency = currency,
-            )
-
-            OutlinedButton(
-                onClick = onExportData,
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium,
-            ) {
-                Icon(Icons.Rounded.Download, contentDescription = null)
-                Spacer(Modifier.width(Spacing.sm))
-                Text("Export data")
-            }
-
-            val visibleInsights = insights
-            if (visibleInsights.isNotEmpty()) {
-                Text("What changed", style = MaterialTheme.typography.titleMedium)
-                visibleInsights.take(3).forEach { insight ->
-                    InsightCard(
-                        title = insight.title,
-                        body = insight.body,
-                        tone = insight.tone,
-                        actionLabel = null,
-                        onAction = {},
-                    )
-                }
-            }
-
-            val monthlyBars = remember(monthly) {
-                monthly.map { flow ->
-                    MonthBar(
-                        label = flow.month.month.name.take(3),
-                        incomeMinor = flow.incomeMinor,
-                        expenseMinor = flow.expenseMinor,
-                    )
-                }
-            }
-            val monthsWithData = monthly.count { it.incomeMinor > 0 || it.expenseMinor > 0 }
-            MetricCard(
-                title = "Six-month cash flow",
-                subtitle = "Income versus expenses",
-            ) {
-                if (monthsWithData < 2) {
-                    Text(
-                        "Add another month of records to see cash-flow trends.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val twoColumn = maxWidth >= AdaptiveLayout.EXPANDED_CONTENT_WIDTH_DP.dp
+                val contentMaxWidth = if (twoColumn) {
+                    InsightsContentMaxWidth
                 } else {
-                    // Bars, month labels, legend and the screen-reader summary all come from
-                    // the shared MPAndroidChart-backed component.
-                    MizaniCashFlowBars(months = monthlyBars, currency = currency)
-                    Spacer(Modifier.height(Spacing.sm))
-                    Text(
-                        "Highest recorded income month: ${monthly.maxByOrNull { it.incomeMinor }?.let { "${it.month.month.name} ${it.month.year} (${MoneyFormat.format(it.incomeMinor, currency)})" } ?: "none yet"}.",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        // Wraps normally below the legend; the card's 16dp content padding keeps it unclipped.
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    AdaptiveLayout.SINGLE_COLUMN_MAX_WIDTH_DP.dp
                 }
-            }
-
-            MetricCard(
-                title = "Where it went",
-                subtitle = "Spending by category",
-            ) {
-                // Refund-heavy periods can leave negative category totals; only positive
-                // net spending is charted so shares stay comparable and never negative.
-                val positiveSlices = current.categorySlices.filter { it.amountMinor > 0 }
-                if (positiveSlices.isEmpty()) {
-                    Text(
-                        "No net spending recorded in this period.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Column(
+                    modifier = Modifier
+                        .widthIn(max = contentMaxWidth)
+                        .fillMaxWidth()
+                        .align(Alignment.Center),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+                ) {
+                    PeriodMenu(
+                        selected = selectedPreset,
+                        customRange = customRange,
+                        range = periodRange,
+                        onSelect = { preset -> vm.selectPreset(preset) },
+                        onCustom = { showRangePicker = true },
                     )
-                } else {
-                    val positiveTotal = positiveSlices.sumOf { it.amountMinor }
-                    MizaniDonutChart(
-                        slices = positiveSlices,
-                        totalMinor = positiveTotal,
+
+                    if (showDailyTargetDialog) {
+                        DailyTargetDialog(
+                            vm = vm,
+                            initialTargetMinor = snapshot.workspace?.outlookDailyTargetMinor,
+                            currency = currency,
+                            onDismiss = { showDailyTargetDialog = false },
+                        )
+                    }
+
+                    if (snapshot.transactions.isEmpty()) {
+                        OutlookSection(
+                            vm = vm,
+                            state = state,
+                            outlook = outlook,
+                            onSetupPin = onSetupPin,
+                            onEditTarget = { showDailyTargetDialog = true },
+                        )
+                        EmptyState(
+                            title = "No transactions yet",
+                            body = "Add income or expenses to see your cash flow and analysis.",
+                            icon = Icons.Rounded.BarChart,
+                            illustrationAsset = "financial_data_cuate.svg",
+                        )
+                        return@Column
+                    }
+
+                    val current = metrics
+                    if (current == null) {
+                        OutlookSection(
+                            vm = vm,
+                            state = state,
+                            outlook = outlook,
+                            onSetupPin = onSetupPin,
+                            onEditTarget = { showDailyTargetDialog = true },
+                        )
+                        Text(
+                            stringResource(R.string.insights_loading),
+                            style = MaterialTheme.typography.bodyMedium,
+                            // Loading is a status change: announce it instead of going visually blank.
+                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                        )
+                        return@Column
+                    }
+
+                    CashFlowHero(
+                        metrics = current,
+                        periodLabel = DateText.rangeLabel(current.period),
+                        previousLabel = DateText.rangeLabel(current.previousPeriod),
                         currency = currency,
-                        modifier = Modifier.fillMaxWidth().height(190.dp),
+                        wide = twoColumn,
                     )
-                    Spacer(Modifier.height(Spacing.sm))
-                    positiveSlices.forEach { slice ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Box(
-                                Modifier.size(8.dp).clip(CircleShape)
-                                    .background(parseHexColor(slice.colorHex)),
-                            )
-                            Spacer(Modifier.width(Spacing.sm))
-                            Text(slice.name, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(
-                                "${(slice.share * 100).roundToInt()}%",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(end = Spacing.sm),
-                            )
-                            Text(
-                                MoneyFormat.format(slice.amountMinor, currency),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                }
-            }
 
-            MetricCard(
-                title = "Income trends",
-                subtitle = current.incomeVariability?.let { "${it.monthsWithIncome} months with income" }
-                    ?: "Record income to build a monthly trend",
-            ) {
-                val variability = current.incomeVariability
-                if (variability == null) {
-                    Text(
-                        if (current.incomeMinor > 0) {
-                            "Keep recording income across months to compare your income history."
-                        } else {
-                            "Record income to see your history."
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                } else {
-                    VariabilityContent(variability, currency)
-                }
-                if (incomeSources.isNotEmpty()) {
-                    Spacer(Modifier.height(Spacing.md))
-                    Text("This month by source", style = MaterialTheme.typography.labelLarge)
-                    val total = incomeSources.sumOf { it.second }.coerceAtLeast(1)
-                    incomeSources.take(5).forEach { (label, amount) ->
+                    if (twoColumn) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
                         ) {
-                            Text(label, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(
-                                "${(amount.toDouble() / total * 100).roundToInt()}% · ${MoneyFormat.format(amount, currency)}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                }
-            }
-            if (showMoreMetrics) {
-                MetricCard(
-                    title = "Wallets",
-                    subtitle = "${current.walletBalances.size} active wallets",
-                ) {
-                    Row {
-                        MetricValue("Total tracked", MoneyFormat.format(current.walletTotalMinor, currency), MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
-                        MetricValue("Liquid", MoneyFormat.format(current.walletLiquidMinor, currency), MaterialTheme.colorScheme.primary, Modifier.weight(1f))
-                    }
-                    Spacer(Modifier.height(Spacing.sm))
-                    val positiveTotal = current.walletByType.sumOf { it.totalMinor }.coerceAtLeast(1)
-                    current.walletByType.forEach { total ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(total.type.label, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                            Text(
-                                MoneyFormat.format(total.totalMinor, currency),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        ProgressBar(
-                            fraction = total.totalMinor.toDouble().coerceAtLeast(0.0).toFloat() / positiveTotal.toFloat(),
-                            height = 5,
-                            color = if (total.type == WalletType.DEBT) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                        )
-                        Spacer(Modifier.height(Spacing.xs))
-                    }
-                }
-
-                MetricCard(
-                    title = "Fees",
-                    subtitle = "Fees on transactions and transfers",
-                ) {
-                    Row {
-                        MetricValue("This month", MoneyFormat.format(feeNow, currency), MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
-                        MetricValue(
-                            "Last month",
-                            MoneyFormat.format(feeBefore, currency),
-                            MaterialTheme.colorScheme.onSurfaceVariant,
-                            Modifier.weight(1f),
-                        )
-                    }
-                    Spacer(Modifier.height(Spacing.sm))
-                    Text(
-                        if (feeBefore > 0) {
-                            if (feeNow > feeBefore) "Up ${MoneyFormat.format(feeNow - feeBefore, currency)} from last month."
-                            else if (feeNow < feeBefore) "Down ${MoneyFormat.format(feeBefore - feeNow, currency)} from last month."
-                            else "The same as last month."
-                        } else if (feeNow > 0) {
-                            "No fees were recorded last month, so no percentage change is shown."
-                        } else {
-                            "No fees recorded this month. Add the fee separately when a provider charges you."
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (feeTransactions.isNotEmpty()) {
-                        Spacer(Modifier.height(Spacing.md))
-                        Text("Largest fees this month", style = MaterialTheme.typography.labelLarge)
-                        feeTransactions.take(4).forEach { transaction ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-                                verticalAlignment = Alignment.CenterVertically,
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(Spacing.lg),
                             ) {
-                                Text(
-                                    transaction.payee.ifBlank { snapshot.categoryName(transaction.categoryId) },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    modifier = Modifier.weight(1f),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
+                                OutlookSection(
+                                    vm = vm,
+                                    state = state,
+                                    outlook = outlook,
+                                    onSetupPin = onSetupPin,
+                                    onEditTarget = { showDailyTargetDialog = true },
                                 )
-                                Text(
-                                    MoneyFormat.format(transaction.feeMinor, currency),
-                                    style = MaterialTheme.typography.labelMedium,
+                                SpendingSection(metrics = current, currency = currency)
+                                CashFlowSection(monthly = monthly, currency = currency)
+                            }
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+                            ) {
+                                WhatChangedSection(insights = insights)
+                                IncomeTrendsSection(
+                                    metrics = current,
+                                    snapshot = snapshot,
+                                    currency = currency,
+                                    incomeSources = incomeSources,
                                 )
                             }
                         }
-                    }
-                }
-
-                MetricCard(
-                    title = "Forecast",
-                    subtitle = "Estimate for this period",
-                ) {
-                    val forecast = current.forecastMinor
-                    if (forecast == null) {
-                        Text(
-                            "Record more expenses to see your estimate.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
                     } else {
-                        Text(
-                            MoneyFormat.format(forecast, currency),
-                            style = MaterialTheme.typography.headlineMedium,
+                        OutlookSection(
+                            vm = vm,
+                            state = state,
+                            outlook = outlook,
+                            onSetupPin = onSetupPin,
+                            onEditTarget = { showDailyTargetDialog = true },
                         )
-                        Text(
-                            "Your spending may finish around this amount.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        WhatChangedSection(insights = insights)
+                        SpendingSection(metrics = current, currency = currency)
+                        CashFlowSection(monthly = monthly, currency = currency)
+                        IncomeTrendsSection(
+                            metrics = current,
+                            snapshot = snapshot,
+                            currency = currency,
+                            incomeSources = incomeSources,
                         )
                     }
-                }
 
-                if (current.incomeVariability == null && current.transactionCount == 0) {
+                    TextButton(
+                        onClick = { showMoreMetrics = !showMoreMetrics },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(if (showMoreMetrics) "Show less detail" else "More detail")
+                    }
+
+                    if (showMoreMetrics) {
+                        SectionHeader(title = "Advanced detail", accent = true)
+                        if (twoColumn) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
+                            ) {
+                                MetricCard(
+                                    title = "Wallets",
+                                    subtitle = "${current.walletBalances.size} active wallets",
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    WalletContent(metrics = current, currency = currency)
+                                }
+                                MetricCard(
+                                    title = "Fees",
+                                    subtitle = "Fees on transactions and transfers",
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    FeesContent(
+                                        feeNow = feeNow,
+                                        feeBefore = feeBefore,
+                                        feeTransactions = feeTransactions,
+                                        snapshot = snapshot,
+                                        currency = currency,
+                                    )
+                                }
+                            }
+                            MetricCard(
+                                title = "Forecast",
+                                subtitle = "Estimate for this period",
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                ForecastContent(metrics = current, currency = currency)
+                            }
+                        } else {
+                            MetricCard(
+                                title = "Wallets",
+                                subtitle = "${current.walletBalances.size} active wallets",
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                WalletContent(metrics = current, currency = currency)
+                            }
+                            MetricCard(
+                                title = "Fees",
+                                subtitle = "Fees on transactions and transfers",
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                FeesContent(
+                                    feeNow = feeNow,
+                                    feeBefore = feeBefore,
+                                    feeTransactions = feeTransactions,
+                                    snapshot = snapshot,
+                                    currency = currency,
+                                )
+                            }
+                            MetricCard(
+                                title = "Forecast",
+                                subtitle = "Estimate for this period",
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                ForecastContent(metrics = current, currency = currency)
+                            }
+                        }
+                        if (current.incomeVariability == null && current.transactionCount == 0) {
+                            Text(
+                                "Record more transactions to see your insights.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(Spacing.xl))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun OutlookSection(
+    vm: AppViewModel,
+    state: AppUiState,
+    outlook: MoneyOutlook,
+    onSetupPin: () -> Unit,
+    onEditTarget: () -> Unit,
+) {
+    SectionHeader(title = "Money Outlook", accent = true)
+    MoneyOutlookCard(
+        vm = vm,
+        state = state,
+        outlook = outlook,
+        onSetupPin = onSetupPin,
+        onEditTarget = onEditTarget,
+    )
+}
+
+@Composable
+private fun WhatChangedSection(insights: List<Insight>) {
+    if (insights.isEmpty()) return
+    SectionHeader(title = "What changed", accent = true)
+    insights.take(3).forEach { insight ->
+        InsightCard(
+            title = insight.title,
+            body = insight.body,
+            tone = insight.tone,
+            actionLabel = null,
+            onAction = {},
+        )
+    }
+}
+
+@Composable
+private fun SpendingSection(metrics: DashboardMetrics, currency: Currency) {
+    SectionHeader(title = "Spending", accent = true)
+    MizaniCard(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            "Spending by category",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(Spacing.md))
+        // Refund-heavy periods can leave negative category totals; only positive
+        // net spending is charted so shares stay comparable and never negative.
+        val positiveSlices = metrics.categorySlices.filter { it.amountMinor > 0 }
+        if (positiveSlices.isEmpty()) {
+            Text(
+                "No net spending recorded in this period.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            val positiveTotal = positiveSlices.sumOf { it.amountMinor }
+            MizaniDonutChart(
+                slices = positiveSlices,
+                totalMinor = positiveTotal,
+                currency = currency,
+                modifier = Modifier.fillMaxWidth().height(190.dp),
+            )
+            Spacer(Modifier.height(Spacing.sm))
+            positiveSlices.forEach { slice ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        Modifier.size(8.dp).clip(CircleShape)
+                            .background(parseHexColor(slice.colorHex)),
+                    )
+                    Spacer(Modifier.width(Spacing.sm))
+                    Text(slice.name, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
-                        "Record more transactions to see your insights.",
+                        "${(slice.share * 100).roundToInt()}%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(end = Spacing.sm),
+                    )
+                    Text(
+                        MoneyFormat.format(slice.amountMinor, currency),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CashFlowSection(monthly: List<MonthFlow>, currency: Currency) {
+    SectionHeader(title = "Six-month cash flow", accent = true)
+    MizaniCard(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            "Income versus expenses",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(Spacing.md))
+        val monthlyBars = remember(monthly) {
+            monthly.map { flow ->
+                MonthBar(
+                    label = flow.month.month.name.take(3),
+                    incomeMinor = flow.incomeMinor,
+                    expenseMinor = flow.expenseMinor,
+                )
+            }
+        }
+        val monthsWithData = monthly.count { it.incomeMinor > 0 || it.expenseMinor > 0 }
+        if (monthsWithData < 2) {
+            Text(
+                "Add another month of records to see cash-flow trends.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        } else {
+            // Bars, month labels, legend and the screen-reader summary all come from
+            // the shared MPAndroidChart-backed component.
+            MizaniCashFlowBars(months = monthlyBars, currency = currency)
+            Spacer(Modifier.height(Spacing.sm))
+            Text(
+                "Highest recorded income month: ${monthly.maxByOrNull { it.incomeMinor }?.let { "${it.month.month.name} ${it.month.year} (${MoneyFormat.format(it.incomeMinor, currency)})" } ?: "none yet"}.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                // Wraps normally below the legend; the card's 16dp content padding keeps it unclipped.
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun IncomeTrendsSection(
+    metrics: DashboardMetrics,
+    snapshot: LedgerSnapshot,
+    currency: Currency,
+    incomeSources: List<Pair<String, Long>>,
+) {
+    SectionHeader(title = "Income trends", accent = true)
+    MizaniCard(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            metrics.incomeVariability?.let { "${it.monthsWithIncome} months with income" }
+                ?: "Record income to build a monthly trend",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(Spacing.md))
+        val variability = metrics.incomeVariability
+        if (variability == null) {
+            Text(
+                if (metrics.incomeMinor > 0) {
+                    "Keep recording income across months to compare your income history."
+                } else {
+                    "Record income to see your history."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            VariabilityContent(variability, currency)
+        }
+        if (incomeSources.isNotEmpty()) {
+            Spacer(Modifier.height(Spacing.md))
+            Text("This month by source", style = MaterialTheme.typography.labelLarge)
+            val total = incomeSources.sumOf { it.second }.coerceAtLeast(1)
+            incomeSources.take(5).forEach { (label, amount) ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(label, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        "${(amount.toDouble() / total * 100).roundToInt()}% · ${MoneyFormat.format(amount, currency)}",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
-
-            TextButton(
-                onClick = { showMoreMetrics = !showMoreMetrics },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(if (showMoreMetrics) "Show fewer metrics" else "More metrics")
-            }
-
-            Spacer(Modifier.height(Spacing.xl))
         }
+    }
+}
+
+@Composable
+private fun WalletContent(metrics: DashboardMetrics, currency: Currency) {
+    Row {
+        MetricValue("Total tracked", MoneyFormat.format(metrics.walletTotalMinor, currency), MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
+        MetricValue("Liquid", MoneyFormat.format(metrics.walletLiquidMinor, currency), MaterialTheme.colorScheme.primary, Modifier.weight(1f))
+    }
+    Spacer(Modifier.height(Spacing.sm))
+    val positiveTotal = metrics.walletByType.sumOf { it.totalMinor }.coerceAtLeast(1)
+    metrics.walletByType.forEach { total ->
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(total.type.label, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+            Text(
+                MoneyFormat.format(total.totalMinor, currency),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        ProgressBar(
+            fraction = total.totalMinor.toDouble().coerceAtLeast(0.0).toFloat() / positiveTotal.toFloat(),
+            height = 5,
+            color = if (total.type == WalletType.DEBT) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+        )
+        Spacer(Modifier.height(Spacing.xs))
+    }
+}
+
+@Composable
+private fun FeesContent(
+    feeNow: Long,
+    feeBefore: Long,
+    feeTransactions: List<TransactionEntity>,
+    snapshot: LedgerSnapshot,
+    currency: Currency,
+) {
+    Row {
+        MetricValue("This month", MoneyFormat.format(feeNow, currency), MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
+        MetricValue(
+            "Last month",
+            MoneyFormat.format(feeBefore, currency),
+            MaterialTheme.colorScheme.onSurfaceVariant,
+            Modifier.weight(1f),
+        )
+    }
+    Spacer(Modifier.height(Spacing.sm))
+    Text(
+        if (feeBefore > 0) {
+            if (feeNow > feeBefore) "Up ${MoneyFormat.format(feeNow - feeBefore, currency)} from last month."
+            else if (feeNow < feeBefore) "Down ${MoneyFormat.format(feeBefore - feeNow, currency)} from last month."
+            else "The same as last month."
+        } else if (feeNow > 0) {
+            "No fees were recorded last month, so no percentage change is shown."
+        } else {
+            "No fees recorded this month. Add the fee separately when a provider charges you."
+        },
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    if (feeTransactions.isNotEmpty()) {
+        Spacer(Modifier.height(Spacing.md))
+        Text("Largest fees this month", style = MaterialTheme.typography.labelLarge)
+        feeTransactions.take(4).forEach { transaction ->
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    transaction.payee.ifBlank { snapshot.categoryName(transaction.categoryId) },
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    MoneyFormat.format(transaction.feeMinor, currency),
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ForecastContent(metrics: DashboardMetrics, currency: Currency) {
+    val forecast = metrics.forecastMinor
+    if (forecast == null) {
+        Text(
+            "Record more expenses to see your estimate.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    } else {
+        Text(
+            MoneyFormat.format(forecast, currency),
+            style = MaterialTheme.typography.headlineMedium,
+        )
+        Text(
+            "Your spending may finish around this amount.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -500,16 +691,14 @@ private fun MoneyOutlookCard(
 ) {
     val currency = state.currency
     val dailyCost = outlook.averageDailySpendMinor ?: outlook.dailyTargetMinor
-    MizaniCard {
+    MizaniCard(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("Money Outlook", style = MaterialTheme.typography.titleMedium)
-                Text(
-                    "See how long your money may last at your current daily spending.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            Text(
+                "See how long your money may last at your current daily spending.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
             WalletBalanceVisibilityControl(vm, state, onSetupPin)
         }
         Spacer(Modifier.height(Spacing.md))
@@ -759,9 +948,10 @@ private data class MonthFlow(val month: YearMonth, val incomeMinor: Long, val ex
 private fun MetricCard(
     title: String,
     subtitle: String,
+    modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    MizaniCard {
+    MizaniCard(modifier = modifier.fillMaxWidth()) {
         Column {
             Text(title, style = MaterialTheme.typography.titleMedium)
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -797,10 +987,9 @@ private fun CashFlowHero(
     periodLabel: String,
     previousLabel: String,
     currency: Currency,
+    wide: Boolean,
 ) {
     val themeTokens = LocalMizaniThemeTokens.current
-    val hasIncomePrevious = metrics.previousIncomeMinor > 0
-    val hasExpensePrevious = metrics.previousExpenseMinor > 0
     // Percent change is only an apples-to-apples claim when both periods cover the same
     // number of days (e.g. a month-to-date range compared with the same elapsed days before).
     val showPercentChange = metrics.previousPeriod.days == metrics.period.days
@@ -811,6 +1000,59 @@ private fun CashFlowHero(
             .background(Brush.linearGradient(listOf(themeTokens.heroStart, themeTokens.heroEnd)))
             .padding(20.dp),
     ) {
+        if (wide) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(
+                    modifier = Modifier.weight(0.44f),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    HeroTitle(periodLabel = periodLabel)
+                    HeroNetAmount(
+                        netMinor = metrics.netMinor,
+                        currency = currency,
+                        signStyle = MaterialTheme.typography.headlineSmall,
+                        amountStyle = MaterialTheme.typography.headlineSmall,
+                    )
+                }
+                Spacer(Modifier.width(Spacing.lg))
+                Column(
+                    modifier = Modifier.weight(0.56f),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    HeroStatsRow(metrics = metrics, currency = currency)
+                    HeroComparison(
+                        metrics = metrics,
+                        previousLabel = previousLabel,
+                        currency = currency,
+                        showPercentChange = showPercentChange,
+                    )
+                }
+            }
+        } else {
+            HeroTitle(periodLabel = periodLabel)
+            Spacer(Modifier.height(Spacing.sm))
+            HeroNetAmount(
+                netMinor = metrics.netMinor,
+                currency = currency,
+                signStyle = MaterialTheme.typography.titleMedium,
+                amountStyle = MaterialTheme.typography.displaySmall,
+            )
+            Spacer(Modifier.height(Spacing.md))
+            HeroStatsRow(metrics = metrics, currency = currency)
+            Spacer(Modifier.height(Spacing.md))
+            HeroComparison(
+                metrics = metrics,
+                previousLabel = previousLabel,
+                currency = currency,
+                showPercentChange = showPercentChange,
+            )
+        }
+    }
+}
+
+@Composable
+private fun HeroTitle(periodLabel: String) {
+    Column {
         Text(
             "Cash flow",
             style = MaterialTheme.typography.labelMedium,
@@ -821,103 +1063,123 @@ private fun CashFlowHero(
             style = MaterialTheme.typography.labelLarge,
             color = Color.White,
         )
-        Spacer(Modifier.height(Spacing.sm))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            val netMinor = metrics.netMinor
-            // Exactly one sign, always before the symbol: a negative net used to render
-            // as "$-12,000", and a zero net as "+$0".
-            val netSign = when {
-                netMinor > 0 -> "+"
-                netMinor < 0 -> "−"
-                else -> ""
-            }
-            if (netSign.isNotEmpty()) {
-                Text(
-                    netSign,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White,
-                    modifier = Modifier.padding(end = 2.dp),
-                )
-            }
+    }
+}
+
+@Composable
+private fun HeroNetAmount(
+    netMinor: Long,
+    currency: Currency,
+    signStyle: TextStyle,
+    amountStyle: TextStyle,
+) {
+    // Exactly one sign, always before the symbol: a negative net used to render
+    // as "$-12,000", and a zero net as "+$0".
+    val netSign = when {
+        netMinor > 0 -> "+"
+        netMinor < 0 -> "−"
+        else -> ""
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (netSign.isNotEmpty()) {
             Text(
-                currency.symbol,
-                style = MaterialTheme.typography.titleMedium,
+                netSign,
+                style = signStyle,
                 color = Color.White,
-                modifier = Modifier.padding(end = 4.dp),
-            )
-            Text(
-                MoneyFormat.formatBare(if (netMinor == Long.MIN_VALUE) Long.MAX_VALUE else abs(netMinor), currency),
-                style = MaterialTheme.typography.displaySmall,
-                color = Color.White,
-                maxLines = 1,
+                modifier = Modifier.padding(end = 2.dp),
             )
         }
-        Spacer(Modifier.height(Spacing.md))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            HeroStat(
-                label = "Income",
-                value = MoneyFormat.format(metrics.incomeMinor, currency),
-                modifier = Modifier.weight(1f).padding(end = Spacing.lg),
-            )
-            Box(
-                modifier = Modifier
-                    .width(1.dp)
-                    .height(34.dp)
-                    .background(Color.White.copy(alpha = 0.12f)),
-            )
-            HeroStat(
-                label = "Net spending",
-                value = MoneyFormat.format(metrics.expenseMinor, currency),
-                modifier = Modifier.weight(1f).padding(start = Spacing.lg),
-            )
-        }
-        Spacer(Modifier.height(Spacing.md))
-        if (hasIncomePrevious || hasExpensePrevious) {
-            Text(
-                "Previous period $previousLabel (${metrics.previousPeriod.days} days)",
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.White,
-            )
-            ComparisonLine(
-                label = "Income",
-                current = metrics.incomeMinor,
-                previous = metrics.previousIncomeMinor,
-                currency = currency,
-                color = Color.White,
-                showPercent = showPercentChange,
-            )
-            ComparisonLine(
-                label = "Net spending",
-                current = metrics.expenseMinor,
-                previous = metrics.previousExpenseMinor,
-                currency = currency,
-                color = Color.White,
-                showPercent = showPercentChange,
-            )
-            Text(
-                when {
-                    hasIncomePrevious && hasExpensePrevious ->
-                        "Income and net spending are both compared with recorded prior-period data."
-                    hasIncomePrevious ->
-                        "Income has a recorded prior value; net spending has no recorded prior value."
-                    else ->
-                        "Net spending has a recorded prior value; income has no recorded prior value."
-                },
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.White,
-                modifier = Modifier.padding(top = 2.dp),
-            )
-        } else {
-            Text(
-                "No prior period with recorded activity.",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White,
-                modifier = Modifier.padding(top = 2.dp),
-            )
-        }
+        Text(
+            currency.symbol,
+            style = signStyle,
+            color = Color.White,
+            modifier = Modifier.padding(end = 4.dp),
+        )
+        Text(
+            MoneyFormat.formatBare(if (netMinor == Long.MIN_VALUE) Long.MAX_VALUE else abs(netMinor), currency),
+            style = amountStyle,
+            color = Color.White,
+            maxLines = 1,
+        )
+    }
+}
+
+@Composable
+private fun HeroStatsRow(metrics: DashboardMetrics, currency: Currency) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        HeroStat(
+            label = "Income",
+            value = MoneyFormat.format(metrics.incomeMinor, currency),
+            modifier = Modifier.weight(1f).padding(end = Spacing.lg),
+        )
+        Box(
+            modifier = Modifier
+                .width(1.dp)
+                .height(34.dp)
+                .background(Color.White.copy(alpha = 0.12f)),
+        )
+        HeroStat(
+            label = "Net spending",
+            value = MoneyFormat.format(metrics.expenseMinor, currency),
+            modifier = Modifier.weight(1f).padding(start = Spacing.lg),
+        )
+    }
+}
+
+@Composable
+private fun HeroComparison(
+    metrics: DashboardMetrics,
+    previousLabel: String,
+    currency: Currency,
+    showPercentChange: Boolean,
+) {
+    val hasIncomePrevious = metrics.previousIncomeMinor > 0
+    val hasExpensePrevious = metrics.previousExpenseMinor > 0
+    if (hasIncomePrevious || hasExpensePrevious) {
+        Text(
+            "Previous period $previousLabel (${metrics.previousPeriod.days} days)",
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.White,
+        )
+        ComparisonLine(
+            label = "Income",
+            current = metrics.incomeMinor,
+            previous = metrics.previousIncomeMinor,
+            currency = currency,
+            color = Color.White,
+            showPercent = showPercentChange,
+        )
+        ComparisonLine(
+            label = "Net spending",
+            current = metrics.expenseMinor,
+            previous = metrics.previousExpenseMinor,
+            currency = currency,
+            color = Color.White,
+            showPercent = showPercentChange,
+        )
+        Text(
+            when {
+                hasIncomePrevious && hasExpensePrevious ->
+                    "Income and net spending are both compared with recorded prior-period data."
+                hasIncomePrevious ->
+                    "Income has a recorded prior value; net spending has no recorded prior value."
+                else ->
+                    "Net spending has a recorded prior value; income has no recorded prior value."
+            },
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White,
+            modifier = Modifier.padding(top = 2.dp),
+        )
+    } else {
+        Text(
+            "No prior period with recorded activity.",
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.White,
+            modifier = Modifier.padding(top = 2.dp),
+        )
     }
 }
 

@@ -156,8 +156,10 @@ fun MizaniNavHost(
     // otherwise empty surface on first entry.
     val isTopLevel = isTopLevelRoute(currentRoute)
     val hasTransactions = state.snapshot.transactions.any { it.deletedAt == null }
-    val showGlobalAdd = isTopLevel && currentRoute != "commitments" &&
-        (hasTransactions || (currentRoute != "home" && currentRoute != "transactions"))
+    // Home owns its own actions and must not show the global FAB; Bills records from its
+    // own screen, and Activity hides the FAB until the ledger has content.
+    val showGlobalAdd = isTopLevel && currentRoute != "commitments" && currentRoute != "home" &&
+        (hasTransactions || currentRoute != "transactions")
     var showAddSheet by remember { mutableStateOf(false) }
     val addSheetState = rememberModalBottomSheetState()
     val sheetScope = androidx.compose.runtime.rememberCoroutineScope()
@@ -259,8 +261,9 @@ fun MizaniNavHost(
         val safePaneLeft = with(density) { safePane.leftPx.toDp() }
         val safePaneTop = with(density) { safePane.topPx.toDp() }
         val useRail = isTopLevel && safePaneWidth >= AdaptiveLayout.MEDIUM_WIDTH_DP.dp
-        val hideBottomLabels = safePaneWidth < AdaptiveLayout.COMPACT_NAVIGATION_WIDTH_DP.dp ||
-            density.fontScale > AdaptiveLayout.LARGE_FONT_SCALE
+        // Keep labels legible at 320–360dp; hide them only for very narrow panes or large type.
+        val hideBottomLabels = safePaneWidth < 300.dp ||
+            density.fontScale > AdaptiveLayout.EXTRA_LARGE_FONT_SCALE
         val hideRailLabels = density.fontScale > AdaptiveLayout.EXTRA_LARGE_FONT_SCALE
         Row(
             modifier = Modifier
@@ -377,10 +380,16 @@ fun MizaniNavHost(
                         onEditTransaction = { id -> openDetail("edit/$id") },
                         onOpenInsights = { openTopLevel("insights") },
                         onOpenWallets = { openDetail("wallets") },
-                        onSetupPin = { openDetail("settings") },
+                        onSetupPin = { openDetail("settings/app-lock") },
                         onAdd = { showAddSheet = true },
                         onAddIncome = { openAdd(TransactionType.INCOME) },
                         onAddExpense = { openAdd(TransactionType.EXPENSE) },
+                        onAddTransfer = { openAdd(TransactionType.TRANSFER) },
+                        onImportMessage = {
+                            vm.clearPendingImport()
+                            openDetail("import-message")
+                        },
+                        onOpenCommitments = { openTopLevel("commitments") },
                     )
                 }
             }
@@ -412,7 +421,7 @@ fun MizaniNavHost(
                         vm = vm,
                         state = state,
                         onExportData = { openDetail("export") },
-                        onSetupPin = { openDetail("settings") },
+                        onSetupPin = { openDetail("settings/app-lock") },
                     )
                 }
             }
@@ -441,7 +450,7 @@ fun MizaniNavHost(
                         vm = vm,
                         state = state,
                         onBack = ::navigateBack,
-                        onSetupPin = { openDetail("settings") },
+                        onSetupPin = { openDetail("settings/app-lock") },
                     )
                 }
             }
@@ -572,7 +581,7 @@ fun MizaniNavHost(
                         vm = vm,
                         state = state,
                         onBack = ::navigateBack,
-                        onSetupPin = { openDetail("settings") },
+                        onSetupPin = { openDetail("settings/app-lock") },
                     )
                 }
             }
@@ -588,7 +597,7 @@ fun MizaniNavHost(
                         vm = vm,
                         state = state,
                         onBack = ::navigateBack,
-                        onSetupPin = { openDetail("settings") },
+                        onSetupPin = { openDetail("settings/app-lock") },
                     )
                 }
             }
@@ -615,6 +624,23 @@ fun MizaniNavHost(
                         vm = vm,
                         state = state,
                         onBack = ::navigateBack,
+                        highlightAppLock = false,
+                    )
+                }
+            }
+            composable(
+                "settings/app-lock",
+                enterTransition = ::navEnter,
+                exitTransition = ::navExit,
+                popEnterTransition = ::navPopEnter,
+                popExitTransition = ::navPopExit,
+            ) {
+                MizaniRouteSurface {
+                    SettingsScreen(
+                        vm = vm,
+                        state = state,
+                        onBack = ::navigateBack,
+                        highlightAppLock = true,
                     )
                 }
             }

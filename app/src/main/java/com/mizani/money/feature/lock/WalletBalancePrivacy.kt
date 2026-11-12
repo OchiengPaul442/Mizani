@@ -30,6 +30,7 @@ fun WalletBalanceVisibilityControl(
     state: AppUiState,
     onSetupPin: () -> Unit,
     showLabel: Boolean = false,
+    tint: Color = MaterialTheme.colorScheme.primary,
 ) {
     var confirming by remember { mutableStateOf(false) }
     val visible = state.walletBalancesVisible
@@ -76,7 +77,7 @@ fun WalletBalanceVisibilityControl(
             onClick = action,
             modifier = Modifier.semantics { contentDescription = description },
         ) {
-            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Icon(icon, contentDescription = null, tint = tint)
             Text(actionLabel)
         }
     } else {
@@ -84,7 +85,7 @@ fun WalletBalanceVisibilityControl(
             onClick = action,
             modifier = Modifier.semantics { contentDescription = description },
         ) {
-            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Icon(icon, contentDescription = null, tint = tint)
         }
     }
 }

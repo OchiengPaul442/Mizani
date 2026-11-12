@@ -6,6 +6,35 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-11-13
+
+### Changed
+
+- Redesign the Home screen around a single scrolling dashboard: a full-width gradient balance hero
+  with period progress and income, spending and signed net; one quick-actions row for expense,
+  income, transfer and import; upcoming bills with date badges and a 7-day due total; a seven-day
+  spending pulse; and responsive one- or two-column layouts for phones, foldables and tablets. The
+  Home FAB is removed and bottom navigation labels now stay visible down to 300dp.
+- Group each day's Activity transactions into a single card with hairline dividers between rows and
+  drop the duplicate per-day shown count.
+- Redesign Insights into a responsive two-column analysis screen with the cash-flow hero and export
+  action in the app bar.
+- Bring More and Settings onto the responsive content width and section rhythm, keeping Settings a
+  centered 680dp reading column.
+- Compute Home's seven-day pulse in a single ledger pass for faster dashboard loads.
+- Currency selection now covers all current world currencies with a searchable, full-height picker;
+  discontinued codes remain available only for existing records.
+- Open balance-visibility prompts directly at the App lock section, with an inline explanation, a
+  toast, and automatic scroll.
+- Show the installed build code and install source in About & privacy, and let Play-installed
+  builds open the Play Store listing.
+
+### Fixed
+
+- Add breathing room below the Bills tabs and more readable line spacing in Bills explanatory copy.
+- Add a release-version check and Play update troubleshooting guidance so duplicate version codes,
+  wrong tracks/rollouts, and sideload-signature mismatches are caught before publishing.
+
 ## [1.9.0] - 2026-11-08
 
 ### Added

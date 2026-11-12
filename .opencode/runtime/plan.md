@@ -1,35 +1,74 @@
-# Mizani production QA plan
+# Mizani UI redesign — plan
 
-## Objective / acceptance
-- Audit every implemented Android surface and improve confirmed user-facing, financial, accessibility, privacy, and reliability defects without changing the app ID or schema unnecessarily.
-- Centralize/rewrite exposed copy where practical; remove misleading demo/debug/unfinished content.
-- Prove affected behavior with focused tests plus debug build; report all unverified areas honestly in `MIZANI_PRODUCTION_QA_REVIEW.md`.
+## Objective
+Redesign Mizani's interface for clarity, calmer density, discoverability and responsive/foldable use, centered on Home, without changing financial data semantics, persistence, backup compatibility or legal copy.
 
-## Scope / ownership
-- Baseline/inventory: `app/src/main/java/com/mizani/money/**`, resources, tests, docs.
-- Financial correctness/security: `core/money`, `domain/analytics`, `data/repo`, local security/export; independent reviewer after edits.
-- UX/content/accessibility: `feature/**`, `ui/**`, `res/values/strings.xml`; no overlapping worker edits.
-- Report/state: root QA report and `.opencode/runtime/**` owned by architect.
+## Product direction
+- Calm, precise, trustworthy; brand unchanged (emerald/mint/gold, deep teal, soft-white; medium radii).
+- Home becomes a **dashboard with one clear hierarchy**: greeting + period control → balance/period hero → one row of quick actions → spending → recent activity → wallets → coming up → momentum → insight.
+- Remove duplicate calls to action and repeated summary blocks. Every destination reachable in one tap from the Home action row or section header.
+- Less card-per-row noise in Activity; grouped day cards with hairline dividers.
+- Responsive: compact (<600dp) single column; expanded content (>=700dp after rail) two-column dashboard; max content width on tablets; bottom labels kept on mini devices; quick actions stay in one row at normal text scale and wrap 2x2 only for large font/smallest width.
+- **Fold postures are a requirement** (foldable emulator with Closed / Half-Open / Open):
+  - Closed (cover display, narrow): single column, bottom navigation with labels, quick actions one row, hero and actions above the fold.
+  - Half-open (horizontal hinge / tabletop): render inside the chosen safe pane only; content must be usable in a half-height window; no controls under the hinge; single column; sections scroll; bottom nav stays reachable. Hinge bounds continue to come from `WindowInfoTracker`/`FoldingFeature` via `AdaptiveLayout.largestSafePane`.
+  - Open (inner display): rail navigation + two-column dashboard when the content pane is >=700dp; otherwise single column capped at 680dp and centered.
+  - Verify all three postures by window metrics + uiautomator bounds (FLAG_SECURE prevents readable screenshots).
+- Accessibility preserved: >=48dp targets, content descriptions, tabular money, no color-only meaning, chart text alternatives.
 
-## Task order
-1. Establish code/test baseline and inventory all screens, strings, flows, and confirmed risks.
-2. Fix highest-impact correctness/privacy/interaction issues in bounded slices.
-3. Professionalize copy and accessibility/layout consistency without broad redesign.
-4. Implement PIN-attempt throttling only after the current lock-screen edits settle; obtain independent security review.
-5. Run unit/build/instrumented checks available; review final diff and affected flows.
-6. Publish severity-based QA report with fixed/partial/not fixed/not verified status.
+## Known facts (evidence)
+- Home: `feature/home/HomeScreen.kt` stacks 9+ blocks: greeting, PeriodMenu, wallet list, momentum, 3-column summary, duplicate quick-add card, recent, donut, insight. `QuickAddSection` and FAB both duplicate actions.
+- `QuickAddActions` only exposes expense/income. Transfer and import are hidden in the FAB sheet.
+- `DashboardMetrics.upcoming` is computed but unused in any screen; `budget`/`safeToSpend` also unused outside analytics.
+- Activity: `TransactionsScreen.kt` wraps every transaction row in its own `MizaniCard` (line ~297).
+- Navigation: 5 tabs + extended FAB; labels hidden below 360dp or fontScale>1.15; FAB hidden on Home/Activity when ledger empty; content insets inconsistent (`Spacing.bottom` vs `bottomFab`).
+- Tests depend on: "Activity", "Daily momentum", "Track days, not amounts · 10 points per day.", "0 points", "Record today", "Milestone: Starting out", "Next milestone: First steps · 3 days to go", "Recent activity", FAB text "Add", Bills tab, "Bills & commitments".
+- Design system doc: `docs/DESIGN_SYSTEM.md` (calm, restrained, 16dp rhythm, medium radii).
+- Build/verify: `.\gradlew.bat :app:testDebugUnitTest` and `.\gradlew.bat :app:assembleDebug` (README, CI).
 
-## Verification
-- `:app:testDebugUnitTest`, `:app:assembleDebug`; focused Android tests where emulator/tooling is available.
-- Static searches for hardcoded/debug/placeholder user-facing content and sensitive logging.
-- Real Android UI verification only if an emulator/device is available to the browser/worker environment.
+## Signature creative moves (calm, not decorative noise)
+1. **Balance hero**: gradient field with two oversized, low-opacity brand rings and a single warm-gold focal dot (the brand's "balance" idea); a hairline month-progress track with a gold marker ("Day 12 of 30"). On open/expanded, the hero becomes a full-width band: balance on the left, period flow on the right.
+2. **Command bar actions**: the four actions share one inset surface with vertical hairlines, tinted icon medallions and a short press-scale + haptic response — a single CTA row, not four competing buttons.
+3. **Coming-up timeline**: date badges with a category-colored connector/dot, relative due labels ("in 3 days"), income shown as expected money rather than a bill.
+4. **Section rhythm**: a small gold accent dot before Home section titles; a 7-day "pulse" bar strip in the Spending card footer so the screen has a visual heartbeat without another section.
+5. **Activity as a day timeline** (second pass): date rail + one grouped card per day with hairline dividers instead of card-per-row.
+6. **Empty state**: the Storyset illustration sits inside soft concentric balance rings, matching the hero language.
 
-## Confirmed implementation leads
-- Primary/secondary Compose flows are implemented under `feature/**`; most copy is hardcoded while `res/values/strings.xml` only contains app name/tagline.
-- Confirmed financial defect: refund fees are included by `feesMinor` but omitted from wallet refund balance change, category spend/forecast, transaction summaries, and backup summary (`FinanceModels.kt`, `Analytics.kt`, `TransactionsScreen.kt`, `ExportManager.kt`).
-- Confirmed feedback defect: `SettingsScreen.kt` treats the `Result<Unit>` returned by `AppViewModel.enableLock` as a successful `runCatching` result without inspecting the nested failure.
-- Confirmed product/documentation drift: `docs/VERIFICATION.md` says category reordering is not exposed, but `CategoriesScreen` exposes move controls; prior build/test claims remain stale until fresh commands run.
-- Potential risks to verify/fix in bounded work: repository cross-reference/category/currency validation, restore bundle invariants, empty/stat handling for adjustment-only ledgers, and locale/accessibility coverage.
+## Workstreams
+1. **Design foundation** — semantic accent/positive tokens, compact component primitives (quick action tile, grouped list card, hero shell, section header with supporting copy), responsive breakpoint tokens.
+2. **Home** — rewrite structure and hierarchy; new balance hero (masked total + period income/spend/net); 4 quick actions in one row; spending snapshot; recent activity; wallet strip; coming-up bills (uses `metrics.upcoming`); compact momentum at bottom; insight.
+3. **Navigation shell** — keep 5 destinations; improve bottom bar labels/insets, FAB policy, content max width; expanded dashboard layout.
+4. **Activity** — grouped day cards, denser rows, clearer summary/filters.
+5. **Polish** — More/Insights spacing and section headers; strings/resources; design doc update.
+6. **Verification** — unit tests + assembleDebug + emulator screenshots (compact, expanded, large font) + test-string contract check.
 
-## Status
-E2E AND RELEASE SMOKE GREEN — 87 JVM tests; all 5 instrumented classes passed on API 36.1; debug APK 31,141,566 bytes; unsigned release APK 10,663,390 bytes with R8/resource shrinking, debug-signed local smoke passed; docs/report synchronized; emulator stopped and generated screenshots/test APKs/logs removed. Production signing and localization remain release blockers; manual TalkBack/9-step acceptance, PIN wall-clock/atomicity, and real-spreadsheet CSV remain unverified.
+## Acceptance criteria
+- Home shows at most one primary CTA per action; expense/income/transfer/import reachable from one row.
+- Home top-of-screen (before scroll, 360x800dp) shows greeting, period control, total balance + period summary, and the quick-action row.
+- No duplicate "Quick Add" card; wallet visibility control present in hero.
+- Layout at 320dp, 360dp, 411dp and >=840dp has no clipped/overlapping controls; 4 actions stay one row at default font scale; labels visible in bottom nav at 360dp.
+- Activity groups a day's transactions into one card with dividers.
+- All existing instrumentation text contracts still present or tests updated intentionally.
+- `:app:testDebugUnitTest` passes; `:app:assembleDebug` succeeds; screenshots captured for phone and expanded width.
+
+## Second redesign pass (after emulator restart)
+- DONE Insights: full-width cash-flow hero, responsive two columns (Outlook/Spending/Bars left; What changed/Income trends right), export moved to the top bar, accent section headers; advanced detail full width. Build green.
+- DONE More: centered 680dp / two-column hub at >=700dp, accent section headers, all 9 labels/routes/dividers, FAB inset preserved. Build green.
+- PENDING Settings: centered 680dp for main and data-tools branches, accent section headers, Appearance card dividers; no behavior/label changes.
+- DONE Performance: `AnalyticsEngine.dailySpending(days, today)` single ledger pass replaces Home's 7x `expenseMinor`; unit-tested equivalence. Activity already groups rows into day cards (fewer Lazy items).
+- Verification planned: unit tests, assembleDebug, uiautomator bounds on Insights/More/Settings in Open/Closed, no demo-ledger reset.
+
+## Status (final)
+- DONE: Home dashboard redesign; full-width balance hero with rings/progress on open; one-row command bar; spending pulse; recent activity; wallets; forward-looking coming up; momentum; insight.
+- DONE: Navigation fold policy, labeled bottom nav, Home FAB removal, new Home callbacks.
+- DONE: Activity grouped by day; duplicate shown-count removed.
+- DONE: Strings/docs/changelog; stale Bills test assertion corrected.
+- DONE: Unit tests, compileDebugKotlin, assembleDebug, compileDebugAndroidTestKotlin.
+- DONE: Closed / Half-Open / Open / 1.3x bounds verification; all PASS (see evidence.md).
+- LIMITATION: no instrumentation run; no readable screenshots (FLAG_SECURE); Coming-up card not visually exercised without bills.
+
+## Risks / limits
+- Architect session cannot run shell; delegate build/adb to workers.
+- Instrumentation suites reset app state; only run on disposable emulator, one class at a time.
+- No new DB fields; no financial logic changes; `metrics.upcoming` is read-only.
+- Do not change backup JSON, Room schema, DataStore keys, enum values, navigation route names used by tests.

@@ -52,6 +52,35 @@ class AnalyticsEngine(private val data: LedgerSnapshot) {
      */
     fun expenseMinor(range: DateRange): Long = categorySpendTotals(range).values.sum()
 
+    /**
+     * Daily spending for the trailing [days] window ending at [today], oldest day first.
+     * Scans the ledger once and applies the same rules as [expenseMinor] per day: expenses
+     * count their amount plus fee, transfers only their fee, refunds subtract their amount
+     * but keep their fee, and income or adjustments never count. Days without eligible
+     * transactions are returned as zero.
+     */
+    fun dailySpending(days: Int, today: LocalDate): List<Pair<LocalDate, Long>> {
+        require(days > 0) { "days must be greater than 0" }
+        val todayDay = today.toEpochDay()
+        val startDay = todayDay - (days - 1L)
+        val byEpochDay = mutableMapOf<Long, Long>()
+        for (transaction in data.transactions) {
+            val epochDay = transaction.localDateEpochDay
+            if (transaction.deletedAt != null || epochDay < startDay || epochDay > todayDay) continue
+            val contribution = when (transaction.type) {
+                TransactionType.EXPENSE -> transaction.amountMinor + positiveFee(transaction)
+                TransactionType.TRANSFER -> positiveFee(transaction)
+                TransactionType.REFUND -> -transaction.amountMinor + positiveFee(transaction)
+                TransactionType.INCOME, TransactionType.ADJUSTMENT -> 0L
+            }
+            byEpochDay[epochDay] = (byEpochDay[epochDay] ?: 0L) + contribution
+        }
+        return (0 until days).map { offset ->
+            val day = startDay + offset
+            LocalDate.ofEpochDay(day) to (byEpochDay[day] ?: 0L)
+        }
+    }
+
     fun netMinor(range: DateRange): Long = incomeMinor(range) - expenseMinor(range)
 
     fun categorySpendTotals(range: DateRange): Map<String, Long> {
@@ -367,7 +396,29 @@ class AnalyticsEngine(private val data: LedgerSnapshot) {
                     walletName = data.walletName(null),
                 )
             }
-        return (recurring + debts)
+        val commitments = data.commitmentProgress()
+            .filter { progress ->
+                val commitment = progress.commitment
+                !commitment.archived &&
+                    commitment.dueEpochDay in today.toEpochDay()..end.toEpochDay() &&
+                    progress.remainingWorkspaceMinor > 0L
+            }
+            .map { progress ->
+                val commitment = progress.commitment
+                val category = data.category(commitment.categoryId)
+                UpcomingCommitment(
+                    id = commitment.id,
+                    name = commitment.name,
+                    amountMinor = progress.remainingWorkspaceMinor,
+                    dueDate = LocalDate.ofEpochDay(commitment.dueEpochDay),
+                    isIncome = false,
+                    essential = true,
+                    categoryName = category?.name ?: "Bill",
+                    colorHex = category?.colorHex ?: "#8A6D3B",
+                    walletName = data.walletName(null),
+                )
+            }
+        return (recurring + debts + commitments)
             .filter { it.amountMinor > 0 }
             .sortedBy { it.dueDate }
     }
@@ -582,6 +633,10 @@ class AnalyticsEngine(private val data: LedgerSnapshot) {
     private fun add(map: MutableMap<String, Long>, key: String, delta: Long) {
         map[key] = (map[key] ?: 0L) + delta
     }
+
+    /** Fees are only eligible spending when positive, mirroring [categorySpendTotals]. */
+    private fun positiveFee(transaction: TransactionEntity): Long =
+        if (transaction.feeMinor > 0) transaction.feeMinor else 0L
 
     companion object {
         const val UNCATEGORISED = "uncategorised"

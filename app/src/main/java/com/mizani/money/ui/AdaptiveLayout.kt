@@ -25,6 +25,12 @@ object AdaptiveLayout {
     const val LARGE_FONT_SCALE = 1.15f
     const val EXTRA_LARGE_FONT_SCALE = 1.30f
 
+    /** Content width at which Home switches from one column to two. */
+    const val EXPANDED_CONTENT_WIDTH_DP = 700
+
+    /** Cap for the single-column Home content so phones never stretch cards. */
+    const val SINGLE_COLUMN_MAX_WIDTH_DP = 680
+
     /**
      * Selects the largest uninterrupted app pane when a separating fold/hinge crosses the
      * window. A continuous, non-separating fold does not force a smaller pane because content can

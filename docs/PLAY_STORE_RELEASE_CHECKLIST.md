@@ -12,8 +12,8 @@ The policy-specific evidence review is tracked in [Google Play policy audit](GOO
 | --- | --- |
 | App | Mizani |
 | Application ID | `com.mizani.money` |
-| Current version | `1.9.0` |
-| Current derived version code | `1009000`; confirm it is greater than the latest Play version code |
+| Current version | `1.10.0` |
+| Current derived version code | `1010000`; confirm it is greater than the latest Play version code |
 | Provider | Paul Ochieng; confirm legal authority to publish |
 | Privacy contact | `paul.ochieng.dev@gmail.com`; confirm it is monitored |
 | Release address | Kampala, Uganda; owner-confirmed release value |
@@ -125,6 +125,15 @@ release-owner gates and future-feature constraints:
 - [ ] Rollback/halting criteria are documented: stop rollout for crashes, data loss, failed restore, broken upgrade, or critical privacy/security defects.
 - [ ] Encrypted backup and the signed previous production artifact are retained before rollout.
 
+## If an update does not appear or install
+
+1. Confirm `mizaniVersionName` was bumped and `printReleaseVersion` shows a code greater than every Play artifact; 1.10.0 = 1010000. Never edit versionCode directly.
+2. Confirm the release is on the intended track, not internal/closed only; managed publishing is released; staged rollout is at the intended percentage.
+3. Do not sideload a locally signed release APK over a Play install; uninstall it and install from Play/Internal testing. Play App Signing uses a different certificate.
+4. Upload an AAB (`:app:bundleRelease`) and verify the version in the AAB; confirm Play Console accepted it without a version-code error.
+5. In-app update prompts are not a substitute for Play Store delivery; if Play says up to date, check the track/rollout.
+6. Clear Play Store cache or check the update manually; device eligibility/ABI splits can matter.
+
 ## Commands for final evidence
 
 ```powershell
@@ -134,6 +143,7 @@ release-owner gates and future-feature constraints:
 .\gradlew.bat :app:lintRelease --no-daemon
 .\gradlew.bat :app:signingReport --no-daemon --no-configuration-cache
 .\gradlew.bat :app:bundleRelease --no-daemon
+.\gradlew.bat :app:printReleaseVersion --no-daemon --console=plain
 jarsigner -verify -verbose -certs app\build\outputs\bundle\release\app-release.aab
 ```
 

@@ -52,6 +52,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mizani.money.R
@@ -74,6 +75,7 @@ import com.mizani.money.ui.components.DateField
 import com.mizani.money.ui.components.MizaniCard
 import com.mizani.money.ui.components.MizaniAlertDialog
 import com.mizani.money.ui.components.MizaniConfirmDialog
+import com.mizani.money.ui.components.MizaniCurrencyPicker
 import com.mizani.money.ui.components.MizaniInfoButton
 import com.mizani.money.ui.components.MizaniPicker
 import com.mizani.money.ui.components.MizaniTopBar
@@ -300,12 +302,13 @@ fun CommitmentsScreen(
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = Spacing.lg)
+                .padding(top = Spacing.lg)
                 .padding(bottom = Spacing.bottom),
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
             Text(
                 "Keep a planned amount and due date in one place. Record the expense when you pay, then link it here to update the bill without adding a second transaction.",
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 23.sp, letterSpacing = 0.1.sp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (error != null) {
@@ -326,7 +329,7 @@ fun CommitmentsScreen(
                             "Archived items are saved below. Add a new one when you need to plan another due date."
                         },
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
                     )
                     Spacer(Modifier.height(Spacing.md))
                     Button(
@@ -802,11 +805,8 @@ private fun CommitmentEditorDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().focusRequester(amountFocusRequester),
                 )
-                MizaniPicker(
-                    selectedText = "${targetCurrency.code} · ${targetCurrency.name}",
-                    options = Currencies.transactionCurrencies.map { option ->
-                        PickerOption(option.code, "${option.code} · ${option.name}")
-                    },
+                MizaniCurrencyPicker(
+                    selectedCode = targetCurrencyCode,
                     onSelect = {
                         if (it != targetCurrencyCode) {
                             // Do not silently reinterpret an amount under a new currency.
@@ -817,8 +817,6 @@ private fun CommitmentEditorDialog(
                         validationError = null
                         rateError = null
                     },
-                    searchable = true,
-                    searchHint = "Search currencies",
                     fieldLabel = "Target currency",
                     modifier = Modifier.fillMaxWidth(),
                 )

@@ -72,6 +72,7 @@ import com.mizani.money.core.money.MoneyFormat
 import com.mizani.money.ui.AppViewModel
 import com.mizani.money.ui.components.MizaniAmountField
 import com.mizani.money.ui.components.MizaniInfoButton
+import com.mizani.money.ui.components.MizaniCurrencyPicker
 import com.mizani.money.ui.components.MizaniIcons
 import com.mizani.money.ui.components.MizaniPicker
 import com.mizani.money.ui.components.PickerOption
@@ -487,12 +488,11 @@ private fun MoneySetupStep(
             )
         }
         Spacer(Modifier.height(6.dp))
-        MizaniPicker(
-            selectedText = "${currency.code} | ${currency.name}",
-            options = Currencies.all.map { PickerOption(it.code, "${it.code} | ${it.name}") },
+        MizaniCurrencyPicker(
+            selectedCode = currencyCode,
             onSelect = onCurrencyChange,
-            searchable = true,
-            searchHint = "Search currencies",
+            currencies = Currencies.all,
+            fieldLabel = "Primary currency",
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(Spacing.xs))

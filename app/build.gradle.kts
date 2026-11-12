@@ -176,3 +176,19 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
+
+tasks.register("printReleaseVersion") {
+    group = "help"
+    description = "Prints the release version identity and Play update constraints."
+    val versionName = mizaniVersionName
+    val versionCode = mizaniVersionCode
+    val releaseAabPath = layout.buildDirectory.file("outputs/bundle/release/app-release.aab").get().asFile.path
+    val warning = "WARNING: versionCode must be strictly greater than every artifact already on any Play track. " +
+        "Sideloaded APKs cannot receive Play updates."
+    doLast {
+        println("versionName: $versionName")
+        println("versionCode: $versionCode")
+        println("release AAB path: $releaseAabPath")
+        println(warning)
+    }
+}

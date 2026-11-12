@@ -37,6 +37,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.mizani.money.BuildConfig
 import com.mizani.money.core.legal.LegalDocumentId
 import com.mizani.money.core.model.AppInfo
@@ -115,6 +117,15 @@ fun AboutScreen(
         }
     }
 
+    fun openPlayListing() {
+        val playListingUrl = "https://play.google.com/store/apps/details?id=${context.packageName}"
+        try {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(playListingUrl)))
+        } catch (_: ActivityNotFoundException) {
+            updateMessage = "No browser is available to open the Play Store listing."
+        }
+    }
+
     Column(Modifier.fillMaxSize()) {
         MizaniTopBar(title = "About & privacy", onBack = onBack)
         Column(
@@ -131,7 +142,7 @@ fun AboutScreen(
                 Column {
                     Text(AppInfo.NAME, style = MaterialTheme.typography.headlineSmall)
                     Text(AppInfo.TAGLINE, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
-                    Text("Version ${AppInfo.VERSION}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Version ${AppInfo.VERSION} (build ${BuildConfig.VERSION_CODE})", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
@@ -139,12 +150,23 @@ fun AboutScreen(
                 MizaniInfoRow(
                     icon = Icons.Rounded.Download,
                     title = if (installedFromPlay) "App updates" else "Check for updates",
-                    subtitle = when {
-                        installedFromPlay -> "Google Play checks when online and prompts you when an update is ready."
-                        isCheckingForUpdate -> "Checking for a new version…"
-                        else -> "Version ${AppInfo.VERSION}"
+                    modifier = if (installedFromPlay) {
+                        Modifier.semantics {
+                            contentDescription = "Open the Google Play Store listing for Mizani"
+                        }
+                    } else {
+                        Modifier
                     },
-                    onClick = if (installedFromPlay || isCheckingForUpdate) null else ::checkForUpdates,
+                    subtitle = when {
+                        installedFromPlay -> "Installed from Google Play · build ${BuildConfig.VERSION_CODE}. Play checks when online and prompts you when an update is ready."
+                        isCheckingForUpdate -> "Checking for a new version…"
+                        else -> "Sideloaded build ${BuildConfig.VERSION_CODE}. Play updates require a Play-installed copy; use the official release check below."
+                    },
+                    onClick = when {
+                        installedFromPlay -> ::openPlayListing
+                        isCheckingForUpdate -> null
+                        else -> ::checkForUpdates
+                    },
                 )
                 if (updateMessage != null) {
                     MizaniSectionDivider()

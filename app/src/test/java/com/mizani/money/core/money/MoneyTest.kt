@@ -112,6 +112,52 @@ class MoneyTest {
     }
 
     @Test
+    fun `transaction currencies are world-wide, unique and sorted`() {
+        val codes = Currencies.transactionCurrencies.map { it.code }
+
+        assertTrue(
+            "expected at least 140 transaction currencies but got ${codes.size}",
+            codes.size >= 140,
+        )
+        assertEquals("codes must be unique", codes.size, codes.toSet().size)
+        assertEquals("codes must be sorted by code", codes.sorted(), codes)
+    }
+
+    @Test
+    fun `transaction currencies include major world currencies`() {
+        val codes = Currencies.transactionCurrencies.map { it.code }.toSet()
+        val expected = listOf(
+            "USD", "EUR", "GBP", "JPY", "CNY", "INR", "BRL", "AUD", "CAD", "CHF",
+            "AED", "SAR", "KRW", "SGD", "HKD", "NZD", "MXN", "TRY", "PLN", "SEK",
+            "NOK", "DKK",
+        )
+
+        val missing = expected.filterNot { it in codes }
+        assertTrue("missing currencies: $missing", missing.isEmpty())
+    }
+
+    @Test
+    fun `byCode resolves zero and three decimal currencies`() {
+        val yen = Currencies.byCode("JPY")
+        assertEquals("JPY", yen.code)
+        assertEquals(0, yen.minorUnits)
+
+        val dinar = Currencies.byCode("KWD")
+        assertEquals("KWD", dinar.code)
+        assertEquals(3, dinar.minorUnits)
+    }
+
+    @Test
+    fun `all exposes the full sorted catalog too`() {
+        val codes = Currencies.all.map { it.code }
+
+        assertTrue("expected at least 140 currencies in all but got ${codes.size}", codes.size >= 140)
+        assertEquals("codes must be unique", codes.size, codes.toSet().size)
+        assertEquals("codes must be sorted by code", codes.sorted(), codes)
+        assertTrue("JPY must be in all", "JPY" in codes.toSet())
+    }
+
+    @Test
     fun `conversion handles zero and three decimal currencies`() {
         val yen = CurrencyConversion.convertMinorUnits(
             amountMinor = 10_000L,

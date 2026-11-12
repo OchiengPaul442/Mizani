@@ -131,7 +131,7 @@ fun FeedbackScreen(onBack: () -> Unit) {
         val intent = FeedbackComposer.createIntent(
             topic = selectedTopic,
             message = message,
-            appVersion = BuildConfig.VERSION_NAME,
+            appVersion = "${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})",
             androidVersion = android.os.Build.VERSION.RELEASE ?: "unknown",
         )
         if (intent.resolveActivity(context.packageManager) == null) {

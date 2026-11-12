@@ -172,6 +172,23 @@ disposable `Medium_Phone_API_36.1` emulator (API 36, x86_64): 30 tests passed wi
 errors, or skips. The 100-scenario matrix is tracked in `docs/INVESTMENT_QA_MATRIX.md`; manual
 physical-device and Play Console rows remain release-owner gates.
 
+### 1.10.0 release metadata preparation (2026-11-13)
+
+The release metadata was advanced to `1.10.0` with the derived Android version code `1010000`.
+Version selection is a MINOR release for the backward-compatible redesign. The following repository
+checks passed against this source tree:
+
+```powershell
+.\gradlew.bat :app:testDebugUnitTest --console=plain
+.\gradlew.bat :app:assembleDebug --console=plain
+.\gradlew.bat :app:compileDebugAndroidTestKotlin --console=plain
+.\gradlew.bat :app:printReleaseVersion --console=plain
+```
+
+This is metadata and debug-build preparation, not release sign-off. No signed release artifact,
+connected instrumentation run, Play Console submission, or production deployment was performed for
+this version in this workspace.
+
 ### 1.9.0 release metadata preparation (2026-11-08)
 
 The release metadata was advanced to `1.9.0` with the derived Android version code `1009000`.

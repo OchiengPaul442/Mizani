@@ -176,6 +176,7 @@ object Fixtures {
         goals: List<GoalEntity> = emptyList(),
         contributions: List<com.mizani.money.data.local.GoalContributionEntity> = emptyList(),
         debts: List<com.mizani.money.data.local.DebtEntity> = emptyList(),
+        commitments: List<com.mizani.money.data.local.CommitmentEntity> = emptyList(),
     ) = LedgerSnapshot(
         wallets = wallets,
         categories = categories,
@@ -186,5 +187,6 @@ object Fixtures {
         goals = goals,
         contributions = contributions,
         debts = debts,
+        commitments = commitments,
     )
 }

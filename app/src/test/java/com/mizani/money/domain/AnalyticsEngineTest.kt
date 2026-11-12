@@ -8,6 +8,7 @@ import com.mizani.money.domain.analytics.AnalyticsEngine
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Test
 import java.time.LocalDate
 
@@ -501,6 +502,137 @@ class AnalyticsEngineTest {
         assertEquals(2, foodSlice.transactionCount)
         // The refund's fee is a separate spending event in the fees category.
         assertEquals(1, feesSlice.transactionCount)
+    }
+
+    @Test
+    fun `upcoming includes one-off commitments but skips archived and past-due ones`() {
+        val categories = listOf(Fixtures.category("bills", "Bills"))
+        fun commitment(
+            id: String,
+            due: LocalDate,
+            archived: Boolean = false,
+        ) = com.mizani.money.data.local.CommitmentEntity(
+            id = id,
+            name = id,
+            targetMinor = 75_000L,
+            targetWorkspaceMinor = 75_000L,
+            dueEpochDay = due.toEpochDay(),
+            categoryId = "bills",
+            archived = archived,
+            createdAt = Fixtures.NOW,
+            updatedAt = Fixtures.NOW,
+        )
+        val snapshot = Fixtures.snapshot(
+            categories = categories,
+            commitments = listOf(
+                commitment("Internet", today.plusDays(3)),
+                commitment("Archived bill", today.plusDays(3), archived = true),
+                commitment("Old bill", today.minusDays(2)),
+            ),
+        )
+        val engine = AnalyticsEngine(snapshot)
+
+        val upcoming = engine.upcoming(DateRange(today, today.plusDays(45)), today)
+
+        assertEquals(1, upcoming.size)
+        val bill = upcoming.single()
+        assertEquals("Internet", bill.name)
+        assertEquals(75_000L, bill.amountMinor)
+        assertEquals(today.plusDays(3), bill.dueDate)
+        assertEquals("Bills", bill.categoryName)
+        assertEquals(false, bill.isIncome)
+    }
+
+    @Test
+    fun `daily spending matches per day expense totals in one pass`() {
+        val transactions = listOf(
+            Fixtures.transaction(
+                id = "expense",
+                type = TransactionType.EXPENSE,
+                amount = 50_000,
+                fee = 1_000,
+                walletId = "cash",
+                categoryId = "food",
+                date = LocalDate.of(2026, 10, 10),
+            ),
+            Fixtures.transaction(
+                id = "transfer",
+                type = TransactionType.TRANSFER,
+                amount = 30_000,
+                fee = 700,
+                walletId = "momo",
+                toWalletId = "cash",
+                date = LocalDate.of(2026, 10, 11),
+            ),
+            Fixtures.transaction(
+                id = "refund",
+                type = TransactionType.REFUND,
+                amount = 10_000,
+                fee = 500,
+                walletId = "cash",
+                categoryId = "food",
+                linkedTransactionId = "expense",
+                date = LocalDate.of(2026, 10, 12),
+            ),
+            income("salary", LocalDate.of(2026, 10, 13), 200_000),
+            Fixtures.transaction(
+                id = "adjust",
+                type = TransactionType.ADJUSTMENT,
+                amount = 20_000,
+                walletId = "cash",
+                date = LocalDate.of(2026, 10, 14),
+            ),
+            // Outside the trailing seven-day window: excluded from every bucket.
+            Fixtures.transaction(
+                id = "outside",
+                type = TransactionType.EXPENSE,
+                amount = 99_000,
+                walletId = "cash",
+                categoryId = "food",
+                date = LocalDate.of(2026, 10, 8),
+            ),
+        )
+        val snapshot = Fixtures.snapshot(
+            wallets = listOf(
+                Fixtures.wallet("cash"),
+                Fixtures.wallet("momo"),
+            ),
+            categories = listOf(Fixtures.category("food")),
+            transactions = transactions,
+        )
+        val engine = AnalyticsEngine(snapshot)
+
+        val pulse = engine.dailySpending(7, today)
+
+        // Window is oldest -> today: Oct 9 through Oct 15, seven entries.
+        assertEquals(7, pulse.size)
+        assertEquals(LocalDate.of(2026, 10, 9), pulse.first().first)
+        assertEquals(today, pulse.last().first)
+        assertEquals((9..15).map { LocalDate.of(2026, 10, it) }, pulse.map { it.first })
+
+        // Every bucket equals the single-range total for that day.
+        pulse.forEach { (day, amount) ->
+            assertEquals(day.toString(), engine.expenseMinor(DateRange(day, day)), amount)
+        }
+
+        // Expense + fee, transfer fee, refund net of its fee, then zero days.
+        assertEquals(mapOf(
+            LocalDate.of(2026, 10, 9) to 0L,
+            LocalDate.of(2026, 10, 10) to 51_000L,
+            LocalDate.of(2026, 10, 11) to 700L,
+            LocalDate.of(2026, 10, 12) to -9_500L,
+            LocalDate.of(2026, 10, 13) to 0L,
+            LocalDate.of(2026, 10, 14) to 0L,
+            LocalDate.of(2026, 10, 15) to 0L,
+        ), pulse.toMap())
+    }
+
+    @Test
+    fun `daily spending requires a positive day count`() {
+        val engine = AnalyticsEngine(Fixtures.snapshot())
+        assertThrows(IllegalArgumentException::class.java) {
+            engine.dailySpending(0, today)
+        }
     }
 
     private fun income(id: String, date: LocalDate, amount: Long) =

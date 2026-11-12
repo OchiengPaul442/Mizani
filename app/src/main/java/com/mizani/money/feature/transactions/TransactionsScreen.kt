@@ -15,13 +15,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -267,7 +267,6 @@ fun TransactionsScreen(
             }
             item {
                 SummaryRow(
-                    count = filtered.size,
                     incomeMinor = income,
                     expenseMinor = expense,
                     currency = currency,
@@ -293,17 +292,25 @@ fun TransactionsScreen(
                     item(key = "header-$date") {
                         DayHeader(date = date, transactions = transactions, snapshot = snapshot, currency = currency)
                     }
-                    items(transactions, key = { it.id }) { transaction ->
+                    item(key = "day-$date") {
                         MizaniCard(
                             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = Spacing.sm),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                horizontal = Spacing.md,
+                                vertical = Spacing.xs,
+                            ),
                         ) {
-                            TransactionRow(
-                                transaction = transaction,
-                                snapshot = snapshot,
-                                currency = currency,
-                                onClick = { onEdit(transaction.id) },
-                            )
+                            transactions.forEachIndexed { index, transaction ->
+                                TransactionRow(
+                                    transaction = transaction,
+                                    snapshot = snapshot,
+                                    currency = currency,
+                                    onClick = { onEdit(transaction.id) },
+                                )
+                                if (index != transactions.lastIndex) {
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                }
+                            }
                         }
                     }
                 }
@@ -352,7 +359,6 @@ private fun DayHeader(
 
 @Composable
 private fun SummaryRow(
-    count: Int,
     incomeMinor: Long,
     expenseMinor: Long,
     currency: Currency,
@@ -366,11 +372,6 @@ private fun SummaryRow(
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     SummaryLine("Income", MoneyFormat.format(incomeMinor, currency), themeTokens.income)
                     SummaryLine("Net spending", MoneyFormat.format(expenseMinor, currency), MaterialTheme.colorScheme.onSurface)
-                    Text(
-                        "$count shown",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -382,11 +383,6 @@ private fun SummaryRow(
                         Text("Net spending", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(MoneyFormat.format(expenseMinor, currency), style = MaterialTheme.typography.titleSmall)
                     }
-                    Text(
-                        "$count shown",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
             }
         }

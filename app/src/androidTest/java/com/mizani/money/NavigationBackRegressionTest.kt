@@ -118,7 +118,7 @@ class NavigationBackRegressionTest {
 
         compose.onNodeWithText("Bills").performClick()
         compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithText("Bills & commitments").fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithText("Bills & recurring").fetchSemanticsNodes().isNotEmpty()
         }
         assertTrue(compose.onAllNodesWithText("Money Outlook").fetchSemanticsNodes().isEmpty())
 
@@ -126,7 +126,7 @@ class NavigationBackRegressionTest {
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithText("Manage money").fetchSemanticsNodes().isNotEmpty()
         }
-        assertTrue(compose.onAllNodesWithText("Bills & commitments").fetchSemanticsNodes().isEmpty())
+        assertTrue(compose.onAllNodesWithText("Bills & recurring").fetchSemanticsNodes().isEmpty())
 
         compose.onNodeWithText("Home").performClick()
         compose.waitUntil(timeoutMillis = 10_000) {

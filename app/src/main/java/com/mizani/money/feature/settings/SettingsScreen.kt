@@ -9,6 +9,7 @@ import android.provider.Settings as AndroidSettings
 import android.app.TimePickerDialog
 import android.graphics.Color as AndroidColor
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricManager
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -27,7 +29,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -42,6 +47,7 @@ import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.Security
 import com.mizani.money.ui.components.MizaniAlertDialog
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Icon
@@ -54,6 +60,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -99,12 +106,14 @@ import com.mizani.money.ui.components.MizaniSectionCard
 import com.mizani.money.ui.components.MizaniSectionDivider
 import com.mizani.money.ui.components.MizaniTopBar
 import com.mizani.money.ui.components.PickerOption
+import com.mizani.money.ui.components.SectionHeader
 import com.mizani.money.ui.components.Spacing
 import com.mizani.money.ui.components.StatusBanner
 import com.mizani.money.ui.theme.colorThemePreviewColor
 import com.mizani.money.reminder.DailyReminderNotifications
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -124,6 +133,7 @@ fun SettingsScreen(
     state: AppUiState,
     onBack: () -> Unit,
     dataToolsOnly: Boolean = false,
+    highlightAppLock: Boolean = false,
 ) {
     val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0]
@@ -835,14 +845,19 @@ fun SettingsScreen(
     if (dataToolsOnly) {
         Column(Modifier.fillMaxSize()) {
             MizaniTopBar(title = "Data export & backup", onBack = onBack)
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = Spacing.lg)
-                    .padding(bottom = Spacing.bottom),
-                verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.TopCenter,
             ) {
+                Column(
+                    modifier = Modifier
+                        .widthIn(max = 680.dp)
+                        .fillMaxHeight()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = Spacing.lg)
+                        .padding(bottom = Spacing.bottom),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+                ) {
                 message?.let {
                     StatusBanner(text = it, isError = false, onDismiss = { message = null })
                 }
@@ -890,20 +905,41 @@ fun SettingsScreen(
                     )
                 }
 
+                }
             }
         }
         return
     }
 
+    // Focused entry from the balance-visibility control: scroll the Security card into
+    // view so the "Set up app lock" button is reachable without hunting through Settings.
+    val appLockRequester = remember { BringIntoViewRequester() }
+    LaunchedEffect(highlightAppLock) {
+        if (highlightAppLock) {
+            Toast.makeText(
+                context,
+                "Set up an app PIN below to view wallet balances.",
+                Toast.LENGTH_LONG,
+            ).show()
+            delay(180)
+            appLockRequester.bringIntoView()
+        }
+    }
+
     Column(Modifier.fillMaxSize()) {
         MizaniTopBar(title = "Settings", onBack = onBack)
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.lg)
-                .padding(bottom = Spacing.bottom),
-            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 680.dp)
+                    .fillMaxHeight()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = Spacing.lg)
+                    .padding(bottom = Spacing.bottom),
+                verticalArrangement = Arrangement.spacedBy(Spacing.lg),
         ) {
             message?.let {
                 StatusBanner(text = it, isError = false, onDismiss = { message = null })
@@ -912,9 +948,9 @@ fun SettingsScreen(
                 StatusBanner(text = error!!, isError = true, onDismiss = { error = null })
             }
 
-            Text(
-                "Appearance",
-                style = MaterialTheme.typography.titleMedium,
+            SectionHeader(
+                title = "Appearance",
+                accent = true,
                 // Labels stay outside their card; +4dp keeps 16dp between groups, 12dp label-to-card.
                 modifier = Modifier.padding(top = Spacing.xs),
             )
@@ -942,7 +978,9 @@ fun SettingsScreen(
                     )
                 }
 
-                Spacer(Modifier.height(Spacing.xl))
+                Spacer(Modifier.height(Spacing.md))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(Modifier.height(Spacing.md))
                 Text("Accent color", style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.height(Spacing.sm))
                 Text(
@@ -1009,7 +1047,9 @@ fun SettingsScreen(
                     )
                 }
 
-                Spacer(Modifier.height(Spacing.xl))
+                Spacer(Modifier.height(Spacing.md))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(Modifier.height(Spacing.md))
                 Text("Dark appearance", style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.height(Spacing.sm))
                 Text(
@@ -1033,12 +1073,39 @@ fun SettingsScreen(
                 }
             }
 
-            Text(
-                "Security",
-                style = MaterialTheme.typography.titleMedium,
+            SectionHeader(
+                title = "Security",
+                accent = true,
                 modifier = Modifier.padding(top = Spacing.xs),
             )
-            MizaniCard {
+            MizaniCard(
+                modifier = Modifier.bringIntoViewRequester(appLockRequester),
+            ) {
+                if (highlightAppLock) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(Spacing.md),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                Icons.Rounded.Lock,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Text(
+                                "Set up an app PIN below to view wallet balances.",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(Spacing.md))
+                }
                 MizaniInfoRow(
                     icon = Icons.Rounded.Lock,
                     title = "App lock",
@@ -1095,9 +1162,9 @@ fun SettingsScreen(
                 )
             }
 
-            Text(
-                "Region",
-                style = MaterialTheme.typography.titleMedium,
+            SectionHeader(
+                title = "Region",
+                accent = true,
                 modifier = Modifier.padding(top = Spacing.xs),
             )
             MizaniCard {
@@ -1114,9 +1181,9 @@ fun SettingsScreen(
                 )
             }
 
-            Text(
-                stringResource(R.string.settings_reminders_title),
-                style = MaterialTheme.typography.titleMedium,
+            SectionHeader(
+                title = stringResource(R.string.settings_reminders_title),
+                accent = true,
                 modifier = Modifier.padding(top = Spacing.xs),
             )
             MizaniCard {
@@ -1344,9 +1411,9 @@ fun SettingsScreen(
                 }
             }
 
-            Text(
-                "Privacy",
-                style = MaterialTheme.typography.titleMedium,
+            SectionHeader(
+                title = "Privacy",
+                accent = true,
                 modifier = Modifier.padding(top = Spacing.xs),
             )
             MizaniSectionCard {
@@ -1357,9 +1424,9 @@ fun SettingsScreen(
                 )
             }
 
-            Text(
-                "Delete data",
-                style = MaterialTheme.typography.titleMedium,
+            SectionHeader(
+                title = "Delete data",
+                accent = true,
                 modifier = Modifier.padding(top = Spacing.xs),
             )
             MizaniSectionCard {
@@ -1372,6 +1439,7 @@ fun SettingsScreen(
                 )
             }
 
+        }
         }
     }
 }

@@ -90,6 +90,7 @@ import com.mizani.money.ui.components.EmptyState
 import com.mizani.money.ui.components.MizaniCelebration
 import com.mizani.money.ui.components.MizaniAmountField
 import com.mizani.money.ui.components.MizaniConfirmDialog
+import com.mizani.money.ui.components.MizaniCurrencyPicker
 import com.mizani.money.ui.components.MizaniIcons
 import com.mizani.money.ui.components.MizaniInfoButton
 import com.mizani.money.ui.components.MizaniPicker
@@ -582,17 +583,13 @@ fun AddTransactionScreen(
             if (canEnterForeignCurrency) {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     Text("Transaction currency", style = MaterialTheme.typography.labelLarge)
-                    MizaniPicker(
-                        selectedText = "${entryCurrency.code} · ${entryCurrency.name}",
-                        options = Currencies.transactionCurrencies.map { item ->
-                            PickerOption(item.code, "${item.code} · ${item.name}")
-                        },
+                    MizaniCurrencyPicker(
+                        selectedCode = entryCurrencyCode,
                         onSelect = {
                             entryCurrencyCode = it
                             error = null
                         },
-                        searchable = true,
-                        searchHint = "Search currencies",
+                        fieldLabel = "Transaction currency",
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }

@@ -37,6 +37,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.mizani.money.core.model.CategoryType
 import com.mizani.money.core.model.Frequency
 import com.mizani.money.core.model.RecurringType
@@ -88,6 +89,7 @@ internal fun RecurringSchedulesPanel(
         modifier = modifier
             .verticalScroll(rememberScrollState())
             .padding(horizontal = Spacing.lg)
+            .padding(top = Spacing.lg)
             .padding(bottom = Spacing.bottom),
         verticalArrangement = Arrangement.spacedBy(Spacing.lg),
     ) {
@@ -107,7 +109,7 @@ internal fun RecurringSchedulesPanel(
                     Text("Repeating money, made simple", style = MaterialTheme.typography.titleMedium)
                     Text(
                         "A schedule is a reminder and forecast. It never changes your balance until you record the actual payment or receipt.",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodySmall.copy(lineHeight = 19.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }

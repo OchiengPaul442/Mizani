@@ -37,19 +37,6 @@ object Currencies {
     val GBP = Currency("GBP", "£", "British Pound", 2)
 
     private val curatedCurrencies = listOf(UGX, KES, TZS, RWF, NGN, GHS, ZAR, USD, EUR, GBP)
-    private val africanCurrencyCodes = setOf(
-        "AOA", "BIF", "BWP", "CDF", "CVE", "DJF", "DZD", "EGP", "ERN", "ETB", "GMD", "GNF",
-        "KMF", "LRD", "LYD", "MAD", "MGA", "MRU", "MUR", "MWK", "MZN", "NAD", "SCR", "SDG",
-        "SLE", "SOS", "SSP", "STN", "SZL", "TND", "XAF", "XOF", "ZMW", "ZWG",
-    )
-
-    /** Common account currencies for African regions plus the globally common choices. */
-    val all: List<Currency> by lazy {
-        val knownCodes = curatedCurrencies.mapTo(mutableSetOf()) { it.code }
-        curatedCurrencies + transactionCurrencies.filter {
-            it.code in africanCurrencyCodes && knownCodes.add(it.code)
-        }
-    }
 
     /** Currency codes currently assigned to an ISO country or territory. */
     private val currentCurrencyCodes: Set<String> by lazy {
@@ -61,8 +48,25 @@ object Currencies {
     }
 
     /**
-     * All currencies known to the runtime are retained for formatting older records. Historical
-     * codes are deliberately excluded from new transaction entry.
+     * Selectable catalog: every currency currently assigned to an ISO country or territory plus
+     * the curated defaults, deduplicated by code (curated metadata wins) and sorted by code.
+     * Historical and non-country codes are excluded here but stay resolvable through [byCode].
+     */
+    private fun currentUnionCurated(): List<Currency> {
+        val byCode = (runtimeCurrencies.filter { it.code in currentCurrencyCodes } + curatedCurrencies)
+            .associateBy { it.code }
+        return byCode.values.sortedBy { it.code }
+    }
+
+    /**
+     * Every currency usable as a workspace currency: all current ISO country currencies plus
+     * the curated defaults, deduplicated by code and sorted by code.
+     */
+    val all: List<Currency> by lazy { currentUnionCurated() }
+
+    /**
+     * All currencies known to the runtime are retained so [byCode] can keep formatting older
+     * records. Historical and non-country codes are deliberately not offered for new entry.
      */
     private val runtimeCurrencies: List<Currency> by lazy {
         JavaCurrency.getAvailableCurrencies().mapNotNull { javaCurrency ->
@@ -79,17 +83,12 @@ object Currencies {
     }
 
     /**
-     * Foreign currencies supported for transaction entry. Keep this broader than [all]: a
-     * workspace still uses the app's verified country currencies, while users can record income
-     * and expenses in any current country currency known to the runtime.
+     * Foreign currencies supported for transaction entry and search: every currency currently
+     * assigned to an ISO country or territory plus the curated defaults, deduplicated by code
+     * and sorted by code. Discontinued codes stay resolvable through [byCode] for old records
+     * but are not offered for new entry.
      */
-    val transactionCurrencies: List<Currency> by lazy {
-        val curatedByCode = curatedCurrencies.associateBy { it.code }
-        val byCode = (curatedCurrencies + runtimeCurrencies.filter { it.code in currentCurrencyCodes })
-            .associateBy { it.code }
-        val preferred = curatedCurrencies.mapNotNull { byCode[it.code] }
-        preferred + byCode.values.filterNot { it.code in curatedByCode }.sortedBy { it.code }
-    }
+    val transactionCurrencies: List<Currency> by lazy { currentUnionCurated() }
 
     private val allCurrenciesByCode: Map<String, Currency> by lazy {
         (curatedCurrencies + runtimeCurrencies).associateBy { it.code }

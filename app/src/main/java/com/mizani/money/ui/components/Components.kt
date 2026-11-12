@@ -199,13 +199,25 @@ fun SectionHeader(
     modifier: Modifier = Modifier,
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
+    accent: Boolean = false,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(title, style = MaterialTheme.typography.titleMedium)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (accent) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.secondary),
+                )
+                Spacer(Modifier.width(Spacing.sm))
+            }
+            Text(title, style = MaterialTheme.typography.titleMedium)
+        }
         if (actionLabel != null && onAction != null) {
             TextButton(onClick = onAction) {
                 Text(actionLabel, style = MaterialTheme.typography.labelLarge)

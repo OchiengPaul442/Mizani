@@ -124,24 +124,46 @@ System sans with tabular figures enabled for money. No custom font is bundled (o
 
 ## Components
 
-- **Hero card**: selected neutral/accent gradient with warm-gold accents, large watermarked
-  mark, currency symbol small, amount large, thin mint progress bar.
+- **Balance hero**: selected neutral/accent gradient with oversized low-opacity balance rings,
+  masked across-wallet total, hairline period progress, and income/spending/net stats with a signed
+  net value.
 - **Safe-to-spend**: white card with warm-gold icon tile; amount and a one-line basis statement.
   Keep detailed methodology in supporting documentation.
-- **Cash-flow summary**: a single card with three columns separated by 1dp dividers, instead of three
-  competing cards.
+- **Cash-flow summary**: income, spending and signed net are three compact stats inside the balance
+  hero rather than a competing summary card.
 - **Transaction row**: 42dp rounded-square category tile, title, wallet/date, signed amount;
   transfer icon + destination.
 - **Insight card**: tinted semantic surface, title and concise body. Show an in-app explanation only
   when it materially changes how users should interpret the metric.
 - **Dialogs**: `surfaceContainerHighest` container, `onSurface` title/body, and `onSurfaceVariant` for secondary details.
 - **Inputs**: 12dp radius, 56dp height, currency prefix, inline supporting text.
+- **Currency picker**: full-height searchable dialog capped at 560dp over the current-only
+  currency catalog (ISO country currencies plus curated defaults); search matches code, name and
+  symbol, and historical codes still resolve when formatting old records.
 - **Buttons**: 12dp radius, 52dp primary height, filled primary; outlined secondary; text actions otherwise.
 - **Charts**: category donut and six-month cash-flow bars; every chart has a text summary
   and a TalkBack description.
+- **Home**: one scrolling dashboard. A full-width gradient balance hero opens the content at every
+  size; at 700dp and above it spans the full content width above two 16dp-separated columns (quick
+  actions, recent activity, wallets and insight on the left; spending, coming up and momentum on the
+  right), capped at 1180dp. Below 700dp the same sections stack in a single 680dp column. The hero
+  adds a hairline period-progress track and, at 520dp or wider, a horizontal income/spending/net
+  band. Spending carries a seven-day pulse; coming-up rows use date badges. The header stacks the
+  period menu under the greeting below 380dp or at large font scale. Quick actions are one row of
+  four divided tiles at normal scale and a 2x2 grid below 300dp or at large font scale.
+- **Insights**: the same responsive page pattern as Home — a single 680dp column below 700dp of
+  content width, two columns at 700dp and above, capped at 1180dp. The cash-flow hero and export
+  action live in the app bar.
+- **More**: a two-column hub at 700dp of content width, single column below it, following the same
+  content-width cap.
+- **Settings**: a centered 680dp reading-width column with section accent headers; layout only,
+  with no change to behavior or labels. Arriving from a balance-visibility prompt focuses the
+  Security/App lock section and shows an inline explanation.
 - **Navigation**: five-tab Material bar (Home, Activity, Insights, Bills, More) and a
-  prominent Add action. Application route changes are immediate so the previous page never shows
-  through during Back or CTA navigation; onboarding keeps its local page animation.
+  prominent Add action on Activity, Insights and More. Home owns its quick actions and never shows
+  the global Add FAB; bottom labels stay visible from 300dp and hide only for very large type.
+  Application route changes are immediate so the previous page never shows through during Back or
+  CTA navigation; onboarding keeps its local page animation.
 
 ## Accessibility
 
