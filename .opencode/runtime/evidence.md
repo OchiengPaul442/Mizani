@@ -50,6 +50,14 @@
 - `docs/PLAY_STORE_RELEASE_CHECKLIST.md` and `docs/VERIFICATION.md` updated for 1.10.0/1010000.
 - `:app:testDebugUnitTest`, `:app:assembleDebug`, `:app:compileDebugAndroidTestKotlin`, `:app:printReleaseVersion` all green; print output 1.10.0/1010000.
 
+## Final 1.10.0 device state
+- Version 1.10.0 / versionCode 1010000 built and installed over demo data on Medium_Phone_API_36.1.
+- About: `Version 1.10.0 (build 1010000)` and `Sideloaded build 1010000`; Home retains MTN MoMo, +UGX 100,000, −UGX 25,000, Coming up Internet −UGX 75,000.
+- Lock redirect: `settings/app-lock` opens Security, shows the inline banner and a toast; auto-scroll is conditional (no movement when Security is already on-screen). Manual swipe proves the content remains scrollable.
+- Bills spacing: tab container bottom → intro top = 42px (16dp); intro node 165px, three lines; bottom padding/line-height change applied.
+- Currency picker: device count 153 of 153 (Android runtime differs from JVM 155); search `jpy` → 1 result; JPY row selected; field shows `JPY · Japanese Yen`; cancel leaves the bill at UGX 75,000.
+- Bills spacing/currency/about/lock dumps saved under `C:\Users\USER\AppData\Local\Temp\opencode\mizani-shots\`.
+
 ## Limitations / notes
 - Visual pixels cannot be captured: FLAG_SECURE intentionally renders screencaptures black. Evidence is layout bounds + text semantics, not color/spacing screenshots.
 - No instrumentation suite run (it resets the emulator ledger). `compileDebugAndroidTestKotlin` passes; the stale "Bills & commitments" assertion was corrected to "Bills & recurring".

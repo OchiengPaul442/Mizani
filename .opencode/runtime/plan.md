@@ -65,7 +65,8 @@ Redesign Mizani's interface for clarity, calmer density, discoverability and res
 - DONE: Strings/docs/changelog; stale Bills test assertion corrected.
 - DONE: Unit tests, compileDebugKotlin, assembleDebug, compileDebugAndroidTestKotlin.
 - DONE: Closed / Half-Open / Open / 1.3x bounds verification; all PASS (see evidence.md).
-- LIMITATION: no instrumentation run; no readable screenshots (FLAG_SECURE); Coming-up card not visually exercised without bills.
+- DONE (1.10.0): Bills tab spacing/line-height; current-only 153-currency catalog + searchable full-height picker (jpy verified); lock redirect focuses Security with banner + toast; About build identity/install source/Play link; release-version task and Play update troubleshooting; version 1.10.0 / code 1010000, changelog dated 2026-11-13.
+- LIMITATION: no Play Console access; signed AAB not produced here (owner signing needed); new Insights/More/Settings wide states compile but were not re-captured after the fold AVD was replaced by the phone; no readable screenshots (FLAG_SECURE).
 
 ## Risks / limits
 - Architect session cannot run shell; delegate build/adb to workers.
