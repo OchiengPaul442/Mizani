@@ -6,6 +6,29 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-11-13
+
+### Added
+
+- Add adaptive two-pane layouts for half-open book and tabletop postures that keep navigation and
+  content on either side of the hinge, with slight folds and split-screen windows falling back to
+  the single-pane layout.
+
+### Changed
+
+- Make foldable navigation panels navigation-only: the book sidebar and tabletop dock now show the
+  Mizani header, the five destinations and one privacy line instead of repeating Home's quick
+  actions and workspace name, while Home keeps its action card and the global Add action returns on
+  Activity, Insights and More in half-open postures with a pane-contained chooser.
+
+### Fixed
+
+- Keep the single-date picker inside the content pane in half-open postures instead of centering it
+  across the hinge, so the calendar and its actions stay on one side of the display.
+- Keep an open add chooser across screen rotation: the flat bottom sheet and the half-open
+  pane-contained chooser are restored and re-shown after Activity recreation instead of closing
+  silently.
+
 ## [1.10.0] - 2026-11-13
 
 ### Changed

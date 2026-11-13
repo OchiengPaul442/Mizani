@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Backspace
@@ -55,6 +57,7 @@ import androidx.fragment.app.FragmentActivity
 import com.mizani.money.R
 import com.mizani.money.core.security.PinDefaults
 import com.mizani.money.ui.AppViewModel
+import com.mizani.money.ui.FoldAwareDialogHost
 import com.mizani.money.ui.PIN_RETRY_MESSAGE
 import com.mizani.money.ui.PinAttemptResult
 import com.mizani.money.ui.components.MizaniMark
@@ -152,6 +155,7 @@ fun LockScreen(vm: AppViewModel, biometricEnabled: Boolean) {
             modifier = Modifier
                 .fillMaxSize()
                 .safeDrawingPadding()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = Spacing.xl, vertical = Spacing.xxl),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -189,7 +193,7 @@ fun LockScreen(vm: AppViewModel, biometricEnabled: Boolean) {
                     )
                 }
             }
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.height(Spacing.lg))
             PinKeypad(
                 onDigit = { digit ->
                     if (pin.length < PinDefaults.LENGTH) {
@@ -364,47 +368,49 @@ fun PinSetupDialog(
             securePolicy = SecureFlagPolicy.SecureOn,
         ),
     ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth().padding(Spacing.xl),
-            shape = MaterialTheme.shapes.extraLarge,
-            color = MaterialTheme.colorScheme.surface,
-        ) {
-            Column(
-                modifier = Modifier.padding(Spacing.xl),
-                horizontalAlignment = Alignment.CenterHorizontally,
+        FoldAwareDialogHost {
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(Spacing.xl),
+                shape = MaterialTheme.shapes.extraLarge,
+                color = MaterialTheme.colorScheme.surface,
             ) {
-                Text(
-                    if (stage == 0) "Create a 6-digit PIN" else "Confirm your PIN",
-                    style = MaterialTheme.typography.titleLarge,
-                )
-                Spacer(Modifier.height(Spacing.xs))
-                Text(
-                    "Mizani will ask for this when the app opens.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
-                Spacer(Modifier.height(Spacing.lg))
-                PinDots(entered = current.length)
-                Spacer(Modifier.height(Spacing.md))
-                Box(Modifier.heightIn(min = 20.dp), contentAlignment = Alignment.Center) {
-                    if (error != null) {
-                        Text(
-                            error!!,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                        )
+                Column(
+                    modifier = Modifier.padding(Spacing.xl),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        if (stage == 0) "Create a 6-digit PIN" else "Confirm your PIN",
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                    Spacer(Modifier.height(Spacing.xs))
+                    Text(
+                        "Mizani will ask for this when the app opens.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(Modifier.height(Spacing.lg))
+                    PinDots(entered = current.length)
+                    Spacer(Modifier.height(Spacing.md))
+                    Box(Modifier.heightIn(min = 20.dp), contentAlignment = Alignment.Center) {
+                        if (error != null) {
+                            Text(
+                                error!!,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                            )
+                        }
                     }
-                }
-                Spacer(Modifier.height(Spacing.sm))
-                PinKeypad(
-                    onDigit = { if (current.length < PinDefaults.LENGTH) current += it },
-                    onBackspace = { current = current.dropLast(1) },
-                )
-                Spacer(Modifier.height(Spacing.md))
-                TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
-                    Text("Cancel")
+                    Spacer(Modifier.height(Spacing.sm))
+                    PinKeypad(
+                        onDigit = { if (current.length < PinDefaults.LENGTH) current += it },
+                        onBackspace = { current = current.dropLast(1) },
+                    )
+                    Spacer(Modifier.height(Spacing.md))
+                    TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+                        Text("Cancel")
+                    }
                 }
             }
         }
@@ -432,35 +438,37 @@ fun PinVerifyDialog(
             securePolicy = SecureFlagPolicy.SecureOn,
         ),
     ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth().padding(Spacing.xl),
-            shape = MaterialTheme.shapes.extraLarge,
-            color = MaterialTheme.colorScheme.surface,
-        ) {
-            Column(
-                modifier = Modifier.padding(Spacing.xl),
-                horizontalAlignment = Alignment.CenterHorizontally,
+        FoldAwareDialogHost {
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(Spacing.xl),
+                shape = MaterialTheme.shapes.extraLarge,
+                color = MaterialTheme.colorScheme.surface,
             ) {
-                Text(title, style = MaterialTheme.typography.titleLarge)
-                Spacer(Modifier.height(Spacing.lg))
-                PinDots(entered = pin.length)
-                Spacer(Modifier.height(Spacing.md))
-                Box(Modifier.heightIn(min = 20.dp), contentAlignment = Alignment.Center) {
-                    if (error != null) {
-                        Text(
-                            error!!,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                        )
+                Column(
+                    modifier = Modifier.padding(Spacing.xl),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(title, style = MaterialTheme.typography.titleLarge)
+                    Spacer(Modifier.height(Spacing.lg))
+                    PinDots(entered = pin.length)
+                    Spacer(Modifier.height(Spacing.md))
+                    Box(Modifier.heightIn(min = 20.dp), contentAlignment = Alignment.Center) {
+                        if (error != null) {
+                            Text(
+                                error!!,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                            )
+                        }
                     }
+                    PinKeypad(
+                        onDigit = { if (pin.length < PinDefaults.LENGTH) pin += it },
+                        onBackspace = { pin = pin.dropLast(1) },
+                    )
+                    Spacer(Modifier.height(Spacing.md))
+                    TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Cancel") }
                 }
-                PinKeypad(
-                    onDigit = { if (pin.length < PinDefaults.LENGTH) pin += it },
-                    onBackspace = { pin = pin.dropLast(1) },
-                )
-                Spacer(Modifier.height(Spacing.md))
-                TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Cancel") }
             }
         }
     }

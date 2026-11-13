@@ -172,6 +172,25 @@ disposable `Medium_Phone_API_36.1` emulator (API 36, x86_64): 30 tests passed wi
 errors, or skips. The 100-scenario matrix is tracked in `docs/INVESTMENT_QA_MATRIX.md`; manual
 physical-device and Play Console rows remain release-owner gates.
 
+### 1.11.0 release metadata preparation (2026-11-13)
+
+The release metadata was advanced to `1.11.0` with the derived Android version code `1011000`.
+Version selection is a MINOR release for the backward-compatible foldable responsiveness work:
+adaptive two-pane layouts for half-open book/tabletop postures, pane-aware dialogs, date pickers
+and add chooser, slight-fold/split-screen fallback thresholds, and navigation-only fold panels.
+The following repository checks passed against this source tree:
+
+```powershell
+.\gradlew.bat :app:printReleaseVersion :app:testDebugUnitTest :app:assembleDebug --console=plain
+git diff --check
+```
+
+Prior foldable acceptance in this workspace covered OPENED, book, tabletop and closed postures,
+book and dock navigation taps, a 45-degree hinge, and no crashes, with debug lint at 0 errors. This
+is metadata and debug-build preparation, not release sign-off: no signed release artifact, tag,
+upload, Play Console submission, or production deployment was performed for this version in this
+workspace.
+
 ### 1.10.0 release metadata preparation (2026-11-13)
 
 The release metadata was advanced to `1.10.0` with the derived Android version code `1010000`.

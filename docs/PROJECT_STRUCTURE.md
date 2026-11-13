@@ -33,6 +33,8 @@ com.mizani.money
 ├── ui/
 │   ├── AppViewModel.kt            root state, period selection, lock state
 │   ├── Navigation.kt              top-level destinations and bottom bar
+│   ├── FoldWindow.kt              fold posture/pane resolution + fold-aware dialog host
+│   ├── FoldNavigation.kt          book sidebar + tabletop dock (navigation-only)
 │   ├── theme/                     colour, type, shapes, palette tokens
 │   └── components/                reusable Compose primitives (cards, charts, pickers)
 └── feature/

@@ -1,44 +1,105 @@
-# Decisions
+# Decisions — foldable responsiveness
 
-## Direction
-- Keep the Mizani brand system (emerald/mint/gold, soft-white, medium radii). Redesign hierarchy, not identity.
-- Home becomes a dashboard: header+period, balance hero, one action row, spending, recent, wallets, coming up, momentum, insight.
-- One primary action per intent; remove the duplicate Quick Add card and the old 3-column Summary card.
-- Use existing analytics (`metrics.upcoming`, `walletTotalMinor`, `categorySlices`) — no new financial calculations, no schema changes.
+## D1. Treat a separating fold as two panes, not a reason to shrink the whole app
+Current `largestSafePane` + offset is the root cause of the empty white half. Replace with a
+`FoldWindowLayout` model:
+- no separating feature / FLAT / CLOSED -> `Flat`, full window.
+- separating vertical feature -> `Book`: leading pane + hinge gap + trailing pane.
+- separating horizontal feature -> `Tabletop`: top pane + hinge gap + bottom pane.
+- degenerate pane -> fall back to `Flat`.
+The model is px-based, computed from `WindowLayoutInfo` + `LocalWindowInfo.containerSize`, and
+exposed through `LocalFoldWindowLayout`. It is unit-testable independently of Compose.
 
-## Foldables
-- Closed (narrow): single column, bottom nav with labels, quick actions one row.
-- Half-open (tabletop): keep existing `largestSafePane` policy (render only in a safe pane, never under the hinge); single column is acceptable because the pane height is short; entire Home scrolls.
-- Open (wide): rail at >=600dp safe width; two-column dashboard only when the content pane is >=700dp, max 1180dp total; otherwise a centered 680dp single column.
-- Bottom nav labels stay visible at >=300dp and fontScale <=1.30. Rail labels stay visible unless fontScale >1.30.
-- Global Add FAB is hidden on Home only (the action row owns recording); Activity/Insights/More keep it because instrumentation tests use "Add" there.
+## D2. Use both panes for top-level navigation
+- **Book**: leading pane = persistent `MizaniFoldSidebar` (brand/workspace header, four quick
+  actions, five destinations, privacy footer); trailing pane = current screen. Hide the bottom
+  bar and navigation rail. Selected nav item follows the current top-level route.
+- **Tabletop**: top pane = current screen; bottom pane = `MizaniTabletopDock` with the five
+  destinations and four quick actions. Hide the bottom bar/rail. The dock scrolls or compacts
+  when the trailing pane is short.
+- **Flat/CLOSED**: keep the existing bottom bar / navigation rail behavior; no regression to
+  phone/tablet layouts.
+This intentionally fills the pane that is currently white.
 
-## Creative signature (calm, brand-led)
-- Hero: gradient + oversized low-opacity balance rings + one gold focal dot; hairline period-progress track with "Day X of Y". Expanded layout promotes the hero to a full-width band (balance left, period flow right).
-- Quick actions: one inset command bar with hairlines and tinted icon medallions; short press-scale. One CTA row.
-- Coming up: date-badge timeline with category-colored dot/connector and relative due labels; expected income is visually distinct from bills.
-- Section titles get an optional small gold accent dot (SectionHeader opt-in, no global behavior change).
-- Spending card footer gets a 7-day "pulse" mini bar strip computed from `AnalyticsEngine.expenseMinor(day, day)` and remembered per snapshot/day; includes a text summary for TalkBack.
-- Empty state uses concentric balance rings behind the existing Storyset illustration.
-- Activity (second pass): day timeline rail + grouped day card, not a card per transaction.
+## D3. Pre-main surfaces also use the active pane
+Wrap splash/startup-error/onboarding/legal in `FoldAwareScreen`: content in the content pane,
+branded `FoldBackdrop` in the other pane. Lock uses a split: branding pane + PIN pane, with an
+adaptive/compact keypad and scroll fallback. This prevents centered content from being bisected by
+the hinge.
 
-## New functionality surfaced (no model changes)
-- "Coming up" card reads `DashboardMetrics.upcoming` and links to Bills; shows first 3 items + 7-day due total. This field was computed but unused.
-- Quick actions expose Transfer and Import directly instead of hiding them in the Add sheet.
-- Privacy: hero uses `ProtectedBalanceValue`; eye control remains the existing PIN/biometric gate, extended with a tint parameter for the gradient.
+## D4. Dialogs and sheets must not cross the hinge
+- Expose `LocalFoldWindowLayout` to dialog content.
+- `MizaniAlertDialog` and `DatePickerDialog`: constrain width/height and offset to the content
+  pane center; make long text/calendars scrollable inside the pane.
+- Custom `Dialog` surfaces (PIN setup/verify, sensitive-action confirmation, currency picker,
+  legal/third-party documents): wrap in `FoldAwareDialogHost`, which fills the dialog window but
+  positions the surface in the content pane.
+- Add chooser: keep `ModalBottomSheet` for flat/closed; in a half-open posture use a fold-aware
+  dialog hosting the same chooser content. Make `showAddSheet` `rememberSaveable`.
 
-## Security / verification constraints
-- FLAG_SECURE stays. Screenshots are black by design; visual verification uses window metrics + uiautomator bounds/ASCII layout maps and user inspection.
-- No instrumentation tests on the shared emulator (they reset app data). Only build + unit tests + non-destructive UI dumps.
-- Test-visible strings and routes are frozen: Daily momentum texts, Recent activity, Add, Bills, Bills & commitments, TransactionRow semantics.
+## D5. Insets and hinge gap
+Do not apply global `safeDrawingPadding` to the full fold container (it would shrink pane math).
+Apply side-specific `WindowInsets.safeDrawing` padding inside each pane:
+- book leading: top+bottom+start; book trailing: top+bottom+end.
+- tabletop top: top+start+end; tabletop bottom: bottom+start+end.
+Set the fold content `Scaffold(contentWindowInsets = WindowInsets(0))` to avoid double insets.
+Color the root/hinge background with `surfaceContainer` so the gap is intentional, not white.
 
-## Currency selection decision
-- Offer **all current world currencies** (runtime currencies attached to an ISO country/territory + curated) in the searchable picker.
-- Keep discontinued/historical codes available only for formatting/restoring old records; do not offer them for new entries (existing `MoneyTest` invariant: ADP/AFA/ALK excluded).
-- Expand `all` (workspace/primary currency) to the same current union so onboarding is not limited to 10 + African codes.
-- Replace the dropdown with a Dialog-based full-height picker: LazyColumn, pinned search by code/name/symbol, visible count, selected highlight. Search must be case-insensitive and reset on open.
-- If the device runtime reports a surprisingly small current list, verify the count in the picker before changing the catalog logic.
+## D6. Preserve state and avoid flashes
+- `showAddSheet` -> `rememberSaveable`.
+- Keep `rememberSaveable` in forms (already present in AddTransaction/Onboarding).
+- Seed `produceState` with the last/empty layout and gate the first fold render if needed to avoid
+  a full-window flash. Do not regress startup latency.
+- Verify rotation and fold recreate the activity without losing route, form fields, or sheet.
 
-## Open questions
-- Exact emulator posture control command pending evidence worker (`cmd device_state`).
-- Whether half-open posture exposes a horizontal hinge and which safe pane is selected; verification must confirm no clipped/overlapping bounds.
+## D7. Verification
+- Extend `AdaptiveLayoutTest` (or new `FoldWindowLayoutTest`) for vertical/horizontal/degenerate
+  features, pane sizes, content/nav pane selection, and rotation swaps.
+- Emulator matrix: OPENED portrait/landscape, HALF_OPENED book + tabletop at rotation 0/90/180/270,
+  CLOSED portrait/landscape, font scale 1.0/1.3, dialogs/sheets, rotation while form open.
+- Host-side emulator-window screenshots are allowed and show real pixels despite FLAG_SECURE;
+  keep them in temp, never commit.
+- Run testDebugUnitTest, compileDebugAndroidTestKotlin, lintDebug, assembleDebug. Report honestly.
+
+## D8. Scope guard
+No database, money, backup, permission, network, legal-copy, or dependency changes. UI-only plus
+tests/docs/changelog. Keep `FLAG_SECURE` intact. Flipped/tent states unsupported by this AVD are
+documented, not faked.
+
+## D9. Slight fold / threshold behavior
+`isSeparating` and `FoldingFeature.State` are the platform signals; there is no reliable public
+hinge-angle value in `FoldingFeature`. Policy:
+- `state == FLAT`, no feature, or no intersection with the app window -> Flat full-window layout.
+- `state == HALF_OPENED` + separating feature -> compute panes, then require usable split:
+  book both widths >= 300dp; tabletop both heights >= 260dp; window >= 600dp wide (book) or
+  >= 480dp tall (tabletop). If usable -> two-pane sidebar/dock.
+- If not usable but the smaller pane >= 180dp -> compact split: larger pane content + compact
+  icon-only nav/backdrop in the smaller pane. If smaller pane < 180dp or hinge at an edge ->
+  single larger pane + branded backdrop strip; never a blank white pane.
+- Clamp/intersect feature bounds to the app window so split-screen windows where the hinge is
+  outside the app do not force a false split.
+- Keep the content subtree stable across Flat/Book/Tabletop transitions (custom Layout or stable
+  content call site) so folding does not dispose the NavHost/form state.
+
+## D11. Fold navigation panels are navigation-only (deduplication)
+The fold sidebar/dock must not repeat Home's action card or the flat-mode bottom navigation:
+- Book sidebar and tabletop dock contain only: a compact `Mizani` brand header, the five top-level
+  destinations (Home/Activity/Insights/Bills/More), and one privacy footer. Remove the four
+  expense/income/transfer/import quick-action buttons from both fold panels.
+- Home keeps its existing "Record activity" card and owns its quick actions. Non-Home screens keep
+  the existing global Add FAB in fold modes; it opens the fold-aware add chooser. Do not duplicate
+  the four actions in the panel as well.
+- Use the app name `Mizani` in the panel header instead of the workspace name already shown in the
+  Home header. Keep only one privacy line in the panel (the pinned footer), not both a
+  "Private by design" subtitle and a footer.
+- Book: vertical nav with generous spacing and the footer pinned to the bottom. Tabletop: horizontal
+  dock with the five destinations at the bottom, brand header at the top, and the privacy line above
+  the nav. Both fill their pane without a second action grid.
+
+## D10. Android split-screen / multi-window
+The same model must behave in OS split-screen: `LocalWindowInfo.containerSize` is the app window,
+not the display. No feature -> Flat and existing compact/medium/expanded nav rules. Feature
+crossing the app window -> split only when both panes meet D9; otherwise single larger pane +
+backdrop. Dialogs remain inside the app window content pane. Verify with
+`am start --windowingMode 3` (or `cmd activity`) plus a second app; if the AVD cannot enter
+split-screen reliably, document the exact limitation and still unit-test window-size behavior.

@@ -22,12 +22,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
@@ -49,7 +51,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.window.layout.FoldingFeature
 import androidx.window.layout.WindowInfoTracker
 import androidx.window.layout.WindowLayoutInfo
 import com.google.android.play.core.appupdate.AppUpdateInfo
@@ -65,9 +66,12 @@ import com.mizani.money.feature.legal.LegalConsentScreen
 import com.mizani.money.feature.onboarding.OnboardingScreen
 import com.mizani.money.ui.AppUiState
 import com.mizani.money.ui.AppViewModel
+import com.mizani.money.ui.FoldAwareScreen
+import com.mizani.money.ui.LocalFoldWindowLayout
 import com.mizani.money.ui.MizaniNavHost
 import com.mizani.money.ui.components.MizaniMark
 import com.mizani.money.ui.components.Spacing
+import com.mizani.money.ui.rememberFoldWindowLayout
 import com.mizani.money.ui.theme.MizaniTheme
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
@@ -276,6 +280,7 @@ fun MizaniRoot(
     var acceptingLegal by remember { mutableStateOf(false) }
     var legalError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val foldLayout = rememberFoldWindowLayout(windowLayoutInfo)
     val readyForUpdateCheck = !state.loading && !state.startupError &&
         state.settings.onboardingComplete && state.snapshot.workspace != null &&
         state.settings.hasAcceptedCurrentLegalDocuments && !state.locked
@@ -291,40 +296,45 @@ fun MizaniRoot(
         color = MaterialTheme.colorScheme.background,
         contentColor = MaterialTheme.colorScheme.onBackground,
     ) {
-        when {
-            state.loading -> SplashScreen()
-            state.startupError -> StartupErrorScreen(onRetry = vm::retryStartup)
-            !state.settings.onboardingComplete || state.snapshot.workspace == null -> {
-                OnboardingScreen(
-                    vm = vm,
-                    hasAcceptedCurrentLegalDocuments = state.settings.hasAcceptedCurrentLegalDocuments,
-                )
-            }
-            state.locked -> LockScreen(vm, state.settings.biometricEnabled)
-            !state.settings.hasAcceptedCurrentLegalDocuments -> {
-                LegalConsentScreen(
-                    accepting = acceptingLegal,
-                    error = legalError,
-                    onAgree = {
-                        if (!acceptingLegal) {
-                            acceptingLegal = true
-                            legalError = null
-                            scope.launch {
-                                val result = vm.acceptCurrentLegalDocuments()
-                                acceptingLegal = false
-                                if (result.isFailure) {
-                                    legalError = "Could not save your agreement. Please try again."
+        CompositionLocalProvider(LocalFoldWindowLayout provides foldLayout) {
+            when {
+                state.loading -> FoldAwareScreen { SplashScreen() }
+                state.startupError -> FoldAwareScreen { StartupErrorScreen(onRetry = vm::retryStartup) }
+                !state.settings.onboardingComplete || state.snapshot.workspace == null -> {
+                    FoldAwareScreen {
+                        OnboardingScreen(
+                            vm = vm,
+                            hasAcceptedCurrentLegalDocuments = state.settings.hasAcceptedCurrentLegalDocuments,
+                        )
+                    }
+                }
+                state.locked -> FoldAwareScreen { LockScreen(vm, state.settings.biometricEnabled) }
+                !state.settings.hasAcceptedCurrentLegalDocuments -> {
+                    FoldAwareScreen {
+                        LegalConsentScreen(
+                            accepting = acceptingLegal,
+                            error = legalError,
+                            onAgree = {
+                                if (!acceptingLegal) {
+                                    acceptingLegal = true
+                                    legalError = null
+                                    scope.launch {
+                                        val result = vm.acceptCurrentLegalDocuments()
+                                        acceptingLegal = false
+                                        if (result.isFailure) {
+                                            legalError = "Could not save your agreement. Please try again."
+                                        }
+                                    }
                                 }
-                            }
-                        }
-                    },
+                            },
+                        )
+                    }
+                }
+                else -> MizaniNavHost(
+                    vm = vm,
+                    state = state,
                 )
             }
-            else -> MizaniNavHost(
-                vm = vm,
-                state = state,
-                foldingFeatures = windowLayoutInfo?.displayFeatures?.filterIsInstance<FoldingFeature>().orEmpty(),
-            )
         }
     }
 }
@@ -334,6 +344,7 @@ private fun StartupErrorScreen(onRetry: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .safeDrawingPadding()
             .padding(Spacing.xl),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,

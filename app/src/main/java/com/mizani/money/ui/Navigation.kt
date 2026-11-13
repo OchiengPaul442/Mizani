@@ -12,12 +12,11 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
@@ -46,6 +45,8 @@ import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -53,6 +54,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
@@ -62,7 +64,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import androidx.window.layout.FoldingFeature
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.SecureFlagPolicy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -88,13 +92,13 @@ import com.mizani.money.ui.components.mizaniSurfaceBorderColor
 import com.mizani.money.ui.theme.LocalMizaniThemeTokens
 import kotlinx.coroutines.launch
 
-private data class Tab(
+internal data class Tab(
     val route: String,
     val label: String,
     val icon: ImageVector,
 )
 
-private val tabs = listOf(
+internal val tabs = listOf(
     Tab("home", "Home", Icons.Rounded.Home),
     Tab("transactions", "Activity", Icons.AutoMirrored.Rounded.ReceiptLong),
     Tab("insights", "Insights", Icons.Rounded.BarChart),
@@ -143,7 +147,6 @@ private fun MizaniRouteSurface(content: @Composable () -> Unit) {
 fun MizaniNavHost(
     vm: AppViewModel,
     state: AppUiState,
-    foldingFeatures: List<FoldingFeature> = emptyList(),
 ) {
     val navController = rememberNavController()
     val pendingImport by vm.pendingImport.collectAsState()
@@ -160,9 +163,15 @@ fun MizaniNavHost(
     // own screen, and Activity hides the FAB until the ledger has content.
     val showGlobalAdd = isTopLevel && currentRoute != "commitments" && currentRoute != "home" &&
         (hasTransactions || currentRoute != "transactions")
-    var showAddSheet by remember { mutableStateOf(false) }
+    // Saved across Activity recreation on purpose: Material 3's ModalBottomSheet re-runs
+    // sheetState.show() every time it is composed, so a restored true re-opens the flat sheet
+    // instead of leaving an open flag behind an invisible chooser. The half-open branch renders a
+    // Dialog, which is visible on composition for the same reason.
+    var showAddSheet by rememberSaveable { mutableStateOf(false) }
     val addSheetState = rememberModalBottomSheetState()
     val sheetScope = androidx.compose.runtime.rememberCoroutineScope()
+    val foldLayout = LocalFoldWindowLayout.current ?: rememberFoldWindowLayout(null)
+    val isHalfOpen = foldLayout.isHalfOpen
 
     LaunchedEffect(currentRoute) {
         vm.hideWalletBalances()
@@ -202,6 +211,13 @@ fun MizaniNavHost(
     }
 
     fun openFromAddSheet(destination: () -> Unit) {
+        if (isHalfOpen) {
+            // The half-open chooser is a fold-aware dialog, not a bottom sheet, so there is no
+            // sheet state to animate. Close it directly and navigate.
+            showAddSheet = false
+            destination()
+            return
+        }
         sheetScope.launch {
             addSheetState.hide()
             showAddSheet = false
@@ -236,41 +252,32 @@ fun MizaniNavHost(
         navController.popBackStack()
     }
 
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        // Use the current safe pane, not a device-type check. This adapts automatically to split
-        // screen, rotation, compact foldable displays and unfolded tablets. A separating hinge is
-        // treated as a boundary so content never renders underneath it; the largest pane gets the
-        // app while the other pane remains available to the system or another app.
-        val density = LocalDensity.current
-        val safePane = AdaptiveLayout.largestSafePane(
-            windowWidthPx = with(density) { maxWidth.toPx().toInt() },
-            windowHeightPx = with(density) { maxHeight.toPx().toInt() },
-            feature = foldingFeatures.firstOrNull { it.isSeparating }?.let { feature ->
-                FoldFeatureBounds(
-                    leftPx = feature.bounds.left,
-                    topPx = feature.bounds.top,
-                    rightPx = feature.bounds.right,
-                    bottomPx = feature.bounds.bottom,
-                    vertical = feature.orientation == FoldingFeature.Orientation.VERTICAL,
-                    separating = feature.isSeparating,
-                )
-            },
-        )
-        val safePaneWidth = with(density) { safePane.widthPx.toDp() }
-        val safePaneHeight = with(density) { safePane.heightPx.toDp() }
-        val safePaneLeft = with(density) { safePane.leftPx.toDp() }
-        val safePaneTop = with(density) { safePane.topPx.toDp() }
-        val useRail = isTopLevel && safePaneWidth >= AdaptiveLayout.MEDIUM_WIDTH_DP.dp
-        // Keep labels legible at 320–360dp; hide them only for very narrow panes or large type.
-        val hideBottomLabels = safePaneWidth < 300.dp ||
-            density.fontScale > AdaptiveLayout.EXTRA_LARGE_FONT_SCALE
-        val hideRailLabels = density.fontScale > AdaptiveLayout.EXTRA_LARGE_FONT_SCALE
-        Row(
-            modifier = Modifier
-                .width(safePaneWidth)
-                .height(safePaneHeight)
-                .offset(x = safePaneLeft, y = safePaneTop),
-        ) {
+    FoldNavigationLayout(
+        layout = foldLayout,
+        sidebar = {
+            MizaniFoldSidebar(
+                currentRoute = currentRoute,
+                onNavigate = { route -> openTopLevel(route) },
+            )
+        },
+        dock = {
+            MizaniTabletopDock(
+                currentRoute = currentRoute,
+                onNavigate = { route -> openTopLevel(route) },
+            )
+        },
+        content = {
+            // The content slot keeps the NavHost composed in one place so its back stack and
+            // saveable form state survive Flat/Book/Tabletop posture changes.
+            BoxWithConstraints(Modifier.fillMaxSize()) {
+                val density = LocalDensity.current
+                val useRail = !isHalfOpen && isTopLevel &&
+                    maxWidth >= AdaptiveLayout.MEDIUM_WIDTH_DP.dp
+                // Keep labels legible at 320–360dp; hide them only for very narrow panes or large type.
+                val hideBottomLabels = maxWidth < 300.dp ||
+                    density.fontScale > AdaptiveLayout.EXTRA_LARGE_FONT_SCALE
+                val hideRailLabels = density.fontScale > AdaptiveLayout.EXTRA_LARGE_FONT_SCALE
+                Row(Modifier.fillMaxSize()) {
             if (useRail) {
                 NavigationRail(
                     modifier = Modifier
@@ -306,6 +313,11 @@ fun MizaniNavHost(
             Scaffold(
                 modifier = Modifier.weight(1f),
                 containerColor = MaterialTheme.colorScheme.background,
+                contentWindowInsets = if (isHalfOpen) {
+                    WindowInsets(0, 0, 0, 0)
+                } else {
+                    ScaffoldDefaults.contentWindowInsets
+                },
                 floatingActionButton = {
                     if (showGlobalAdd) {
                         ExtendedFloatingActionButton(
@@ -316,7 +328,7 @@ fun MizaniNavHost(
                     }
                 },
                 bottomBar = {
-                    if (isTopLevel && !useRail) {
+                    if (!isHalfOpen && isTopLevel && !useRail) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -689,63 +701,116 @@ fun MizaniNavHost(
             }
         }
         }
-
-    }
+        }
+    },
+)
 
     if (showAddSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showAddSheet = false },
-            sheetState = addSheetState,
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
-                    .padding(bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+        val onExpense = { openFromAddSheet { openAdd(TransactionType.EXPENSE) } }
+        val onIncome = { openFromAddSheet { openAdd(TransactionType.INCOME) } }
+        val onTransfer = { openFromAddSheet { openAdd(TransactionType.TRANSFER) } }
+        val onImport = {
+            vm.clearPendingImport()
+            openFromAddSheet { openDetail("import-message") }
+        }
+        if (isHalfOpen) {
+            // A bottom sheet would stretch across the hinge, so the half-open chooser is a
+            // fold-aware dialog constrained to the content pane.
+            Dialog(
+                onDismissRequest = { showAddSheet = false },
+                properties = DialogProperties(
+                    usePlatformDefaultWidth = false,
+                    securePolicy = SecureFlagPolicy.SecureOn,
+                ),
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("What would you like to record?", style = MaterialTheme.typography.titleLarge)
-                    Text(
-                        "Choose how money moved.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                FoldAwareDialogHost {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = 480.dp),
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    ) {
+                        AddActionChooserContent(
+                            onExpense = onExpense,
+                            onIncome = onIncome,
+                            onTransfer = onTransfer,
+                            onImport = onImport,
+                        )
+                    }
                 }
-                val tokens = LocalMizaniThemeTokens.current
-                AddActionButton(
-                    icon = Icons.Rounded.ArrowUpward,
-                    iconTint = tokens.expense,
-                    title = "Record expense",
-                    supportingText = "Money spent from a wallet",
-                    onClick = { openFromAddSheet { openAdd(TransactionType.EXPENSE) } },
-                )
-                AddActionButton(
-                    icon = Icons.Rounded.ArrowDownward,
-                    iconTint = tokens.income,
-                    title = "Record income",
-                    supportingText = "Money received into a wallet",
-                    onClick = { openFromAddSheet { openAdd(TransactionType.INCOME) } },
-                )
-                AddActionButton(
-                    icon = Icons.Rounded.SwapHoriz,
-                    iconTint = tokens.transfer,
-                    title = "Move between wallets",
-                    supportingText = "Does not affect income or spending",
-                    onClick = { openFromAddSheet { openAdd(TransactionType.TRANSFER) } },
-                )
-                AddActionButton(
-                    icon = Icons.Rounded.ContentPaste,
-                    iconTint = MaterialTheme.colorScheme.primary,
-                    title = "Import a message",
-                    supportingText = "Review an MTN or Airtel confirmation",
-                    onClick = {
-                        vm.clearPendingImport()
-                        openFromAddSheet { openDetail("import-message") }
-                    },
+            }
+        } else {
+            ModalBottomSheet(
+                onDismissRequest = { showAddSheet = false },
+                sheetState = addSheetState,
+            ) {
+                AddActionChooserContent(
+                    onExpense = onExpense,
+                    onIncome = onIncome,
+                    onTransfer = onTransfer,
+                    onImport = onImport,
                 )
             }
         }
+    }
+}
+
+/**
+ * The four recording destinations shared by the flat bottom sheet and the half-open fold-aware
+ * chooser. Copy and actions are identical in both postures.
+ */
+@Composable
+private fun AddActionChooserContent(
+    onExpense: () -> Unit,
+    onIncome: () -> Unit,
+    onTransfer: () -> Unit,
+    onImport: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("What would you like to record?", style = MaterialTheme.typography.titleLarge)
+            Text(
+                "Choose how money moved.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        val tokens = LocalMizaniThemeTokens.current
+        AddActionButton(
+            icon = Icons.Rounded.ArrowUpward,
+            iconTint = tokens.expense,
+            title = "Record expense",
+            supportingText = "Money spent from a wallet",
+            onClick = onExpense,
+        )
+        AddActionButton(
+            icon = Icons.Rounded.ArrowDownward,
+            iconTint = tokens.income,
+            title = "Record income",
+            supportingText = "Money received into a wallet",
+            onClick = onIncome,
+        )
+        AddActionButton(
+            icon = Icons.Rounded.SwapHoriz,
+            iconTint = tokens.transfer,
+            title = "Move between wallets",
+            supportingText = "Does not affect income or spending",
+            onClick = onTransfer,
+        )
+        AddActionButton(
+            icon = Icons.Rounded.ContentPaste,
+            iconTint = MaterialTheme.colorScheme.primary,
+            title = "Import a message",
+            supportingText = "Review an MTN or Airtel confirmation",
+            onClick = onImport,
+        )
     }
 }
 

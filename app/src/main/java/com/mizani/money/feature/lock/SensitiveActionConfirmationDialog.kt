@@ -41,6 +41,7 @@ import androidx.compose.ui.window.SecureFlagPolicy
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import com.mizani.money.core.security.PinDefaults
+import com.mizani.money.ui.FoldAwareDialogHost
 import com.mizani.money.ui.PIN_RETRY_MESSAGE
 import com.mizani.money.ui.components.Spacing
 import kotlinx.coroutines.CancellationException
@@ -175,104 +176,106 @@ fun SensitiveActionConfirmationDialog(
             securePolicy = SecureFlagPolicy.SecureOn,
         ),
     ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth().padding(Spacing.xl),
-            shape = MaterialTheme.shapes.extraLarge,
-            color = MaterialTheme.colorScheme.surface,
-        ) {
-            Column(
-                modifier = Modifier.padding(Spacing.xl),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
+        FoldAwareDialogHost {
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(Spacing.xl),
+                shape = MaterialTheme.shapes.extraLarge,
+                color = MaterialTheme.colorScheme.surface,
             ) {
-                Text("Confirm your identity", style = MaterialTheme.typography.titleLarge)
-                Spacer(Modifier.height(Spacing.xs))
-                Text(
-                    if (allowBiometrics && prompt != null) {
-                        "Confirm to $actionDescription with your app PIN or enabled biometrics."
-                    } else {
-                        "Enter your 6-digit app PIN to $actionDescription."
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
-
-                if (allowBiometrics && prompt != null) {
-                    Spacer(Modifier.height(Spacing.md))
-                    OutlinedButton(
-                        onClick = {
-                            biometricMessage = null
-                            val promptInfo = BiometricPrompt.PromptInfo.Builder()
-                                .setTitle("Confirm your identity")
-                                .setSubtitle("Confirm to $actionDescription or choose PIN.")
-                                .setNegativeButtonText("Use PIN")
-                                .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK)
-                                .build()
-                            prompt.authenticate(promptInfo)
-                        },
-                        enabled = !verifying,
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                        shape = MaterialTheme.shapes.medium,
-                    ) {
-                        Icon(Icons.Rounded.Fingerprint, contentDescription = null)
-                        Spacer(Modifier.width(Spacing.sm))
-                        Text("Use biometrics")
-                    }
-                }
-
-                Spacer(Modifier.height(Spacing.lg))
-                PinDots(entered = pin.length)
-                Spacer(Modifier.height(Spacing.sm))
                 Column(
-                    modifier = Modifier.heightIn(min = 24.dp),
+                    modifier = Modifier.padding(Spacing.xl),
                     horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
                 ) {
-                    message?.let {
-                        Text(
-                            it,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                            textAlign = TextAlign.Center,
-                        )
-                    }
-                    biometricMessage?.let {
-                        Text(
-                            it,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                            textAlign = TextAlign.Center,
-                        )
-                    }
-                }
-                if (verifying) {
-                    Spacer(Modifier.height(Spacing.sm))
-                    CircularProgressIndicator(
-                        modifier = Modifier.semantics { contentDescription = verificationPhase },
+                    Text("Confirm your identity", style = MaterialTheme.typography.titleLarge)
+                    Spacer(Modifier.height(Spacing.xs))
+                    Text(
+                        if (allowBiometrics && prompt != null) {
+                            "Confirm to $actionDescription with your app PIN or enabled biometrics."
+                        } else {
+                            "Enter your 6-digit app PIN to $actionDescription."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
                     )
-                }
-                Spacer(Modifier.height(Spacing.sm))
-                PinKeypad(
-                    onDigit = {
-                        if (pin.length < PinDefaults.LENGTH && !verifying && blockedForMs == 0L) {
-                            val updatedPin = pin + it
-                            pin = updatedPin
-                            message = null
-                            biometricMessage = null
-                            if (updatedPin.length == PinDefaults.LENGTH) submitPin(updatedPin)
+
+                    if (allowBiometrics && prompt != null) {
+                        Spacer(Modifier.height(Spacing.md))
+                        OutlinedButton(
+                            onClick = {
+                                biometricMessage = null
+                                val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                                    .setTitle("Confirm your identity")
+                                    .setSubtitle("Confirm to $actionDescription or choose PIN.")
+                                    .setNegativeButtonText("Use PIN")
+                                    .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK)
+                                    .build()
+                                prompt.authenticate(promptInfo)
+                            },
+                            enabled = !verifying,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                            shape = MaterialTheme.shapes.medium,
+                        ) {
+                            Icon(Icons.Rounded.Fingerprint, contentDescription = null)
+                            Spacer(Modifier.width(Spacing.sm))
+                            Text("Use biometrics")
                         }
-                    },
-                    onBackspace = {
-                        pin = pin.dropLast(1)
-                        message = null
-                    },
-                    enabled = !verifying && blockedForMs == 0L,
-                )
-                Spacer(Modifier.height(Spacing.md))
-                TextButton(
-                    onClick = { if (!actionCompleted) currentOnDismiss.value() },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Cancel") }
+                    }
+
+                    Spacer(Modifier.height(Spacing.lg))
+                    PinDots(entered = pin.length)
+                    Spacer(Modifier.height(Spacing.sm))
+                    Column(
+                        modifier = Modifier.heightIn(min = 24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        message?.let {
+                            Text(
+                                it,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                        biometricMessage?.let {
+                            Text(
+                                it,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
+                    if (verifying) {
+                        Spacer(Modifier.height(Spacing.sm))
+                        CircularProgressIndicator(
+                            modifier = Modifier.semantics { contentDescription = verificationPhase },
+                        )
+                    }
+                    Spacer(Modifier.height(Spacing.sm))
+                    PinKeypad(
+                        onDigit = {
+                            if (pin.length < PinDefaults.LENGTH && !verifying && blockedForMs == 0L) {
+                                val updatedPin = pin + it
+                                pin = updatedPin
+                                message = null
+                                biometricMessage = null
+                                if (updatedPin.length == PinDefaults.LENGTH) submitPin(updatedPin)
+                            }
+                        },
+                        onBackspace = {
+                            pin = pin.dropLast(1)
+                            message = null
+                        },
+                        enabled = !verifying && blockedForMs == 0L,
+                    )
+                    Spacer(Modifier.height(Spacing.md))
+                    TextButton(
+                        onClick = { if (!actionCompleted) currentOnDismiss.value() },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Cancel") }
+                }
             }
         }
     }

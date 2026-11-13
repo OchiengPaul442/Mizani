@@ -54,6 +54,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
 import com.mizani.money.core.money.Currencies
 import com.mizani.money.core.money.Currency
+import com.mizani.money.ui.FoldAwareDialogHost
 
 /**
  * Full-height, searchable currency picker. The complete current-world catalog is a LazyColumn
@@ -135,128 +136,130 @@ fun MizaniCurrencyPicker(
                 }
             }
 
-            Surface(
-                modifier = Modifier
-                    .widthIn(max = 560.dp)
-                    .fillMaxWidth(0.94f)
-                    .fillMaxHeight(0.88f)
-                    .imePadding(),
-                shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.surface,
-            ) {
-                Column(
+            FoldAwareDialogHost {
+                Surface(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(20.dp),
+                        .widthIn(max = 560.dp)
+                        .fillMaxWidth(0.94f)
+                        .fillMaxHeight(0.88f)
+                        .imePadding(),
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surface,
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(20.dp),
                     ) {
-                        Text(
-                            "Choose currency",
-                            style = MaterialTheme.typography.titleLarge,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Text(
-                            "${filtered.size} of ${currencies.size}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        IconButton(onClick = {
-                            query = ""
-                            open = false
-                        }) {
-                            Icon(Icons.Rounded.Close, contentDescription = "Close currency picker")
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                "Choose currency",
+                                style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(
+                                "${filtered.size} of ${currencies.size}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            IconButton(onClick = {
+                                query = ""
+                                open = false
+                            }) {
+                                Icon(Icons.Rounded.Close, contentDescription = "Close currency picker")
+                            }
                         }
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        label = { Text("Search by code, name or symbol") },
-                        leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-                        trailingIcon = {
-                            if (query.isNotEmpty()) {
-                                IconButton(onClick = { query = "" }) {
-                                    Icon(Icons.Rounded.Close, contentDescription = "Clear search")
+                        Spacer(Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = query,
+                            onValueChange = { query = it },
+                            label = { Text("Search by code, name or symbol") },
+                            leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+                            trailingIcon = {
+                                if (query.isNotEmpty()) {
+                                    IconButton(onClick = { query = "" }) {
+                                        Icon(Icons.Rounded.Close, contentDescription = "Clear search")
+                                    }
                                 }
-                            }
-                        },
-                        singleLine = true,
-                        shape = MaterialTheme.shapes.small,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    LazyColumn(
-                        modifier = Modifier.weight(1f),
-                        state = listState,
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
-                    ) {
-                        if (filtered.isEmpty()) {
-                            item {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 24.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                ) {
-                                    Text("No currencies match", style = MaterialTheme.typography.titleSmall)
-                                    Spacer(Modifier.height(4.dp))
-                                    Text(
-                                        "Try a different code, name or symbol.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                        } else {
-                            items(filtered, key = { it.code }) { currency ->
-                                val isSelected = currency.code.equals(selectedCode, ignoreCase = true)
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .heightIn(min = 52.dp)
-                                        .clip(MaterialTheme.shapes.small)
-                                        .background(
-                                            if (isSelected) MaterialTheme.colorScheme.primaryContainer
-                                            else Color.Transparent
+                            },
+                            singleLine = true,
+                            shape = MaterialTheme.shapes.small,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        LazyColumn(
+                            modifier = Modifier.weight(1f),
+                            state = listState,
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                        ) {
+                            if (filtered.isEmpty()) {
+                                item {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 24.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                    ) {
+                                        Text("No currencies match", style = MaterialTheme.typography.titleSmall)
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(
+                                            "Try a different code, name or symbol.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
-                                        .clickable(role = Role.Button) {
-                                            onSelect(currency.code)
-                                            open = false
-                                            query = ""
+                                    }
+                                }
+                            } else {
+                                items(filtered, key = { it.code }) { currency ->
+                                    val isSelected = currency.code.equals(selectedCode, ignoreCase = true)
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .heightIn(min = 52.dp)
+                                            .clip(MaterialTheme.shapes.small)
+                                            .background(
+                                                if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                                else Color.Transparent
+                                            )
+                                            .clickable(role = Role.Button) {
+                                                onSelect(currency.code)
+                                                open = false
+                                                query = ""
+                                            }
+                                            .semantics { contentDescription = "${currency.code} ${currency.name}" }
+                                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Text(
+                                            currency.code,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                                        )
+                                        Spacer(Modifier.width(10.dp))
+                                        Text(
+                                            currency.name,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            modifier = Modifier.weight(1f),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                        Text(
+                                            currency.symbol,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                        if (isSelected) {
+                                            Spacer(Modifier.width(8.dp))
+                                            Icon(
+                                                Icons.Rounded.Check,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                            )
                                         }
-                                        .semantics { contentDescription = "${currency.code} ${currency.name}" }
-                                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Text(
-                                        currency.code,
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                                    )
-                                    Spacer(Modifier.width(10.dp))
-                                    Text(
-                                        currency.name,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        modifier = Modifier.weight(1f),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                    Text(
-                                        currency.symbol,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                    if (isSelected) {
-                                        Spacer(Modifier.width(8.dp))
-                                        Icon(
-                                            Icons.Rounded.Check,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                        )
                                     }
                                 }
                             }

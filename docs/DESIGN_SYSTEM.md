@@ -164,6 +164,30 @@ System sans with tabular figures enabled for money. No custom font is bundled (o
   the global Add FAB; bottom labels stay visible from 300dp and hide only for very large type.
   Application route changes are immediate so the previous page never shows through during Back or
   CTA navigation; onboarding keeps its local page animation.
+- **Foldable navigation**: in a half-open posture the book sidebar and tabletop dock are
+  navigation-only: a compact Mizani header, the five destinations and one privacy line. They do not
+  repeat Home's quick actions or the workspace name. Home keeps its "Record activity" card; on
+  Activity, Insights and More the global Add FAB remains available and opens the pane-contained
+  add chooser. Flat and closed postures keep the existing bottom bar/rail and FAB behavior.
+- **Foldable dialogs and sheets**: dialogs and the add chooser are constrained to the content pane
+  with `FoldAwareDialogHost`; they never span the hinge. In a half-open posture the add chooser is a
+  rounded dialog instead of a bottom sheet, with the same four recording destinations. Flat and
+  closed postures keep the existing bottom sheet and dialog behavior.
+
+## Foldable layout
+
+A separating hinge creates two non-overlapping panes; the hinge gap is never used for content.
+
+- **Book (vertical hinge)**: the leading pane hosts the persistent navigation sidebar; the
+  trailing pane hosts the current screen.
+- **Tabletop (horizontal hinge)**: the top pane hosts the current screen; the bottom pane hosts the
+  navigation dock.
+- **Flat/closed**: the full window is used with the existing navigation bar or rail.
+
+Panes are used only when both are usable (book >=300dp per pane, tabletop >=260dp per pane);
+otherwise the larger pane takes the content and the smaller becomes a compact icon-only navigation
+pane or a branded backdrop. Each pane applies its own safe-drawing insets, and dialogs and sheets
+are contained in the content pane.
 
 ## Accessibility
 

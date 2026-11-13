@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
+import com.mizani.money.ui.FoldAwareDialogHost
 
 private data class NoticeSection(val title: String, val introduction: String, val license: String)
 
@@ -96,69 +97,71 @@ fun ThirdPartyNoticesDialog(onClose: () -> Unit) {
             securePolicy = SecureFlagPolicy.SecureOn,
         ),
     ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth(0.96f)
-                .widthIn(max = 640.dp)
-                .fillMaxHeight(0.94f),
-            shape = MaterialTheme.shapes.large,
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 4.dp,
-        ) {
-            Column {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text("Third-party notices", modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
-                    IconButton(onClick = onClose) {
-                        Icon(Icons.Rounded.Close, contentDescription = "Close third-party notices")
+        FoldAwareDialogHost {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth(0.96f)
+                    .widthIn(max = 640.dp)
+                    .fillMaxHeight(0.94f),
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 4.dp,
+            ) {
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("Third-party notices", modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
+                        IconButton(onClick = onClose) {
+                            Icon(Icons.Rounded.Close, contentDescription = "Close third-party notices")
+                        }
                     }
-                }
-                LazyColumn(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(18.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp, vertical = 18.dp),
-                ) {
-                    item {
-                        Text(
-                            "Mizani includes third-party software and artwork. Software dependency notices are " +
-                                "also available from Settings > About & privacy > Open-source licenses.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    items(thirdPartyNotices) { notice ->
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(notice.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                            Text(notice.introduction, style = MaterialTheme.typography.bodyMedium)
+                    LazyColumn(
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(18.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp, vertical = 18.dp),
+                    ) {
+                        item {
                             Text(
-                                notice.license,
-                                style = MaterialTheme.typography.bodySmall,
-                                fontFamily = FontFamily.Monospace,
+                                "Mizani includes third-party software and artwork. Software dependency notices are " +
+                                    "also available from Settings > About & privacy > Open-source licenses.",
+                                style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                    }
-                    item {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("Storyset illustrations", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                            Text(
-                                "Attribution: Illustrations by Storyset (storyset.com), Freepik Company. " +
-                                    "The onboarding and empty-state illustrations are modified Storyset artwork. " +
-                                    "Source credits and modification details are in the project's " +
-                                    "docs/ASSET_CREDITS.md.",
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
+                        items(thirdPartyNotices) { notice ->
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(notice.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                Text(notice.introduction, style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    notice.license,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        item {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("Storyset illustrations", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    "Attribution: Illustrations by Storyset (storyset.com), Freepik Company. " +
+                                        "The onboarding and empty-state illustrations are modified Storyset artwork. " +
+                                        "Source credits and modification details are in the project's " +
+                                        "docs/ASSET_CREDITS.md.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
                         }
                     }
-                }
-                HorizontalDivider()
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.End,
-                ) {
-                    Button(onClick = onClose, shape = MaterialTheme.shapes.medium) { Text("Done") }
+                    HorizontalDivider()
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        Button(onClick = onClose, shape = MaterialTheme.shapes.medium) { Text("Done") }
+                    }
                 }
             }
         }

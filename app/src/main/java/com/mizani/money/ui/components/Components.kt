@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -21,7 +23,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ArrowBack
@@ -33,6 +37,7 @@ import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -66,6 +71,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
 import com.mizani.money.R
@@ -77,6 +83,8 @@ import com.mizani.money.core.money.MoneyFormat
 import com.mizani.money.core.time.DateText
 import com.mizani.money.data.local.TransactionEntity
 import com.mizani.money.data.repo.LedgerSnapshot
+import com.mizani.money.ui.FoldAwareDialogHost
+import com.mizani.money.ui.LocalFoldWindowLayout
 import com.mizani.money.ui.theme.LocalMizaniThemeTokens
 import java.time.Instant
 import java.time.LocalDate
@@ -512,7 +520,7 @@ fun MizaniCelebration(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun DateField(
     label: String,
@@ -545,6 +553,62 @@ fun DateField(
         val pickerState = rememberDatePickerState(
             initialSelectedDateMillis = date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
         )
+        val foldLayout = LocalFoldWindowLayout.current
+        if (foldLayout != null && foldLayout.isHalfOpen) {
+            // A platform DatePickerDialog centers on the whole display and can cross the hinge, so
+            // the half-open picker mirrors DateRangePickerDialog: a fold-aware dialog constrained
+            // to the content pane with its own scrollable picker and action buttons.
+            Dialog(
+                onDismissRequest = { showPicker = false },
+                properties = DialogProperties(
+                    usePlatformDefaultWidth = false,
+                    securePolicy = SecureFlagPolicy.SecureOn,
+                ),
+            ) {
+                FoldAwareDialogHost {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = 360.dp)
+                            .heightIn(max = 568.dp),
+                        shape = DatePickerDefaults.shape,
+                        color = DatePickerDefaults.colors().containerColor,
+                        tonalElevation = DatePickerDefaults.TonalElevation,
+                    ) {
+                        Column(verticalArrangement = Arrangement.SpaceBetween) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(weight = 1f, fill = false)
+                                    .verticalScroll(rememberScrollState()),
+                            ) {
+                                DatePicker(state = pickerState)
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.End)
+                                    .padding(PaddingValues(bottom = 8.dp, end = 6.dp)),
+                            ) {
+                                FlowRow(
+                                    horizontalArrangement = Arrangement.End,
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                ) {
+                                    TextButton(onClick = { showPicker = false }) { Text("Cancel") }
+                                    TextButton(
+                                        onClick = {
+                                            pickerState.selectedDateMillis?.let { millis ->
+                                                onDateSelected(Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate())
+                                            }
+                                            showPicker = false
+                                        },
+                                    ) { Text("Choose") }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return
+        }
         DatePickerDialog(
             onDismissRequest = { showPicker = false },
             modifier = Modifier.fillMaxWidth(0.94f).widthIn(max = 560.dp),

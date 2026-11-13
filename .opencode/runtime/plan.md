@@ -1,75 +1,57 @@
-# Mizani UI redesign — plan
+# Plan — Foldable responsiveness (Pixel 10 Pro Fold)
 
 ## Objective
-Redesign Mizani's interface for clarity, calmer density, discoverability and responsive/foldable use, centered on Home, without changing financial data semantics, persistence, backup compatibility or legal copy.
-
-## Product direction
-- Calm, precise, trustworthy; brand unchanged (emerald/mint/gold, deep teal, soft-white; medium radii).
-- Home becomes a **dashboard with one clear hierarchy**: greeting + period control → balance/period hero → one row of quick actions → spending → recent activity → wallets → coming up → momentum → insight.
-- Remove duplicate calls to action and repeated summary blocks. Every destination reachable in one tap from the Home action row or section header.
-- Less card-per-row noise in Activity; grouped day cards with hairline dividers.
-- Responsive: compact (<600dp) single column; expanded content (>=700dp after rail) two-column dashboard; max content width on tablets; bottom labels kept on mini devices; quick actions stay in one row at normal text scale and wrap 2x2 only for large font/smallest width.
-- **Fold postures are a requirement** (foldable emulator with Closed / Half-Open / Open):
-  - Closed (cover display, narrow): single column, bottom navigation with labels, quick actions one row, hero and actions above the fold.
-  - Half-open (horizontal hinge / tabletop): render inside the chosen safe pane only; content must be usable in a half-height window; no controls under the hinge; single column; sections scroll; bottom nav stays reachable. Hinge bounds continue to come from `WindowInfoTracker`/`FoldingFeature` via `AdaptiveLayout.largestSafePane`.
-  - Open (inner display): rail navigation + two-column dashboard when the content pane is >=700dp; otherwise single column capped at 680dp and centered.
-  - Verify all three postures by window metrics + uiautomator bounds (FLAG_SECURE prevents readable screenshots).
-- Accessibility preserved: >=48dp targets, content descriptions, tabular money, no color-only meaning, chart text alternatives.
-
-## Known facts (evidence)
-- Home: `feature/home/HomeScreen.kt` stacks 9+ blocks: greeting, PeriodMenu, wallet list, momentum, 3-column summary, duplicate quick-add card, recent, donut, insight. `QuickAddSection` and FAB both duplicate actions.
-- `QuickAddActions` only exposes expense/income. Transfer and import are hidden in the FAB sheet.
-- `DashboardMetrics.upcoming` is computed but unused in any screen; `budget`/`safeToSpend` also unused outside analytics.
-- Activity: `TransactionsScreen.kt` wraps every transaction row in its own `MizaniCard` (line ~297).
-- Navigation: 5 tabs + extended FAB; labels hidden below 360dp or fontScale>1.15; FAB hidden on Home/Activity when ledger empty; content insets inconsistent (`Spacing.bottom` vs `bottomFab`).
-- Tests depend on: "Activity", "Daily momentum", "Track days, not amounts · 10 points per day.", "0 points", "Record today", "Milestone: Starting out", "Next milestone: First steps · 3 days to go", "Recent activity", FAB text "Add", Bills tab, "Bills & commitments".
-- Design system doc: `docs/DESIGN_SYSTEM.md` (calm, restrained, 16dp rhythm, medium radii).
-- Build/verify: `.\gradlew.bat :app:testDebugUnitTest` and `.\gradlew.bat :app:assembleDebug` (README, CI).
-
-## Signature creative moves (calm, not decorative noise)
-1. **Balance hero**: gradient field with two oversized, low-opacity brand rings and a single warm-gold focal dot (the brand's "balance" idea); a hairline month-progress track with a gold marker ("Day 12 of 30"). On open/expanded, the hero becomes a full-width band: balance on the left, period flow on the right.
-2. **Command bar actions**: the four actions share one inset surface with vertical hairlines, tinted icon medallions and a short press-scale + haptic response — a single CTA row, not four competing buttons.
-3. **Coming-up timeline**: date badges with a category-colored connector/dot, relative due labels ("in 3 days"), income shown as expected money rather than a bill.
-4. **Section rhythm**: a small gold accent dot before Home section titles; a 7-day "pulse" bar strip in the Spending card footer so the screen has a visual heartbeat without another section.
-5. **Activity as a day timeline** (second pass): date rail + one grouped card per day with hairline dividers instead of card-per-row.
-6. **Empty state**: the Storyset illustration sits inside soft concentric balance rings, matching the hero language.
-
-## Workstreams
-1. **Design foundation** — semantic accent/positive tokens, compact component primitives (quick action tile, grouped list card, hero shell, section header with supporting copy), responsive breakpoint tokens.
-2. **Home** — rewrite structure and hierarchy; new balance hero (masked total + period income/spend/net); 4 quick actions in one row; spending snapshot; recent activity; wallet strip; coming-up bills (uses `metrics.upcoming`); compact momentum at bottom; insight.
-3. **Navigation shell** — keep 5 destinations; improve bottom bar labels/insets, FAB policy, content max width; expanded dashboard layout.
-4. **Activity** — grouped day cards, denser rows, clearer summary/filters.
-5. **Polish** — More/Insights spacing and section headers; strings/resources; design doc update.
-6. **Verification** — unit tests + assembleDebug + emulator screenshots (compact, expanded, large font) + test-string contract check.
+Make Mizani respond correctly and intentionally to foldable postures and window changes:
+OPENED, HALF_OPENED (book/tabletop, multiple hinge angles), CLOSED/cover, REAR_DISPLAY_MODE,
+CONCURRENT_INNER_DEFAULT, portrait/landscape rotation, and split/resized windows. Verify on the
+running API 37 Pixel 10 Pro Fold emulator with installed debug build.
 
 ## Acceptance criteria
-- Home shows at most one primary CTA per action; expense/income/transfer/import reachable from one row.
-- Home top-of-screen (before scroll, 360x800dp) shows greeting, period control, total balance + period summary, and the quick-action row.
-- No duplicate "Quick Add" card; wallet visibility control present in hero.
-- Layout at 320dp, 360dp, 411dp and >=840dp has no clipped/overlapping controls; 4 actions stay one row at default font scale; labels visible in bottom nav at 360dp.
-- Activity groups a day's transactions into one card with dividers.
-- All existing instrumentation text contracts still present or tests updated intentionally.
-- `:app:testDebugUnitTest` passes; `:app:assembleDebug` succeeds; screenshots captured for phone and expanded width.
+1. Current debug APK builds and installs over the existing 1.10.0 data without data loss.
+2. Every app surface (splash, onboarding, legal, lock, Home, Activity, Insights, Bills, More,
+   detail/form screens, bottom sheets/dialogs) stays inside the active display and avoids the
+   separating hinge; no clipped, overlapping, or unreachable primary controls.
+3. OPENED flat: full inner display used; navigation rail on wide windows; content capped/centered.
+4. HALF_OPENED book (vertical hinge): both panes used intentionally (nav rail/panel in one pane,
+   content in the other) OR app occupies a clearly intentional pane; nothing crosses the hinge.
+5. HALF_OPENED tabletop (horizontal hinge): content and primary controls are reachable in the
+   correct pane; navigation/actions are not stranded above/below the hinge.
+6. CLOSED/cover: compact phone layout, full cover display, all controls reachable.
+7. Rotation/angle changes preserve navigation and in-progress form/sheet state where feasible;
+   no crash, black screen, or stale one-frame layout.
+8. REAR_DISPLAY_MODE / CONCURRENT_INNER_DEFAULT: app remains launchable/visible or a documented
+   platform limitation; no crash.
+9. Font scale 1.0 and >=1.3, compact/medium/expanded widths remain usable.
+9a. Slight fold: FLAT/no-intersection stays full-window; HALF_OPENED splits only when both panes
+    are usable (book >=300dp wide each, tabletop >=260dp tall each); otherwise compact/single
+    larger pane + intentional backdrop. No blank half; no state loss at the transition.
+9b. Android split-screen: app window resize reflows correctly; a hinge outside the app window does
+    not force a split; a hinge inside it follows 9a; dialogs stay inside the app content pane.
+10. Executable evidence: posture-by-posture hierarchy/bounds + screenshots where not FLAG_SECURE
+    blocked; unit tests for fold/layout policy; focused JVM/compile checks; changelog/docs updated.
 
-## Second redesign pass (after emulator restart)
-- DONE Insights: full-width cash-flow hero, responsive two columns (Outlook/Spending/Bars left; What changed/Income trends right), export moved to the top bar, accent section headers; advanced detail full width. Build green.
-- DONE More: centered 680dp / two-column hub at >=700dp, accent section headers, all 9 labels/routes/dividers, FAB inset preserved. Build green.
-- PENDING Settings: centered 680dp for main and data-tools branches, accent section headers, Appearance card dividers; no behavior/label changes.
-- DONE Performance: `AnalyticsEngine.dailySpending(days, today)` single ledger pass replaces Home's 7x `expenseMinor`; unit-tested equivalence. Activity already groups rows into day cards (fewer Lazy items).
-- Verification planned: unit tests, assembleDebug, uiautomator bounds on Insights/More/Settings in Open/Closed, no demo-ledger reset.
+## Task graph
+1. DONE: Confirm adb/gradle access through test-workers; identify AVD/API/current posture.
+2. DONE: Install current 1.10.0 debug APK; confirm Home renders in CLOSED.
+3. DONE: Discover posture/rotation/hinge-angle controls; baseline matrix: book blank right half,
+   tabletop +24px hinge crossing, open/closed fine.
+4. DONE: Audit adaptive code and design fold policy (two-pane sidebar/dock, thresholds, insets).
+5. DONE: Core two-pane build installed and visually confirmed in OPENED and BOOK; 12 unit tests pass.
+6. DONE: Dock/sidebar polish builds and tests pass (header, bottom nav, pinned footer).
+7. DONE: Lock-screen scroll + PIN-dialog host; build passed. Dialog alert/date rewrites exist but
+   were not compiled; add-chooser/custom wraps remain.
+8. DONE: On-device closed/book/tabletop navigation, hinge-45, logcat checks all passed.
+9. ACTIVE: Finish dialogs + navigation-only fold panels (remove duplicate quick actions, restore
+   fold-mode Add FAB), build/test; then install and visually verify.
+10. PENDING: Final matrix incl. open/book/tabletop/closed rotations, hinge 15/45/90/145/155,
+    split-screen, font scale 1.0/1.3, form rotation, lock, dialogs/sheets; screenshots + hierarchy.
+11. PENDING: Run testDebugUnitTest, compileDebugAndroidTestKotlin, lintDebug, assembleDebug.
+12. PENDING: Reviewer pass (auth/lock + privacy dialog changes); update CHANGELOG/docs
+    (VERIFICATION, DESIGN_SYSTEM, PROJECT_STRUCTURE); final honest handoff.
 
-## Status (final)
-- DONE: Home dashboard redesign; full-width balance hero with rings/progress on open; one-row command bar; spending pulse; recent activity; wallets; forward-looking coming up; momentum; insight.
-- DONE: Navigation fold policy, labeled bottom nav, Home FAB removal, new Home callbacks.
-- DONE: Activity grouped by day; duplicate shown-count removed.
-- DONE: Strings/docs/changelog; stale Bills test assertion corrected.
-- DONE: Unit tests, compileDebugKotlin, assembleDebug, compileDebugAndroidTestKotlin.
-- DONE: Closed / Half-Open / Open / 1.3x bounds verification; all PASS (see evidence.md).
-- DONE (1.10.0): Bills tab spacing/line-height; current-only 153-currency catalog + searchable full-height picker (jpy verified); lock redirect focuses Security with banner + toast; About build identity/install source/Play link; release-version task and Play update troubleshooting; version 1.10.0 / code 1010000, changelog dated 2026-11-13.
-- LIMITATION: no Play Console access; signed AAB not produced here (owner signing needed); new Insights/More/Settings wide states compile but were not re-captured after the fold AVD was replaced by the phone; no readable screenshots (FLAG_SECURE).
-
-## Risks / limits
-- Architect session cannot run shell; delegate build/adb to workers.
-- Instrumentation suites reset app state; only run on disposable emulator, one class at a time.
-- No new DB fields; no financial logic changes; `metrics.upcoming` is read-only.
-- Do not change backup JSON, Room schema, DataStore keys, enum values, navigation route names used by tests.
+## Risks
+- FLAG_SECURE blocks pixel screenshots; use UI hierarchy, app bounds, semantics, and screenshots of
+  non-secure surfaces. Do not weaken FLAG_SECURE in shipped code.
+- Emulator posture switching may recreate the activity and lose transient form state.
+- Rear/concurrent display modes may show launcher by platform design.
+- Changing whole-app pane strategy can regress phone/normal tablet layout.

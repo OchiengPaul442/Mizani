@@ -37,6 +37,7 @@ import androidx.compose.ui.window.SecureFlagPolicy
 import com.mizani.money.core.legal.LegalDocument
 import com.mizani.money.core.legal.LegalDocumentId
 import com.mizani.money.core.legal.LegalDocuments
+import com.mizani.money.ui.FoldAwareDialogHost
 
 @Composable
 fun LegalDocumentsDialog(
@@ -56,49 +57,51 @@ fun LegalDocumentsDialog(
             securePolicy = SecureFlagPolicy.SecureOn,
         ),
     ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth(0.96f)
-                .widthIn(max = 640.dp)
-                .fillMaxHeight(0.94f),
-            shape = MaterialTheme.shapes.large,
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 4.dp,
-        ) {
-            Column {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Legal information", style = MaterialTheme.typography.titleLarge)
+        FoldAwareDialogHost {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth(0.96f)
+                    .widthIn(max = 640.dp)
+                    .fillMaxHeight(0.94f),
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 4.dp,
+            ) {
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Legal information", style = MaterialTheme.typography.titleLarge)
+                        }
+                        IconButton(onClick = onClose) {
+                            Icon(Icons.Rounded.Close, contentDescription = "Close legal information")
+                        }
                     }
-                    IconButton(onClick = onClose) {
-                        Icon(Icons.Rounded.Close, contentDescription = "Close legal information")
+
+                    PrimaryTabRow(selectedTabIndex = selectedDocument.ordinal) {
+                        Tab(
+                            selected = selectedDocument == LegalDocumentId.TERMS,
+                            onClick = { selectedDocument = LegalDocumentId.TERMS },
+                            text = { Text("Terms of Service") },
+                        )
+                        Tab(
+                            selected = selectedDocument == LegalDocumentId.PRIVACY,
+                            onClick = { selectedDocument = LegalDocumentId.PRIVACY },
+                            text = { Text("Privacy Notice") },
+                        )
                     }
-                }
 
-                PrimaryTabRow(selectedTabIndex = selectedDocument.ordinal) {
-                    Tab(
-                        selected = selectedDocument == LegalDocumentId.TERMS,
-                        onClick = { selectedDocument = LegalDocumentId.TERMS },
-                        text = { Text("Terms of Service") },
-                    )
-                    Tab(
-                        selected = selectedDocument == LegalDocumentId.PRIVACY,
-                        onClick = { selectedDocument = LegalDocumentId.PRIVACY },
-                        text = { Text("Privacy Notice") },
-                    )
-                }
-
-                DocumentBody(document, Modifier.weight(1f))
-                HorizontalDivider()
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Button(onClick = onClose, shape = MaterialTheme.shapes.medium) { Text("Done") }
+                    DocumentBody(document, Modifier.weight(1f))
+                    HorizontalDivider()
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Button(onClick = onClose, shape = MaterialTheme.shapes.medium) { Text("Done") }
+                    }
                 }
             }
         }
