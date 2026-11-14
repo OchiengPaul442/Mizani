@@ -476,6 +476,9 @@ private fun MoneySetupStep(
             selectedText = country.name,
             options = CountryPacks.all.map { PickerOption(it.code, it.name) },
             onSelect = onCountryChange,
+            searchable = true,
+            searchHint = stringResource(R.string.search_countries),
+            emptyResultsLabel = stringResource(R.string.no_countries_match),
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(Spacing.md))

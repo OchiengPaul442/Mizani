@@ -4,7 +4,6 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,8 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Download
@@ -50,6 +47,7 @@ import com.mizani.money.ui.AppUiState
 import com.mizani.money.ui.components.MizaniCard
 import com.mizani.money.ui.components.MizaniInfoRow
 import com.mizani.money.ui.components.MizaniMark
+import com.mizani.money.ui.components.MizaniPageContent
 import com.mizani.money.ui.components.MizaniSectionCard
 import com.mizani.money.ui.components.MizaniSectionDivider
 import com.mizani.money.ui.components.MizaniTopBar
@@ -128,14 +126,7 @@ fun AboutScreen(
 
     Column(Modifier.fillMaxSize()) {
         MizaniTopBar(title = "About & privacy", onBack = onBack)
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.lg)
-                .padding(bottom = Spacing.bottom),
-            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
-        ) {
+        MizaniPageContent {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 MizaniMark(size = 56)
                 Spacer(Modifier.width(Spacing.md))

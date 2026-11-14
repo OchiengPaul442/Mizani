@@ -2,8 +2,8 @@ package com.mizani.money.feature.settings
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -14,8 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.automirrored.rounded.Send
@@ -43,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import com.mizani.money.BuildConfig
 import com.mizani.money.core.legal.LegalDocuments
 import com.mizani.money.ui.components.MizaniCard
+import com.mizani.money.ui.components.MizaniPageContent
 import com.mizani.money.ui.components.MizaniTopBar
 import com.mizani.money.ui.components.Spacing
 import com.mizani.money.ui.components.StatusBanner
@@ -152,14 +151,7 @@ fun FeedbackScreen(onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize()) {
         MizaniTopBar(title = "Send feedback", onBack = onBack)
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.lg)
-                .padding(bottom = Spacing.bottom),
-            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
-        ) {
+        MizaniPageContent {
             MizaniCard(containerColor = MaterialTheme.colorScheme.primaryContainer) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(

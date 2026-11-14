@@ -852,6 +852,7 @@ fun SettingsScreen(
                 Column(
                     modifier = Modifier
                         .widthIn(max = 680.dp)
+                        .fillMaxWidth()
                         .fillMaxHeight()
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = Spacing.lg)
@@ -935,6 +936,7 @@ fun SettingsScreen(
             Column(
                 modifier = Modifier
                     .widthIn(max = 680.dp)
+                    .fillMaxWidth()
                     .fillMaxHeight()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = Spacing.lg)
@@ -1618,6 +1620,9 @@ private fun CountryCurrencyDialog(
                     selectedText = CountryPacks.byCode(countryCode).name,
                     options = CountryPacks.all.map { PickerOption(it.code, it.name) },
                     onSelect = { countryCode = it },
+                    searchable = true,
+                    searchHint = stringResource(R.string.search_countries),
+                    emptyResultsLabel = stringResource(R.string.no_countries_match),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Text("Primary currency", style = MaterialTheme.typography.labelMedium)

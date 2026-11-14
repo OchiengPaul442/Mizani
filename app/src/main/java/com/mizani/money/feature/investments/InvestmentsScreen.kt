@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -54,7 +55,9 @@ import com.mizani.money.ui.components.MizaniAmountField
 import com.mizani.money.ui.components.MizaniCard
 import com.mizani.money.ui.components.MizaniPicker
 import com.mizani.money.ui.components.MizaniStatCard
+import com.mizani.money.ui.components.MizaniStatRow
 import com.mizani.money.ui.components.MizaniTopBar
+import com.mizani.money.ui.components.MizaniPageContent
 import com.mizani.money.ui.components.PickerOption
 import com.mizani.money.ui.components.Spacing
 import com.mizani.money.ui.components.StatusBanner
@@ -130,14 +133,7 @@ fun InvestmentsScreen(
                 }
             },
         )
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.lg)
-                .padding(bottom = Spacing.bottom),
-            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
-        ) {
+        MizaniPageContent {
             MizaniCard {
                 Text("Keep a private record of where your money is invested.", style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.height(Spacing.xs))
@@ -148,21 +144,23 @@ fun InvestmentsScreen(
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            MizaniStatRow {
                 MizaniStatCard(
                     label = "Current value",
                     value = protectedMoney(summary.currentValueMinor, currency, state.walletBalancesVisible),
+                    labelRowMinHeight = 48.dp,
                     valueContentDescription = protectedMoneyDescription("Current investment value", summary.currentValueMinor, currency, state.walletBalancesVisible),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                 )
                 MizaniStatCard(
                     label = "Gain / loss",
                     value = protectedMoney(summary.gainLossMinor, currency, state.walletBalancesVisible),
+                    labelRowMinHeight = 48.dp,
                     valueContentDescription = protectedMoneyDescription("Investment gain or loss", summary.gainLossMinor, currency, state.walletBalancesVisible),
                     accent = if (summary.gainLossMinor >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                     infoTitle = stringResource(R.string.info_investment_gain_title),
                     infoBody = stringResource(R.string.info_investment_gain_body),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                 )
             }
 

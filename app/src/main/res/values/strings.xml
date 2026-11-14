@@ -20,6 +20,9 @@
     <string name="common_back">Back</string>
     <string name="common_cancel">Cancel</string>
     <string name="common_ok">OK</string>
+    <string name="search_countries">Search countries</string>
+    <string name="no_countries_match">No countries match</string>
+    <string name="picker_no_matching_options">No matching options</string>
     <string name="country">Country</string>
     <string name="primary_currency">Primary currency</string>
     <string name="suggestions">Suggestions</string>

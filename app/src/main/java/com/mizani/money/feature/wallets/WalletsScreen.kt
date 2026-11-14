@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -64,7 +65,9 @@ import com.mizani.money.ui.components.MizaniAmountField
 import com.mizani.money.ui.components.MizaniCard
 import com.mizani.money.ui.components.MizaniPicker
 import com.mizani.money.ui.components.MizaniStatCard
+import com.mizani.money.ui.components.MizaniStatRow
 import com.mizani.money.ui.components.MizaniTopBar
+import com.mizani.money.ui.components.MizaniPageContent
 import com.mizani.money.ui.components.PickerOption
 import com.mizani.money.ui.components.Spacing
 import com.mizani.money.ui.components.StatusBanner
@@ -138,14 +141,7 @@ fun WalletsScreen(
                 }
             },
         )
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.lg)
-                .padding(bottom = Spacing.bottom),
-            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
-        ) {
+        MizaniPageContent {
             if (error != null) {
                 StatusBanner(
                     text = error!!,
@@ -154,11 +150,12 @@ fun WalletsScreen(
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            MizaniStatRow {
                 MizaniStatCard(
                     label = "Across wallets",
                     value = if (state.walletBalancesVisible) MoneyFormat.format(total, currency) else "••••••",
-                    modifier = Modifier.weight(1f),
+                    labelRowMinHeight = 48.dp,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                     valueContentDescription = if (state.walletBalancesVisible) {
                         "Across wallets ${MoneyFormat.format(total, currency)}"
                     } else {
@@ -168,7 +165,8 @@ fun WalletsScreen(
                 MizaniStatCard(
                     label = "Liquid",
                     value = if (state.walletBalancesVisible) MoneyFormat.format(liquid, currency) else "••••••",
-                    modifier = Modifier.weight(1f),
+                    labelRowMinHeight = 48.dp,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                     accent = MaterialTheme.colorScheme.primary,
                     infoTitle = stringResource(R.string.info_liquid_title),
                     infoBody = stringResource(R.string.info_liquid_body),

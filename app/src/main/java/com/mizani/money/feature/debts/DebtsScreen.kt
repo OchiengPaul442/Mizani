@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -58,7 +59,9 @@ import com.mizani.money.ui.components.MizaniAmountField
 import com.mizani.money.ui.components.MizaniCard
 import com.mizani.money.ui.components.MizaniPicker
 import com.mizani.money.ui.components.MizaniStatCard
+import com.mizani.money.ui.components.MizaniStatRow
 import com.mizani.money.ui.components.MizaniTopBar
+import com.mizani.money.ui.components.MizaniPageContent
 import com.mizani.money.ui.components.PickerOption
 import com.mizani.money.ui.components.ProgressBar
 import com.mizani.money.ui.components.Spacing
@@ -156,14 +159,7 @@ fun DebtsScreen(
                 }
             },
         )
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.lg)
-                .padding(bottom = Spacing.bottom),
-            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
-        ) {
+        MizaniPageContent {
             MizaniCard {
                 Text("See what you owe and how it is changing.", style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.height(Spacing.xs))
@@ -174,19 +170,19 @@ fun DebtsScreen(
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            MizaniStatRow {
                 MizaniStatCard(
                     label = "Total owed",
                     value = protectedMoney(totalOwed, currency, state.walletBalancesVisible),
                     valueContentDescription = protectedMoneyDescription("Total debt", totalOwed, currency, state.walletBalancesVisible),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                 )
                 MizaniStatCard(
                     label = "Planned payments",
                     value = protectedMoney(plannedPayments, currency, state.walletBalancesVisible),
                     caption = "per payment schedule",
                     valueContentDescription = protectedMoneyDescription("Planned debt payments", plannedPayments, currency, state.walletBalancesVisible),
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                 )
             }
 

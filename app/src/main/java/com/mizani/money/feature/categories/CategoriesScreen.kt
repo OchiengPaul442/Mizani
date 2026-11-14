@@ -60,6 +60,7 @@ import com.mizani.money.ui.AppViewModel
 import com.mizani.money.ui.components.CategoryAvatar
 import com.mizani.money.ui.components.MizaniCard
 import com.mizani.money.ui.components.MizaniIcons
+import com.mizani.money.ui.components.MizaniPageContent
 import com.mizani.money.ui.components.MizaniTopBar
 import com.mizani.money.ui.components.SmallPill
 import com.mizani.money.ui.components.Spacing
@@ -131,14 +132,7 @@ fun CategoriesScreen(
                 }
             },
         )
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.lg)
-                .padding(bottom = Spacing.bottom),
-            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
-        ) {
+        MizaniPageContent {
             if (error != null) {
                 StatusBanner(
                     text = error!!,

@@ -179,7 +179,7 @@ fun MizaniTopBar(
 
 @Composable
 fun MizaniCard(
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier.fillMaxWidth(),
     // Default card surface follows the selected scheme: white in light mode and layered
     // charcoal in dark mode, so cards remain distinct from the page background.
     containerColor: Color = MaterialTheme.colorScheme.surface,

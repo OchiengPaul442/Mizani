@@ -1,10 +1,14 @@
 package com.mizani.money.ui.components
 
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -16,7 +20,23 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+
+/** Equal-height row for related secondary metrics. */
+@Composable
+fun MizaniStatRow(
+    modifier: Modifier = Modifier,
+    content: @Composable RowScope.() -> Unit,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        content = content,
+    )
+}
 
 /**
  * Compact secondary metric card used on Home, Wallets, Debts, Plan and More.
@@ -27,6 +47,7 @@ fun MizaniStatCard(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
+    labelRowMinHeight: Dp = 0.dp,
     accent: Color = MaterialTheme.colorScheme.onSurface,
     caption: String? = null,
     icon: ImageVector? = null,
@@ -50,6 +71,7 @@ fun MizaniStatCard(
             Spacer(Modifier.height(Spacing.xs))
         }
         Row(
+            modifier = Modifier.heightIn(min = labelRowMinHeight),
             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {

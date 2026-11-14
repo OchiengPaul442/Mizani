@@ -60,6 +60,7 @@ fun MizaniPicker(
     searchable: Boolean = false,
     searchHint: String = "Search",
     fieldLabel: String? = null,
+    emptyResultsLabel: String? = null,
 ) {
     var expanded by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
@@ -132,7 +133,12 @@ fun MizaniPicker(
             }
             if (searchable && filteredOptions.isEmpty()) {
                 DropdownMenuItem(
-                    text = { Text("No matching currencies", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                    text = {
+                        Text(
+                            emptyResultsLabel ?: stringResource(R.string.picker_no_matching_options),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
                     onClick = {},
                     enabled = false,
                 )

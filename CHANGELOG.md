@@ -6,6 +6,23 @@ The first recorded version is `1.1.0`; earlier history for the `v1.0.0` tag has 
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-11-14
+
+### Added
+
+- Add searchable country choices worldwide and use the selected country's currency as the onboarding default.
+
+### Changed
+
+- Center single-column More destinations at a consistent readable width and make cards fill their
+  content column by default, keeping sibling cards aligned across orientations.
+
+### Fixed
+
+- Anchor the app-lock recovery note at the bottom of the screen, away from the PIN keypad.
+- Keep paired metric cards the same height and align labels on pages with info actions.
+- Give app-lock keypad buttons a clear outline against the screen gradient.
+
 ## [1.11.0] - 2026-11-13
 
 ### Added

@@ -265,14 +265,8 @@ object CountryPacks {
     )
 
     private val supportedPacks = listOf(uganda, kenya, tanzania, rwanda, nigeria, ghana, southAfrica)
-    private val africanCountryCodes = listOf(
-        "DZ", "AO", "BJ", "BW", "BF", "BI", "CV", "CM", "CF", "TD", "KM", "CG", "CD", "CI",
-        "DJ", "EG", "GQ", "ER", "SZ", "ET", "GA", "GM", "GN", "GW", "LS", "LR", "LY", "MG",
-        "MW", "ML", "MR", "MU", "MA", "MZ", "NA", "NE", "ST", "SN", "SC", "SL", "SO", "SS",
-        "SD", "TG", "TN", "ZM", "ZW",
-    )
     private val supportedCodes = supportedPacks.mapTo(mutableSetOf()) { it.code }
-    private val genericAfricanPacks = africanCountryCodes.mapNotNull { code ->
+    private val genericCountryPacks = Locale.getISOCountries().mapNotNull { code ->
         if (code in supportedCodes) return@mapNotNull null
         val region = Locale.Builder().setRegion(code).build()
         val currencyCode = runCatching { JavaCurrency.getInstance(region).currencyCode }.getOrNull()
@@ -291,7 +285,7 @@ object CountryPacks {
         )
     }
 
-    val all: List<CountryPack> = (supportedPacks + genericAfricanPacks)
+    val all: List<CountryPack> = (supportedPacks + genericCountryPacks)
         .sortedBy { it.name } + other
 
     fun byCode(code: String): CountryPack = all.firstOrNull { it.code == code } ?: other

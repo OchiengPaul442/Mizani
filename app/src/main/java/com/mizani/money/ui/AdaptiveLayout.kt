@@ -28,7 +28,7 @@ object AdaptiveLayout {
     /** Content width at which Home switches from one column to two. */
     const val EXPANDED_CONTENT_WIDTH_DP = 700
 
-    /** Cap for the single-column Home content so phones never stretch cards. */
+    /** Cap for single-column page content so cards stay readable on wide windows. */
     const val SINGLE_COLUMN_MAX_WIDTH_DP = 680
 
     /**

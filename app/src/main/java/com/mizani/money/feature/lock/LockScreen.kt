@@ -3,9 +3,11 @@ package com.mizani.money.feature.lock
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -41,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
@@ -151,98 +154,137 @@ fun LockScreen(vm: AppViewModel, biometricEnabled: Boolean) {
                 ),
             ),
     ) {
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .safeDrawingPadding()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.xl, vertical = Spacing.xxl),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .safeDrawingPadding(),
         ) {
-            Spacer(Modifier.height(Spacing.xl))
-            MizaniMark(size = 72)
-            Spacer(Modifier.height(Spacing.lg))
-            Text("Welcome back", style = MaterialTheme.typography.headlineMedium)
-            Text(
-                "Enter your 6-digit PIN to open Mizani",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(Spacing.xl))
-            PinDots(entered = pin.length)
-            Spacer(Modifier.height(Spacing.md))
-            // heightIn (not a fixed height) so large-font users never lose the message;
-            // liveRegion announces failures and biometric status without stealing focus.
-            Box(Modifier.heightIn(min = 24.dp), contentAlignment = Alignment.Center) {
-                when {
-                    verifying -> CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                    error != null -> Text(
-                        error!!,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                    )
-                    biometricMessage != null -> Text(
-                        biometricMessage!!,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 2,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                    )
-                }
+            val fontScale = LocalDensity.current.fontScale
+            val pinRecoveryNoteAtBottom = maxHeight >= 800.dp * fontScale
+            // On short windows, keep the note in the scroll flow so the keypad keeps more viewport.
+            val recoveryNoteSpace = if (pinRecoveryNoteAtBottom) {
+                72.dp * fontScale + Spacing.xxl
+            } else {
+                0.dp
             }
-            Spacer(Modifier.height(Spacing.lg))
-            PinKeypad(
-                onDigit = { digit ->
-                    if (pin.length < PinDefaults.LENGTH) {
-                        error = null
-                        biometricMessage = null
-                        pin += digit
-                    }
-                },
-                onBackspace = { pin = pin.dropLast(1) },
-                enabled = !verifying && blockedForMs <= 0L,
-            )
-            Spacer(Modifier.height(Spacing.lg))
-            if (canUseBiometrics && prompt != null) {
-                OutlinedButton(
-                    onClick = {
-                        biometricMessage = null
-                        try {
-                            prompt.authenticate(
-                                BiometricPrompt.PromptInfo.Builder()
-                                    .setTitle("Unlock Mizani")
-                                    .setSubtitle("Use your fingerprint or face")
-                                    .setNegativeButtonText("Use PIN")
-                                    .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK)
-                                    .build(),
-                            )
-                        } catch (error: Exception) {
-                            biometricMessage = biometricUnavailableText
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
-                    shape = MaterialTheme.shapes.medium,
-                ) {
-                    Icon(Icons.Rounded.Fingerprint, contentDescription = null)
-                    Spacer(Modifier.width(Spacing.sm))
-                    Text("Unlock with biometrics")
-                }
-            }
-            Spacer(Modifier.height(Spacing.md))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.Lock, contentDescription = null, modifier = Modifier.size(13.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.width(4.dp))
+            val contentMaxHeight = (maxHeight - recoveryNoteSpace).coerceAtLeast(0.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = contentMaxHeight)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = Spacing.xl, vertical = Spacing.xxl),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Spacer(Modifier.height(Spacing.xl))
+                MizaniMark(size = 72)
+                Spacer(Modifier.height(Spacing.lg))
+                Text("Welcome back", style = MaterialTheme.typography.headlineMedium)
                 Text(
-                    "If you forget your PIN, local data cannot be recovered without your encrypted backup.",
-                    style = MaterialTheme.typography.labelSmall,
+                    "Enter your 6-digit PIN to open Mizani",
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )
+                Spacer(Modifier.height(Spacing.xl))
+                PinDots(entered = pin.length)
+                Spacer(Modifier.height(Spacing.md))
+                // heightIn (not a fixed height) so large-font users never lose the message;
+                // liveRegion announces failures and biometric status without stealing focus.
+                Box(Modifier.heightIn(min = 24.dp), contentAlignment = Alignment.Center) {
+                    when {
+                        verifying -> CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        error != null -> Text(
+                            error!!,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                        )
+                        biometricMessage != null -> Text(
+                            biometricMessage!!,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 2,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                        )
+                    }
+                }
+                Spacer(Modifier.height(Spacing.lg))
+                PinKeypad(
+                    onDigit = { digit ->
+                        if (pin.length < PinDefaults.LENGTH) {
+                            error = null
+                            biometricMessage = null
+                            pin += digit
+                        }
+                    },
+                    onBackspace = { pin = pin.dropLast(1) },
+                    enabled = !verifying && blockedForMs <= 0L,
+                )
+                Spacer(Modifier.height(Spacing.lg))
+                if (canUseBiometrics && prompt != null) {
+                    OutlinedButton(
+                        onClick = {
+                            biometricMessage = null
+                            try {
+                                prompt.authenticate(
+                                    BiometricPrompt.PromptInfo.Builder()
+                                        .setTitle("Unlock Mizani")
+                                        .setSubtitle("Use your fingerprint or face")
+                                        .setNegativeButtonText("Use PIN")
+                                        .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK)
+                                        .build(),
+                                )
+                            } catch (error: Exception) {
+                                biometricMessage = biometricUnavailableText
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        shape = MaterialTheme.shapes.medium,
+                    ) {
+                        Icon(Icons.Rounded.Fingerprint, contentDescription = null)
+                        Spacer(Modifier.width(Spacing.sm))
+                        Text("Unlock with biometrics")
+                    }
+                }
+                if (!pinRecoveryNoteAtBottom) {
+                    Spacer(Modifier.height(Spacing.md))
+                    PinRecoveryNote()
+                }
+            }
+            if (pinRecoveryNoteAtBottom) {
+                PinRecoveryNote(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(start = Spacing.xl, end = Spacing.xl, bottom = Spacing.xxl),
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun PinRecoveryNote(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            Icons.Rounded.Lock,
+            contentDescription = null,
+            modifier = Modifier.size(13.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+            "If you forget your PIN, local data cannot be recovered without your encrypted backup.",
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -297,6 +339,8 @@ fun PinKeypad(
                             modifier = Modifier
                                 .size(68.dp)
                                 .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                .border(1.dp, MaterialTheme.colorScheme.onSurfaceVariant, CircleShape)
                                 .clickable(enabled = enabled, onClick = onBackspace),
                             contentAlignment = Alignment.Center,
                         ) {
@@ -311,12 +355,14 @@ fun PinKeypad(
                                 .size(68.dp)
                                 .clip(CircleShape)
                                 .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                .border(1.dp, MaterialTheme.colorScheme.onSurfaceVariant, CircleShape)
                                 .clickable(enabled = enabled) { onDigit(key) },
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
                                 key,
                                 style = MaterialTheme.typography.headlineSmall,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontWeight = FontWeight.Medium,
                             )
                         }
