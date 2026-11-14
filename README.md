@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/OchiengPaul442/budgeting-application/actions/workflows/android-ci.yml"><img src="https://github.com/OchiengPaul442/budgeting-application/actions/workflows/android-ci.yml/badge.svg?branch=main&amp;event=push" alt="Build and tests workflow status"></a>
+  <a href="https://github.com/OchiengPaul442/Mizani/actions/workflows/android-ci.yml"><img src="https://github.com/OchiengPaul442/Mizani/actions/workflows/android-ci.yml/badge.svg?branch=main&amp;event=push" alt="Build and tests workflow status"></a>
   <img src="https://img.shields.io/badge/Android-API%2024%2B-087F72?logo=android&logoColor=white" alt="Android API 24 and newer">
   <img src="https://img.shields.io/badge/Kotlin-087F72?logo=kotlin&logoColor=white" alt="Built with Kotlin">
 </p>
@@ -109,8 +109,8 @@ JDK/JBR path. Keep machine-specific paths out of commits. Android Studio can cre
 Clone the repository and build with the Gradle wrapper:
 
 ```powershell
-git clone https://github.com/OchiengPaul442/budgeting-application.git
-cd budgeting-application
+git clone https://github.com/OchiengPaul442/Mizani.git
+cd Mizani
 .\gradlew.bat :app:assembleDebug
 ```
 
