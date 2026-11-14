@@ -1,10 +1,7 @@
 # Mizani
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/logo-lockup-on-dark.svg">
-    <img src="docs/brand/logo-lockup-on-light.svg" alt="Mizani — Your money, in balance." width="360">
-  </picture>
+  <img src="docs/brand/Mizani%20Finance_%20Take%20Control%20Today.png" alt="Mizani banner: take control of your money." width="100%">
 </p>
 
 <p align="center">
